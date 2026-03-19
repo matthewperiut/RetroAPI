@@ -1,0 +1,127 @@
+// Usage: ./gradlew :test:runClient -Pmc=b1.7.3
+//        ./gradlew :test:runClient -Pmc=b1.4_01
+// Default: b1.7.3
+
+def versionConfigs = [
+	'b1.4_01': [dep: '1.0.0-beta.4.1', reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
+	'b1.5':    [dep: '1.0.0-beta.5',   reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
+	'b1.5_01': [dep: '1.0.0-beta.5.1', reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
+	'b1.6':    [dep: '1.0.0-beta.6',   reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.1':  [dep: '1.0.0-beta.6.1', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.2':  [dep: '1.0.0-beta.6.2', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.3':  [dep: '1.0.0-beta.6.3', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.4':  [dep: '1.0.0-beta.6.4', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.5':  [dep: '1.0.0-beta.6.5', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.6.6':  [dep: '1.0.0-beta.6.6', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
+	'b1.7':    [dep: '1.0.0-beta.7',   reg: 'mcb1.6-mcb1.7.3'],
+	'b1.7_01': [dep: '1.0.0-beta.7.1', reg: 'mcb1.6-mcb1.7.3'],
+	'b1.7.2':  [dep: '1.0.0-beta.7.2', reg: 'mcb1.6-mcb1.7.3'],
+	'b1.7.3':  [dep: '1.0.0-beta.7.3', reg: 'mcb1.6-mcb1.7.3', raven: [2, 2], sparrow: [2, 2], stationapi: true],
+]
+
+def mcVersion = project.hasProperty('mc') ? project.mc : 'b1.7.3'
+def config = versionConfigs[mcVersion]
+if (config == null) throw new GradleException("Unknown MC version: ${mcVersion}. Valid: ${versionConfigs.keySet()}")
+
+def raven = config.getOrDefault('raven', [1, 1])
+def sparrow = config.getOrDefault('sparrow', [1, 1])
+def nests = config.getOrDefault('nests', [7, 4])
+
+apply plugin: 'java-library'
+apply plugin: 'fabric-loom'
+apply plugin: 'ploceus'
+
+base {
+	archivesName = 'retroapi-test'
+}
+version = "1.0.0+mc${mcVersion}"
+group = rootProject.maven_group
+
+ploceus {
+	setIntermediaryGeneration(2)
+}
+
+repositories {
+	maven { url = "https://matthewperiut.github.io/repository" }
+	exclusiveContent {
+		forRepository {
+			maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+	maven { name = 'Jitpack'; url = 'https://jitpack.io' }
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${mcVersion}"
+	mappings ploceus.featherMappings('1')
+
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
+	clientExceptions ploceus.raven(raven[0].toString(), 'client')
+	serverExceptions ploceus.raven(raven[1].toString(), 'server')
+	clientSignatures ploceus.sparrow(sparrow[0].toString(), 'client')
+	serverSignatures ploceus.sparrow(sparrow[1].toString(), 'server')
+	clientNests ploceus.nests(nests[0].toString(), 'client')
+	serverNests ploceus.nests(nests[1].toString(), 'server')
+
+	ploceus.dependOsl(rootProject.osl_version)
+
+	annotationProcessor "systems.manifold:manifold-preprocessor:${rootProject.manifold_version}"
+
+	// Module dependencies
+	def regModule = "registration-${config.reg}"
+	def regLibrary = ':libraries:registration'
+	def modules = [
+		[lib: regLibrary, mod: ":libraries:registration:${regModule}"],
+		[lib: ':libraries:blockentity', mod: ':libraries:blockentity:blockentity-mcb1.4-mcb1.7.3'],
+		[lib: ':libraries:rendering', mod: ':libraries:rendering:rendering-mcb1.4-mcb1.7.3'],
+		[lib: ':libraries:recipes', mod: ':libraries:recipes:recipes-mcb1.4-mcb1.7.3'],
+	]
+	if (config.stationapi) {
+		modules += [lib: ':libraries:stationapi', mod: ':libraries:stationapi:stationapi-mcb1.7.3-mcb1.7.3']
+	}
+
+	modules.each { m ->
+		implementation project(path: m.lib)
+		implementation project(path: m.mod, configuration: 'namedElements')
+	}
+
+	if (config.stationapi) {
+		modCompileOnly("net.modificationstation:StationAPI:${rootProject.stapi_version}")
+	}
+}
+
+sourceSets {
+	main {
+		java { srcDirs = [file('shared/java')] }
+		resources { srcDirs = [file('shared/resources')] }
+	}
+}
+
+loom {
+	runs {
+		client {}
+		server {}
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 21
+	it.options.compilerArgs += ['-Xplugin:Manifold']
+}
+
+processResources {
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+jar {
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${base.archivesName.get()}" }
+	}
+}

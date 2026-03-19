@@ -1,0 +1,13 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.periut.retroapi.mixin.recipe",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"CraftingManagerAccessor",
+		"SmeltingManagerAccessor"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

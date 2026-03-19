@@ -1,13 +1,18 @@
 plugins {
+	id 'java-library'
 	id 'maven-publish'
-	id 'fabric-loom' version '1.15-SNAPSHOT'
-	id 'ploceus' version '1.15-SNAPSHOT'
+	id 'fabric-loom' version '1.15-SNAPSHOT' apply false
+	id 'ploceus' version '1.15-SNAPSHOT' apply false
 }
+
+// Root project - produces the bundled retroapi JAR
+apply plugin: 'fabric-loom'
+apply plugin: 'ploceus'
 
 base {
 	archivesName = project.archives_base_name
 }
-version = "${project.version}+mc${project.minecraft_version}"
+version = "${project.version}+mcb1.4-mcb1.7.3"
 group = project.maven_group
 
 ploceus {
@@ -16,146 +21,281 @@ ploceus {
 
 repositories {
 	maven { url = "https://matthewperiut.github.io/repository" }
-	exclusiveContent {
-		forRepository {
-			maven {
-				name = "Modrinth"
-				url = "https://api.modrinth.com/maven"
-			}
-		}
-		filter {
-			includeGroup "maven.modrinth"
-		}
-	}
-	maven {
-		name = 'Jitpack'
-		url = 'https://jitpack.io'
-	}
-
 	mavenCentral()
-}
-
-sourceSets {
-	test {
-		compileClasspath += main.compileClasspath + main.output
-		runtimeClasspath += main.runtimeClasspath + main.output
-	}
-}
-
-loom {
-	accessWidenerPath = file("src/main/resources/retroapi.accesswidener")
-	mods {
-		retroapi {
-			sourceSet sourceSets.main
-		}
-		retroapi_test {
-			sourceSet sourceSets.test
-		}
-	}
-	runs {
-		client {
-			source sourceSets.test
-		}
-		server {
-			source sourceSets.test
-		}
-	}
+	mavenLocal()
 }
 
 dependencies {
+	// Dummy MC dependency to keep Loom happy - root has no source code
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings ploceus.featherMappings(project.feather_build)
-
-	// remove these lines if not using exceptions patches
-	clientExceptions ploceus.raven(project.client_raven_build, 'client')
-	serverExceptions ploceus.raven(project.server_raven_build, 'server')
-	// remove these lines if not using generics patches
-	clientSignatures ploceus.sparrow(project.client_sparrow_build, 'client')
-	serverSignatures ploceus.sparrow(project.server_sparrow_build, 'server')
-	// remove these lines if not using inner class patches
-	clientNests ploceus.nests(project.client_nests_build, 'client')
-	serverNests ploceus.nests(project.server_nests_build, 'server')
-
-	ploceus.dependOsl(project.osl_version)
-
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-	modImplementation "com.periut:starac:${project.starac_version}"
-
-	// Netty is required by OSL networking but not bundled with Minecraft b1.7.3
-	include "io.netty:netty-buffer:4.1.77.Final"
-	include "io.netty:netty-common:4.1.77.Final"
-
-	modCompileOnly("net.modificationstation:StationAPI:${project.stapi_version}")
-
-//	modLocalRuntime("com.periut:retrocommands:${project.retrocommands_version}") {
-//		transitive = false
-//	}
-
-}
-// Exclude Legacy Fabric LWJGL 2 wrapper (starac provides LWJGL 3)
-configurations.configureEach {
-	exclude group: 'org.lwjgl.lwjgl'
 }
 
 processResources {
 	inputs.property 'version', version
-
 	filesMatching('fabric.mod.json') {
 		expand 'version': version
 	}
 }
 
-processTestResources {
-	inputs.property 'version', version
-
-	filesMatching('fabric.mod.json') {
-		expand 'version': version
+jar {
+	from('LICENSE') {
+		rename { "${it}_${project.base.archivesName.get()}" }
 	}
-}
-
-tasks.withType(JavaCompile).configureEach {
-	it.options.encoding = 'UTF-8'
-	it.options.release = 21
 }
 
 java {
 	withSourcesJar()
 }
 
-jar {
-	from('LICENSE') {
-		rename { "${it}_${base.archivesName.get()}" }
-	}
-}
-
-test {
-	// This is a mod testbed, not JUnit tests
-	enabled = false
-}
-
-tasks.register('testJar', Jar) {
-	from sourceSets.test.output
-	archiveClassifier = 'testmod-dev'
-}
-
-tasks.register('remapTestJar', net.fabricmc.loom.task.RemapJarTask) {
-	inputFile = tasks.named('testJar').flatMap { it.archiveFile }
-	archiveClassifier = 'testmod'
-	addNestedDependencies = false
-	classpath.from(sourceSets.test.compileClasspath)
-}
-
-build.dependsOn remapTestJar
-
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
 			from components.java
+			pom.withXml {
+				asNode().appendNode('dependencies')
+			}
+		}
+	}
+	repositories {
+		mavenLocal()
+	}
+}
+
+// Build only library JARs (no test mods)
+tasks.register('buildLibs') {
+	dependsOn ':remapJar'
+	group = 'build'
+	description = 'Build the retroapi distribution JAR (without test mods)'
+}
+
+// ============================================================
+// Helper functions for subprojects
+// ============================================================
+
+def addPomDependency(project) {
+	project.rootProject.publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				pom.withXml {
+					def depsNode = asNode().get("dependencies")[0]
+					def depNode = depsNode.appendNode("dependency")
+					depNode.appendNode("groupId", project.rootProject.maven_group)
+					depNode.appendNode("artifactId", project.library_id)
+					depNode.appendNode("version", project.library_version)
+					depNode.appendNode("scope", "compile")
+				}
+			}
+		}
+	}
+}
+
+/**
+ * Sets up a library parent project (no MC dependency, just a source holder).
+ * Library parents use java-library plugin only, no Loom.
+ */
+def setUpLibrary(project) {
+	project.apply plugin: 'java-library'
+
+	project.base {
+		archivesName = "${project.rootProject.mod_id}-${project.library_id}"
+	}
+	project.version = project.library_version
+	project.group = project.rootProject.maven_group
+
+	project.repositories {
+		maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+		mavenCentral()
+	}
+
+	project.dependencies {
+		implementation "net.fabricmc:fabric-loader:${project.rootProject.loader_version}"
+		implementation "org.apache.logging.log4j:log4j-api:2.19.0"
+		implementation "org.apache.logging.log4j:log4j-core:2.19.0"
+	}
+
+	// Parent is a source holder only - version modules compile the source.
+	// Disable compilation since shared source references MC classes not on the parent classpath.
+	project.tasks.configureEach { task ->
+		if (task.name == 'compileJava' || task.name == 'processResources' || task.name == 'jar' ||
+			task.name == 'classes' || task.name == 'javadoc' || task.name == 'javadocJar' ||
+			task.name == 'sourcesJar') {
+			task.enabled = false
 		}
 	}
 
-	repositories {
-		// Add repositories to publish to here.
+	// Store shared source dirs for child modules, then clear parent source sets
+	// so IntelliJ associates the files with the child modules (which have MC on classpath)
+	project.ext.sharedJavaDirs = project.sourceSets.main.java.srcDirs.collect()
+	project.ext.sharedResourceDirs = project.sourceSets.main.resources.srcDirs.collect()
+	project.sourceSets.main.java.srcDirs = []
+	project.sourceSets.main.resources.srcDirs = []
+
+	addPomDependency(project)
+}
+
+/**
+ * Sets up a version-specific module (with Loom, MC dependency, mappings, etc.).
+ * @param dependencies - module names like 'blockentity-mcb1.4-mcb1.7.3' that this module depends on
+ */
+def setUpModule(project, String... dependencies) {
+	def library = project.parent
+
+	project.apply plugin: 'java-library'
+	project.apply plugin: 'maven-publish'
+	project.apply plugin: 'fabric-loom'
+	project.apply plugin: 'ploceus'
+
+	project.base {
+		archivesName = "${project.rootProject.mod_id}-${library.library_id}"
+	}
+	project.version = "${library.library_version}+mc${project.min_mc_version}-mc${project.max_mc_version}"
+	project.group = project.rootProject.maven_group
+
+	project.ploceus {
+		setIntermediaryGeneration(2)
+	}
+
+	def libraryDeps = getLibraryDependencies(project, dependencies)
+	def moduleDeps = getModuleDependencies(project, dependencies)
+
+	project.repositories {
+		maven { url = "https://matthewperiut.github.io/repository" }
+		exclusiveContent {
+			forRepository {
+				maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+			}
+			filter { includeGroup "maven.modrinth" }
+		}
+		maven { name = 'Jitpack'; url = 'https://jitpack.io' }
+		mavenCentral()
+	}
+
+	project.dependencies {
+		minecraft "com.mojang:minecraft:${project.minecraft_version}"
+		mappings project.ploceus.featherMappings(project.feather_build)
+		modImplementation "net.fabricmc:fabric-loader:${project.rootProject.loader_version}"
+
+		// Exception/signature/nests patches
+		if (project.hasProperty('client_raven_build')) {
+			clientExceptions project.ploceus.raven(project.client_raven_build, 'client')
+		}
+		if (project.hasProperty('server_raven_build')) {
+			serverExceptions project.ploceus.raven(project.server_raven_build, 'server')
+		}
+		if (project.hasProperty('client_sparrow_build')) {
+			clientSignatures project.ploceus.sparrow(project.client_sparrow_build, 'client')
+		}
+		if (project.hasProperty('server_sparrow_build')) {
+			serverSignatures project.ploceus.sparrow(project.server_sparrow_build, 'server')
+		}
+		if (project.hasProperty('client_nests_build')) {
+			clientNests project.ploceus.nests(project.client_nests_build, 'client')
+		}
+		if (project.hasProperty('server_nests_build')) {
+			serverNests project.ploceus.nests(project.server_nests_build, 'server')
+		}
+
+		// OSL
+		project.ploceus.dependOsl(project.rootProject.osl_version)
+
+		// Manifold preprocessor for conditional compilation across MC versions
+		annotationProcessor "systems.manifold:manifold-preprocessor:${project.rootProject.manifold_version}"
+
+		// Inter-module dependencies
+		libraryDeps.each { libraryPath ->
+			implementation project.dependencies.project(path: libraryPath)
+		}
+		moduleDeps.each { modulePath ->
+			implementation project.dependencies.project(path: modulePath, configuration: 'namedElements')
+		}
+	}
+
+	// Manifold preprocessor plugin arg is added below with encoding/release
+
+	// Include in root JAR (unless excluded, e.g. test mod)
+	if (!project.hasProperty('exclude_from_root') || !project.exclude_from_root.toBoolean()) {
+		project.rootProject.dependencies {
+			include project.dependencies.project(path: project.path)
+		}
+	}
+
+	// Inherit parent library source dirs
+	project.sourceSets {
+		main {
+			java {
+				srcDirs += library.ext.sharedJavaDirs
+			}
+			resources {
+				srcDirs += library.ext.sharedResourceDirs
+			}
+		}
+	}
+
+	project.processResources {
+		inputs.property 'version', project.version
+		filesMatching('fabric.mod.json') {
+			expand 'version': project.version
+		}
+	}
+
+	project.tasks.withType(JavaCompile).configureEach {
+		it.options.encoding = 'UTF-8'
+		it.options.release = 21
+		it.options.compilerArgs += ['-Xplugin:Manifold']
+	}
+
+	project.java {
+		withSourcesJar()
+	}
+
+	project.jar {
+		from(project.rootProject.file('LICENSE')) {
+			rename { "${it}_${project.base.archivesName.get()}" }
+		}
+	}
+
+	project.publishing {
+		publications {
+			mavenJava(MavenPublication) {
+				artifactId library.name
+				from project.components.java
+			}
+		}
+		repositories {
+			mavenLocal()
+		}
+	}
+}
+
+def getLibraryDependencies(project, String... moduleNames) {
+	def libraries = new ArrayList<>()
+	libraries.add(project.parent.path)
+	for (moduleName : moduleNames) {
+		def i = moduleName.indexOf('-mc')
+		def libraryName = moduleName.substring(0, i)
+		libraries.add(":libraries:${libraryName}")
+	}
+	return libraries
+}
+
+def getModuleDependencies(project, String... moduleNames) {
+	def modules = new ArrayList<>()
+	for (moduleName : moduleNames) {
+		def i = moduleName.indexOf('-mc')
+		def libraryName = moduleName.substring(0, i)
+		modules.add(":libraries:${libraryName}:${moduleName}")
+	}
+	return modules
+}
+
+// Exclude Legacy Fabric LWJGL 2 wrapper (starac provides LWJGL 3)
+allprojects {
+//	configurations.configureEach {
+//		exclude group: 'org.lwjgl.lwjgl'
+//	}
+	tasks.withType(GenerateModuleMetadata) {
+		enabled = false
 	}
 }

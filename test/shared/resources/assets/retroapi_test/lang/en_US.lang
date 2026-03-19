@@ -1,0 +1,6 @@
+tile.@.test_block.name=Test Block
+tile.@.color_block.name=Color Block
+tile.@.pipe.name=Pipe
+tile.@.crate.name=Crate
+tile.@.freezer.name=Freezer
+item.@.test_item.name=Test Item

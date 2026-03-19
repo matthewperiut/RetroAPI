@@ -2,17 +2,19 @@
 
 ## What This Is
 
-RetroAPI is a Fabric mod for **Minecraft Beta 1.7.3** that lets other mods register custom blocks and items without requiring StationAPI. It handles ID assignment, texture atlasing, custom rendering, networking, and world persistence. When StationAPI is present, RetroAPI delegates to it instead.
+RetroAPI is a modular Fabric mod library for **Minecraft Beta 1.4 – Beta 1.7.3** that lets other mods register custom blocks, items, recipes, and more without requiring StationAPI. It handles ID assignment, texture atlasing, custom rendering, networking, and world persistence. When StationAPI is present (b1.7.3 only), RetroAPI delegates to it instead.
 
 ## Build & Run
 
 ```bash
-./gradlew build          # Compiles main + test mod, outputs to build/libs/
-./gradlew runClient      # Launches client with test mod loaded
-./gradlew runServer      # Launches dedicated server with test mod loaded
+./gradlew buildLibs                                          # Compiles library JAR only (no test mods)
+./gradlew build -x validateAccessWidener                     # Compiles all modules + all test mods
+./gradlew :test:test-mcb1.7.3:runClient                      # Launches client with test mod on b1.7.3
+./gradlew :test:test-mcb1.4_01:runClient                     # Launches client with test mod on b1.4_01
+./gradlew :test:test-mcb1.6.6:runClient                      # Launches client with test mod on b1.6.6
 ```
 
-Java 21 required. Uses Fabric Loom + Ploceus (Feather mappings for b1.7.3).
+Java 21 required. Uses Fabric Loom + Ploceus (Feather mappings). Multi-version, multi-module project following the OSL pattern. Uses Manifold preprocessor for conditional compilation across MC versions.
 
 ## Mapping Gotchas (CRITICAL)
 
@@ -51,115 +53,90 @@ Use `jar tf` on it to verify class/package names before writing imports.
 - Server send: `ServerPlayNetworking.send(player, channel, writerLambda)`
 - Channels registered via `ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "name"), serverToClient, clientToServer)`
 
-## Package Structure
+## Project Structure (Multi-Module)
+
+Follows the OSL (Ornithe Standard Libraries) pattern. Each library has a parent directory with shared source and version-specific subdirectories.
 
 ```
-com.periut.retroapi/
-├── RetroAPI.java                    # init entrypoint — fires registration events
+retroapi/
+├── build.gradle              # Root — helper functions (setUpLibrary, setUpModule) + fat JAR
+├── settings.gradle           # All subproject includes
+├── gradle.properties         # Global versions
+├── src/main/resources/       # Root fabric.mod.json (retroapi mod ID)
 │
-├── client/                          # Client-side code
-│   ├── RetroAPIClient.java          # client-init — ID sync + chunk extended receiver
-│   ├── FurnaceBlockEntityProxy.java
-│   ├── texture/
-│   │   └── AtlasExpander.java       # Composites custom textures into terrain/item atlases
-│   └── screen/
-│       └── StationAPIWorldScreen.java  # Error screen for StationAPI worlds
+├── libraries/
+│   ├── registration/         # Blocks, items, textures, storage, networking, lang, ID management
+│   │   ├── src/main/java/    # Shared source (uses #if preprocessor for version differences)
+│   │   ├── registration-mcb1.4-mcb1.5_01/   # Version module: resources + access widener
+│   │   └── registration-mcb1.6-mcb1.7.3/    # Version module: resources + access widener
+│   │
+│   ├── blockentity/          # RetroBlockEntityType, RetroMenu, SyncField, BlockActivatedHandler
+│   │   └── blockentity-mcb1.4-mcb1.7.3/
+│   │
+│   ├── rendering/            # RenderType, RenderTypes, CustomBlockRenderer, BlockRenderContext
+│   │   └── rendering-mcb1.4-mcb1.7.3/
+│   │
+│   ├── recipes/              # RetroRecipes — crafting, smelting, fuel registration
+│   │   └── recipes-mcb1.4-mcb1.7.3/
+│   │
+│   └── stationapi/           # StationAPI compat bridge (b1.7.3 ONLY)
+│       └── stationapi-mcb1.7.3-mcb1.7.3/
 │
-├── server/
-│   └── RetroAPIServer.java          # server-init — sends ID sync on player join
-│
-├── network/                         # Networking
-│   ├── RetroAPINetworking.java      # Channel declarations (id_sync, chunk_ext)
-│   ├── BlocksUpdatePacketAccess.java
-│   └── WorldChunkPacketAccess.java
-│
-├── register/                        # Public API for mod authors
-│   ├── RetroIdentifier.java         # record(namespace, path) — "mod:name"
-│   ├── block/
-│   │   ├── RetroBlockAccess.java    # Duck interface on Block (create, register, texture, bounds)
-│   │   ├── BlockActivatedHandler.java
-│   │   ├── RetroTexture.java        # Mutable sprite ID wrapper
-│   │   ├── RetroTextures.java       # Texture registration and atlas tracking
-│   │   └── event/
-│   │       └── BlockRegistrationCallback.java
-│   ├── item/
-│   │   ├── RetroItemAccess.java     # Duck interface on Item
-│   │   └── event/
-│   │       └── ItemRegistrationCallback.java
-│   ├── blockentity/
-│   │   ├── RetroBlockEntityType.java
-│   │   ├── SyncField.java
-│   │   └── RetroMenu.java
-│   └── rendertype/
-│       ├── RenderType.java          # Custom block render type registry
-│       ├── RenderTypes.java         # Vanilla render type constants
-│       ├── CustomBlockRenderer.java
-│       ├── BlockRenderContext.java
-│       └── RetroBlockRendererAccess.java
-│
-├── registry/                        # ID management
-│   ├── RetroRegistry.java
-│   ├── BlockRegistration.java
-│   ├── ItemRegistration.java
-│   ├── IdAssigner.java
-│   └── IdMap.java
-│
-├── storage/                         # Extended block storage (unlimited blocks beyond 256)
-│   ├── ChunkExtendedBlocks.java
-│   ├── ExtendedBlocksAccess.java
-│   ├── RegionSidecar.java
-│   ├── SidecarManager.java
-│   ├── BackupManager.java
-│   └── InventorySidecar.java
-│
-├── mixin/
-│   ├── RetroAPIMixinPlugin.java     # Conditionally disables mixins when StationAPI present
-│   ├── register/                    # Block/item/BE registration mixins
-│   │   ├── BlockArrayExpandMixin.java
-│   │   ├── BlockMixin.java
-│   │   ├── ItemMixin.java
-│   │   ├── ItemStackMixin.java
-│   │   └── BlockEntityAccessor.java
-│   ├── storage/                     # World/chunk persistence mixins
-│   │   ├── AlphaWorldStorageMixin.java
-│   │   ├── ChunkStorageMixin.java
-│   │   ├── WorldChunkMixin.java
-│   │   ├── WorldAccessor.java
-│   │   ├── WorldStorageAccessor.java
-│   │   └── RegionWorldStorageSourceAccessor.java
-│   ├── network/                     # Packet serialization + server networking
-│   │   ├── ChunkSendMixin.java
-│   │   ├── BlockUpdatePacketMixin.java
-│   │   ├── BlocksUpdatePacketMixin.java
-│   │   ├── WorldChunkPacketMixin.java
-│   │   └── ServerPlayerEntityAccessor.java
-│   ├── client/                      # Client-side mixins
-│   │   ├── BlockRendererMixin.java
-│   │   ├── ClientNetworkHandlerMixin.java
-│   │   ├── MinecraftMixin.java
-│   │   ├── MinecraftAccessor.java
-│   │   ├── PlayerRendererMixin.java
-│   │   ├── LanguageAccessor.java
-│   │   └── atlas/                   # Atlas/texture mixins (disabled with StationAPI)
-│   │       ├── AchievementsScreenMixin.java
-│   │       ├── BlockRendererAtlasMixin.java
-│   │       ├── BlockParticleMixin.java
-│   │       ├── ItemInHandRendererMixin.java
-│   │       ├── ItemRendererMixin.java
-│   │       └── TextureManagerMixin.java
-│   └── stationapi/                  # StationAPI-specific mixins (separate config)
-│       ├── FlattenedWorldStorageMixin.java
-│       └── ModNioResourcePackMixin.java
-│
-├── compat/                          # StationAPI bridge
-│   ├── StationAPICompat.java
-│   ├── StationAPIRegistryForwarder.java
-│   ├── WorldConversionHelper.java
-│   └── WorldConversionProcessor.java
-│
-└── lang/
-    └── LangLoader.java              # Loads translations from mod assets
+└── test/                     # Test mod
+    ├── shared/               # Shared test source, resources, and access widener
+    ├── test-mcb1.4_01/       # Per-version test runners (14 total, b1.4_01 through b1.7.3)
+    ├── test-mcb1.6.6/
+    ├── test-mcb1.7.3/        # b1.7.3 also includes StationAPI compat
+    └── ...
 ```
+
+### Module Dependency Graph
+```
+blockentity (standalone)
+rendering (standalone)
+registration (depends on: blockentity, rendering)
+├── recipes (depends on: registration)
+└── stationapi (depends on: registration; b1.7.3 only)
+test (depends on: all)
+```
+
+Identifiers use OSL's `NamespacedIdentifier` interface (`net.ornithemc.osl.core.api.util.NamespacedIdentifier`) with factory `NamespacedIdentifiers.from(namespace, identifier)`. Methods: `.namespace()`, `.identifier()`, `.toString()` returns `"namespace:identifier"`.
+
+### Manifold Preprocessor
+
+Version differences in shared source are handled via Manifold preprocessor `#if` directives. Each version module defines symbols via `-A` compiler args in its `build.gradle`:
+
+- **b1.6-b1.7.3**: `-AMC_B1_6_OR_LATER`, `-AMC_HAS_ACHIEVEMENTS`, `-AMC_HAS_UPDATE_CLIENTS`
+- **b1.4-b1.5_01**: `-AMC_PRE_B1_6`
+
+Usage in Java source:
+```java
+#if MC_B1_6_OR_LATER
+Block.IS_SOLID_RENDER[this.id] = solid;
+#else
+Block.IS_SOLID[this.id] = solid;
+#endif
+```
+
+Key version differences:
+| Feature | b1.4-b1.5_01 | b1.6-b1.7.3 |
+|---------|-------------|-------------|
+| Solid render field | `IS_SOLID` | `IS_SOLID_RENDER` |
+| Update clients field | doesn't exist | `UPDATE_CLIENTS` |
+| `isSolidRender()` method | `isSolid()` | `isSolidRender()` |
+| `BlockEntity.cancelRemoval()` | doesn't exist | exists |
+| `ItemInHandRenderer.render` | `(ItemStack)` | `(MobEntity, ItemStack)` |
+| `ItemRenderer.renderGuiItem` | `(TextRenderer, TextureManager, ItemStack, int, int)` | `(TextRenderer, TextureManager, int, int, int, int, int)` |
+| `BlockRenderer.renderAsItem` | `(Block, int)` | `(Block, int, float)` |
+| `AchievementsScreen` | doesn't exist | exists |
+| `Block$Sounds` (access widener) | `Block$Sounds` | `Block__Sounds` |
+
+### Adding a New Version Range
+1. Create `libraries/{module}/{module}-mc{min}-mc{max}/` with `build.gradle`, `gradle.properties`
+2. In `build.gradle`: define preprocessor symbols via `-A` compiler args
+3. Add version-specific resources (access widener, mixin config, fabric.mod.json)
+4. Register in `settings.gradle` via `include`
+5. Use `#if` directives in shared source for any API differences
 
 ## Key Architecture Concepts
 
@@ -218,7 +195,7 @@ RetroAPI blocks can have block entities without subclassing `BlockWithBlockEntit
 
 ### Translation / Lang
 
-- `LangLoader` loads translations from `assets/{modid}/retroapi/lang/en_US.lang`
+- `LangLoader` loads translations from `assets/{modid}/lang/en_US.lang`
 - Auto-generates default translations for any block/item without one (e.g. `test_block` → `Test Block`)
 - Works with both StationAPI and non-StationAPI (injects into `Language.translations` properties)
 
@@ -228,17 +205,17 @@ RetroAPI blocks can have block entities without subclassing `BlockWithBlockEntit
 
 ## Test Mod
 
-Located in `src/test/`. Registers:
+Located in `test/`. Shared source in `test/shared/`, per-version runners in `test/test-mc{version}/`. Registers:
 - 5 special blocks (test_block, color_block, pipe, crate with inventory, freezer with furnace-style menu)
 - 200 numbered blocks (block_0 through block_199) — spawned in chests near the player
 - 200 numbered items (item_0 through item_199) — spawned in a second row of chests
 - 1 test item
 
-Mixin config: `retroapi_test.mixins.json`. Run with `./gradlew runClient`.
+14 test runners covering every beta version: b1.4_01, b1.5, b1.5_01, b1.6–b1.6.6, b1.7, b1.7_01, b1.7.2, b1.7.3. Run with `./gradlew :test:test-mc{version}:runClient`.
 
 ## Access Widener
 
-`src/main/resources/retroapi.accesswidener` — makes Block/Item fields mutable, Block constructor accessible, and all 8 Block static arrays (BY_ID, IS_SOLID_RENDER, OPACITIES, etc.) accessible + mutable for runtime expansion. Also exposes BlockItem.block field.
+Each registration version module has its own `retroapi.registration.accesswidener` — makes Block/Item fields mutable, Block constructor accessible, and Block static arrays accessible + mutable for runtime expansion. Also exposes BlockItem.block field. Field names differ between versions (e.g. `IS_SOLID` in b1.4 vs `IS_SOLID_RENDER` in b1.6+, `Block$Sounds` in b1.4 vs `Block__Sounds` in b1.7.3).
 
 ## Important Implementation Notes
 
@@ -251,10 +228,22 @@ Mixin config: `retroapi_test.mixins.json`. Run with `./gradlew runClient`.
 
 ## StationAPI Compatibility
 
-When StationAPI is present:
-- Registration delegates to StationAPI's registry
-- Atlas mixins are disabled (StationAPI handles textures)
+When StationAPI is present (b1.7.3 only), `RetroAPIMixinPlugin` disables conflicting mixins:
+- **Atlas mixins** disabled (StationAPI handles textures)
+- **ItemStackMixin** disabled (StationAPI handles item NBT)
+- **Network mixins** disabled: BlockUpdatePacket, BlocksUpdatePacket, WorldChunkPacket, ChunkSend, ClientNetworkHandler, ClientPlayerInteractionManager
+- Registration delegates to StationAPI's registry (`StationAPICompat`)
 - `IdAssigner.saveCurrentIds()` is called instead of `assignIds()` (StationAPI manages IDs)
 - `BackupManager.backupRetroApiData()` runs before world format conversions
 - `WorldConversionHelper` injects RetroAPI mappings into StationAPI's flattening schema
 - Lang defaults are still injected (works for both StationAPI and non-StationAPI)
+
+## Recipes Module
+
+`RetroRecipes` API for crafting, smelting, and fuel:
+```java
+RetroRecipes.addShaped(output, "XXX", "X X", "XXX", 'X', new ItemStack(Item.STICK));
+RetroRecipes.addShapeless(output, new ItemStack(Block.STONE), new ItemStack(Item.DYE));
+RetroRecipes.addSmelting(inputBlockId, new ItemStack(Item.IRON_INGOT));
+RetroRecipes.addFuel(itemId, 200); // 200 ticks = 10 seconds
+```

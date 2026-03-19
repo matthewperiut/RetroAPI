@@ -15,3 +15,27 @@ pluginManagement {
 		gradlePluginPortal()
 	}
 }
+
+rootProject.name = 'retroapi'
+
+// --- Libraries ---
+
+include ':libraries:registration'
+include ':libraries:registration:registration-mcb1.4-mcb1.5_01'
+include ':libraries:registration:registration-mcb1.6-mcb1.7.3'
+
+include ':libraries:blockentity'
+include ':libraries:blockentity:blockentity-mcb1.4-mcb1.7.3'
+
+include ':libraries:rendering'
+include ':libraries:rendering:rendering-mcb1.4-mcb1.7.3'
+
+include ':libraries:recipes'
+include ':libraries:recipes:recipes-mcb1.4-mcb1.7.3'
+
+include ':libraries:stationapi'
+include ':libraries:stationapi:stationapi-mcb1.7.3-mcb1.7.3'
+
+// --- Test mod ---
+
+include ':test'

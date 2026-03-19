@@ -1,0 +1,5 @@
+setUpModule(project, 'registration-mcb1.6-mcb1.7.3')
+
+dependencies {
+	modCompileOnly("net.modificationstation:StationAPI:${project.rootProject.stapi_version}")
+}

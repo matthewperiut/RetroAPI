@@ -13,6 +13,18 @@ import net.minecraft.world.WorldView;
  * can be created on the server without triggering class-loading errors.
  */
 public class BlockRenderContext {
+	private static final boolean HAS_AMBIENT_OCCLUSION;
+	static {
+		boolean found;
+		try {
+			Minecraft.class.getMethod("isAmbientOcclusionEnabled");
+			found = true;
+		} catch (NoSuchMethodException e) {
+			found = false;
+		}
+		HAS_AMBIENT_OCCLUSION = found;
+	}
+
 	private static final float[] FACE_SHADES = {0.5F, 1.0F, 0.8F, 0.8F, 0.6F, 0.6F};
 
 	// [face][3] - normal direction offset
@@ -115,7 +127,7 @@ public class BlockRenderContext {
 	 * Face indices: 0=bottom, 1=top, 2=north, 3=south, 4=west, 5=east.
 	 */
 	public void renderLitFace(int face, int sprite) {
-		if (Minecraft.isAmbientOcclusionEnabled()) {
+		if (HAS_AMBIENT_OCCLUSION && Minecraft.isAmbientOcclusionEnabled()) {
 			renderSmoothFace(face, sprite);
 		} else {
 			renderFlatFace(face, sprite);

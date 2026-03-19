@@ -3,20 +3,31 @@
 // Default: b1.7.3
 
 def versionConfigs = [
-	'b1.4_01': [dep: '1.0.0-beta.4.1', reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
-	'b1.5':    [dep: '1.0.0-beta.5',   reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
-	'b1.5_01': [dep: '1.0.0-beta.5.1', reg: 'mcb1.4-mcb1.5_01', sparrow: [2, 2]],
-	'b1.6':    [dep: '1.0.0-beta.6',   reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.1':  [dep: '1.0.0-beta.6.1', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.2':  [dep: '1.0.0-beta.6.2', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.3':  [dep: '1.0.0-beta.6.3', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.4':  [dep: '1.0.0-beta.6.4', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.5':  [dep: '1.0.0-beta.6.5', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.6.6':  [dep: '1.0.0-beta.6.6', reg: 'mcb1.6-mcb1.7.3',  nests: [6, 4]],
-	'b1.7':    [dep: '1.0.0-beta.7',   reg: 'mcb1.6-mcb1.7.3'],
-	'b1.7_01': [dep: '1.0.0-beta.7.1', reg: 'mcb1.6-mcb1.7.3'],
-	'b1.7.2':  [dep: '1.0.0-beta.7.2', reg: 'mcb1.6-mcb1.7.3'],
-	'b1.7.3':  [dep: '1.0.0-beta.7.3', reg: 'mcb1.6-mcb1.7.3', raven: [2, 2], sparrow: [2, 2], stationapi: true],
+	'b1.0':    [dep: '1.0.0-beta.0',   reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.0_01': [dep: '1.0.0-beta.0.1', reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.0.2':  [dep: '1.0.0-beta.0.2', reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', sparrow: [2, 2], nests: [6, 0], noServerPatches: true],
+	'b1.1':    [dep: '1.0.0-beta.1',   reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', nests: [1, 1]],
+	'b1.1_01': [dep: '1.0.0-beta.1.1', reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.1_02': [dep: '1.0.0-beta.1.2', reg: 'mcb1.0-mcb1.1_02', recipes: 'mcb1.0-mcb1.1_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.2':    [dep: '1.0.0-beta.2',   reg: 'mcb1.2-mcb1.2_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.2_01': [dep: '1.0.0-beta.2.1', reg: 'mcb1.2-mcb1.2_02', sparrow: [2, 2], nests: [7, 3]],
+	'b1.2_02': [dep: '1.0.0-beta.2.2', reg: 'mcb1.2-mcb1.2_02', sparrow: [2, 2], nests: [7, 0], noServerPatches: true],
+	'b1.4_01': [dep: '1.0.0-beta.4.1', reg: 'mcb1.4-mcb1.4_01', sparrow: [2, 2]],
+	'b1.5':    [dep: '1.0.0-beta.5',   reg: 'mcb1.5-mcb1.5_01', sparrow: [2, 2]],
+	'b1.5_01': [dep: '1.0.0-beta.5.1', reg: 'mcb1.5-mcb1.5_01', sparrow: [2, 2]],
+	'b1.6':    [dep: '1.0.0-beta.6',   reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.1':  [dep: '1.0.0-beta.6.1', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.2':  [dep: '1.0.0-beta.6.2', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.3':  [dep: '1.0.0-beta.6.3', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.4':  [dep: '1.0.0-beta.6.4', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.5':  [dep: '1.0.0-beta.6.5', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.6.6':  [dep: '1.0.0-beta.6.6', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
+	'b1.7':    [dep: '1.0.0-beta.7',   reg: 'mcb1.7-mcb1.7.3'],
+	'b1.7_01': [dep: '1.0.0-beta.7.1', reg: 'mcb1.7-mcb1.7.3'],
+	'b1.7.2':  [dep: '1.0.0-beta.7.2', reg: 'mcb1.7-mcb1.7.3'],
+	'b1.7.3':  [dep: '1.0.0-beta.7.3', reg: 'mcb1.7-mcb1.7.3', raven: [2, 2], sparrow: [2, 2], stationapi: true],
+	'b1.8':    [dep: '1.0.0-beta.8.0.r', reg: 'mcb1.8-mcb1.8.1', nests: [8, 5], mcVer: 180],
+	'b1.8.1':  [dep: '1.0.0-beta.8.1', reg: 'mcb1.8-mcb1.8.1', nests: [8, 5], mcVer: 181],
 ]
 
 def mcVersion = project.hasProperty('mc') ? project.mc : 'b1.7.3'
@@ -60,11 +71,13 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
 
 	clientExceptions ploceus.raven(raven[0].toString(), 'client')
-	serverExceptions ploceus.raven(raven[1].toString(), 'server')
 	clientSignatures ploceus.sparrow(sparrow[0].toString(), 'client')
-	serverSignatures ploceus.sparrow(sparrow[1].toString(), 'server')
 	clientNests ploceus.nests(nests[0].toString(), 'client')
-	serverNests ploceus.nests(nests[1].toString(), 'server')
+	if (!config.getOrDefault('noServerPatches', false)) {
+		serverExceptions ploceus.raven(raven[1].toString(), 'server')
+		serverSignatures ploceus.sparrow(sparrow[1].toString(), 'server')
+		serverNests ploceus.nests(nests[1].toString(), 'server')
+	}
 
 	ploceus.dependOsl(rootProject.osl_version)
 
@@ -77,7 +90,7 @@ dependencies {
 		[lib: regLibrary, mod: ":libraries:registration:${regModule}"],
 		[lib: ':libraries:blockentity', mod: ':libraries:blockentity:blockentity-mcb1.4-mcb1.7.3'],
 		[lib: ':libraries:rendering', mod: ':libraries:rendering:rendering-mcb1.4-mcb1.7.3'],
-		[lib: ':libraries:recipes', mod: ':libraries:recipes:recipes-mcb1.4-mcb1.7.3'],
+		[lib: ':libraries:recipes', mod: ":libraries:recipes:recipes-${config.getOrDefault('recipes', 'mcb1.2-mcb1.7.3')}"],
 	]
 	if (config.stationapi) {
 		modules += [lib: ':libraries:stationapi', mod: ':libraries:stationapi:stationapi-mcb1.7.3-mcb1.7.3']
@@ -107,10 +120,11 @@ loom {
 	}
 }
 
+def testMcVer = config.getOrDefault('mcVer', 173)
 tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = 'UTF-8'
 	it.options.release = 21
-	it.options.compilerArgs += ['-Xplugin:Manifold']
+	it.options.compilerArgs += ['-Xplugin:Manifold', "-AMC_VER=${testMcVer}"]
 }
 
 processResources {

@@ -40,7 +40,7 @@ public class WorldRendererMixin {
 				}
 			}
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 			minecraft.particleManager.handleBlockBreaking(x, y, z, blockId, metadata);
 #else
 			minecraft.particleManager.handleBlockBreaking(x, y, z);

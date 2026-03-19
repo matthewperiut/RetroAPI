@@ -73,6 +73,16 @@ public class FreezerBlockEntity extends BlockEntity implements Inventory {
 	public void markDirty() {
 	}
 
+#if MC_VER >= 180
+	@Override
+	public void onOpen() {
+	}
+
+	@Override
+	public void onClose() {
+	}
+#endif
+
 	@Override
 	public void tick() {
 		boolean wasLit = fuelTime > 0;
@@ -164,7 +174,11 @@ public class FreezerBlockEntity extends BlockEntity implements Inventory {
 			NbtCompound itemNbt = (NbtCompound) list.get(i);
 			int slot = itemNbt.getByte("Slot") & 0xFF;
 			if (slot < inventory.length) {
+#if MC_VER >= 180
+				inventory[slot] = ItemStack.fromNbt(itemNbt);
+#else
 				inventory[slot] = new ItemStack(itemNbt);
+#endif
 			}
 		}
 		cookTime = nbt.getShort("CookTime");

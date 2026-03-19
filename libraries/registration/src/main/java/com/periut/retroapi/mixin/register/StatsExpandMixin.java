@@ -1,3 +1,4 @@
+#if MC_VER >= 140
 package com.periut.retroapi.mixin.register;
 
 import net.minecraft.stat.Stat;
@@ -24,3 +25,4 @@ public class StatsExpandMixin {
 		}
 	}
 }
+#endif

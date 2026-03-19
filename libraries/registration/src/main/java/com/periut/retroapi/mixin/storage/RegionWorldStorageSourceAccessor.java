@@ -1,3 +1,4 @@
+#if MC_VER >= 140
 package com.periut.retroapi.mixin.storage;
 
 import net.minecraft.world.storage.AlphaWorldStorageSource;
@@ -11,3 +12,4 @@ public interface RegionWorldStorageSourceAccessor {
 	@Accessor("dir")
 	File retroapi$getDir();
 }
+#endif

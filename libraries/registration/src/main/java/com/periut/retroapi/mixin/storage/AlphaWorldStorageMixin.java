@@ -1,9 +1,10 @@
+#if MC_VER >= 140
 package com.periut.retroapi.mixin.storage;
 
 import com.periut.retroapi.registry.IdAssigner;
 import com.periut.retroapi.registry.RetroRegistry;
 import com.periut.retroapi.storage.SidecarManager;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 import net.fabricmc.loader.api.FabricLoader;
 #endif
 import net.minecraft.world.WorldData;
@@ -28,7 +29,7 @@ public class AlphaWorldStorageMixin {
 
 		File worldDir = ((WorldStorageAccessor) (Object) this).retroapi$getDir();
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		if (FabricLoader.getInstance().isModLoaded("stationapi")) {
 			LOGGER.info("StationAPI present, saving current ID map for world: {}", worldDir);
 			IdAssigner.saveCurrentIds(worldDir);
@@ -49,3 +50,4 @@ public class AlphaWorldStorageMixin {
 		SidecarManager.saveAll();
 	}
 }
+#endif

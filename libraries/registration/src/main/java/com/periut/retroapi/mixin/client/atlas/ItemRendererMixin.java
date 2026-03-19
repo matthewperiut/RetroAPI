@@ -6,7 +6,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.entity.ItemRenderer;
 import net.minecraft.entity.ItemEntity;
-#if MC_PRE_B1_6
+#if MC_VER < 160
 import net.minecraft.item.ItemStack;
 #endif
 import org.spongepowered.asm.mixin.Mixin;
@@ -39,7 +39,7 @@ public class ItemRendererMixin {
 
 	@Inject(
 		method = "render(Lnet/minecraft/entity/ItemEntity;DDDFF)V",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getSprite()I")
 #else
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getSprite()I"),
@@ -52,7 +52,7 @@ public class ItemRendererMixin {
 
 	@ModifyConstant(
 		method = "render(Lnet/minecraft/entity/ItemEntity;DDDFF)V",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(intValue = 256)
 #else
 		constant = @Constant(intValue = 256),
@@ -68,7 +68,7 @@ public class ItemRendererMixin {
 
 	@ModifyConstant(
 		method = "render(Lnet/minecraft/entity/ItemEntity;DDDFF)V",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(floatValue = 256.0F)
 #else
 		constant = @Constant(floatValue = 256.0F),
@@ -79,8 +79,8 @@ public class ItemRendererMixin {
 		return (float) retroapi$atlasSize;
 	}
 
-#if MC_B1_6_OR_LATER
-	// --- renderGuiItem: b1.6+ takes (TextRenderer, TextureManager, int, int, int, int, int) ---
+#if MC_VER >= 150
+	// --- renderGuiItem: b1.5+ takes (TextRenderer, TextureManager, int, int, int, int, int) ---
 
 	@Inject(
 		method = "renderGuiItem",
@@ -119,7 +119,7 @@ public class ItemRendererMixin {
 		return original;
 	}
 #else
-	// --- renderGuiItem: b1.4-b1.5 takes (TextRenderer, TextureManager, ItemStack, int, int) ---
+	// --- renderGuiItem: b1.4 takes (TextRenderer, TextureManager, ItemStack, int, int) ---
 
 	@Inject(
 		method = "renderGuiItem(Lnet/minecraft/client/render/TextRenderer;Lnet/minecraft/client/render/texture/TextureManager;Lnet/minecraft/item/ItemStack;II)V",
@@ -151,7 +151,7 @@ public class ItemRendererMixin {
 
 	@ModifyConstant(
 		method = "drawTexture",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(floatValue = 0.00390625F)
 #else
 		constant = @Constant(floatValue = 0.00390625F),

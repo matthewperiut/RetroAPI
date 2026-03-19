@@ -290,7 +290,6 @@ def getModuleDependencies(project, String... moduleNames) {
 	return modules
 }
 
-// Exclude Legacy Fabric LWJGL 2 wrapper (starac provides LWJGL 3)
 allprojects {
 //	configurations.configureEach {
 //		exclude group: 'org.lwjgl.lwjgl'

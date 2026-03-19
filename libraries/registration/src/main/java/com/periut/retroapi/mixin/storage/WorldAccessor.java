@@ -1,3 +1,4 @@
+#if MC_VER >= 140
 package com.periut.retroapi.mixin.storage;
 
 import net.minecraft.world.World;
@@ -10,3 +11,4 @@ public interface WorldAccessor {
 	@Accessor("storage")
 	WorldStorage retroapi$getStorage();
 }
+#endif

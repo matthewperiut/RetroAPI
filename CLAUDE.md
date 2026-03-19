@@ -127,7 +127,7 @@ Key version differences:
 | `BlockEntity.cancelRemoval()` | doesn't exist | exists |
 | `ItemInHandRenderer.render` | `(ItemStack)` | `(MobEntity, ItemStack)` |
 | `ItemRenderer.renderGuiItem` | `(TextRenderer, TextureManager, ItemStack, int, int)` | `(TextRenderer, TextureManager, int, int, int, int, int)` |
-| `BlockRenderer.renderAsItem` | `(Block, int)` | `(Block, int, float)` |
+| `BlockRenderer.renderAsItem` | `(Block, int)` | `(Block, int)` b1.6.x / `(Block, int, float)` b1.7+ |
 | `AchievementsScreen` | doesn't exist | exists |
 | `Block$Sounds` (access widener) | `Block$Sounds` | `Block__Sounds` |
 

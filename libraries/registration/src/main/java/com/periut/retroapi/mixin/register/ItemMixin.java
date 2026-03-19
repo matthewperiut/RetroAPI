@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.Shadow;
 @Mixin(Item.class)
 public abstract class ItemMixin implements RetroItemAccess {
 
-	@Shadow public abstract Item setMaxStackSize(int size);
+	@Shadow public int maxStackSize;
 	@Shadow public abstract Item setSprite(int sprite);
 
 	@Override
 	public RetroItemAccess maxStackSize(int size) {
-		this.setMaxStackSize(size);
+		this.maxStackSize = size;
 		return this;
 	}
 

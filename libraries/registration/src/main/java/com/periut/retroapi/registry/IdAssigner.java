@@ -32,7 +32,7 @@ public class IdAssigner {
 		idMap.save(idMapFile);
 	}
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 	public static void saveCurrentIds(File worldDir) {
 		File idMapFile = new File(worldDir, "retroapi/id_map.dat");
 		IdMap idMap = new IdMap();
@@ -173,7 +173,7 @@ public class IdAssigner {
 		int newSize = Block.BY_ID.length;
 		while (newSize <= minSize) newSize *= 2;
 		Block.BY_ID = Arrays.copyOf(Block.BY_ID, newSize);
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		Block.IS_SOLID_RENDER = Arrays.copyOf(Block.IS_SOLID_RENDER, newSize);
 #else
 		Block.IS_SOLID = Arrays.copyOf(Block.IS_SOLID, newSize);
@@ -183,7 +183,7 @@ public class IdAssigner {
 		Block.HAS_BLOCK_ENTITY = Arrays.copyOf(Block.HAS_BLOCK_ENTITY, newSize);
 		Block.TICKS_RANDOMLY = Arrays.copyOf(Block.TICKS_RANDOMLY, newSize);
 		Block.LIGHT = Arrays.copyOf(Block.LIGHT, newSize);
-#if MC_HAS_UPDATE_CLIENTS
+#if MC_VER >= 160
 		Block.UPDATE_CLIENTS = Arrays.copyOf(Block.UPDATE_CLIENTS, newSize);
 #endif
 		LOGGER.info("Grew block arrays to size {}", newSize);
@@ -202,7 +202,7 @@ public class IdAssigner {
 		// Clear old slot only if it's actually this block
 		if (oldId >= 0 && oldId < byId.length && byId[oldId] == block) {
 			byId[oldId] = null;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 			Block.IS_SOLID_RENDER[oldId] = false;
 #else
 			Block.IS_SOLID[oldId] = false;
@@ -212,14 +212,14 @@ public class IdAssigner {
 			Block.HAS_BLOCK_ENTITY[oldId] = false;
 			Block.TICKS_RANDOMLY[oldId] = false;
 			Block.LIGHT[oldId] = 0;
-#if MC_HAS_UPDATE_CLIENTS
+#if MC_VER >= 160
 			Block.UPDATE_CLIENTS[oldId] = false;
 #endif
 		}
 
 		// Set new slot
 		byId[newId] = block;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		Block.IS_SOLID_RENDER[newId] = block.isSolidRender();
 		Block.OPACITIES[newId] = block.isSolidRender() ? 255 : 0;
 #else

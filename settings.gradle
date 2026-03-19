@@ -21,8 +21,13 @@ rootProject.name = 'retroapi'
 // --- Libraries ---
 
 include ':libraries:registration'
-include ':libraries:registration:registration-mcb1.4-mcb1.5_01'
-include ':libraries:registration:registration-mcb1.6-mcb1.7.3'
+include ':libraries:registration:registration-mcb1.0-mcb1.1_02'
+include ':libraries:registration:registration-mcb1.2-mcb1.2_02'
+include ':libraries:registration:registration-mcb1.4-mcb1.4_01'
+include ':libraries:registration:registration-mcb1.5-mcb1.5_01'
+include ':libraries:registration:registration-mcb1.6-mcb1.6.6'
+include ':libraries:registration:registration-mcb1.7-mcb1.7.3'
+include ':libraries:registration:registration-mcb1.8-mcb1.8.1'
 
 include ':libraries:blockentity'
 include ':libraries:blockentity:blockentity-mcb1.4-mcb1.7.3'
@@ -31,7 +36,8 @@ include ':libraries:rendering'
 include ':libraries:rendering:rendering-mcb1.4-mcb1.7.3'
 
 include ':libraries:recipes'
-include ':libraries:recipes:recipes-mcb1.4-mcb1.7.3'
+include ':libraries:recipes:recipes-mcb1.0-mcb1.1_02'
+include ':libraries:recipes:recipes-mcb1.2-mcb1.7.3'
 
 include ':libraries:stationapi'
 include ':libraries:stationapi:stationapi-mcb1.7.3-mcb1.7.3'

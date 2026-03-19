@@ -5,7 +5,7 @@ import com.periut.retroapi.client.texture.AtlasExpander;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.client.render.ItemInHandRenderer;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 import net.minecraft.entity.mob.MobEntity;
 #endif
 import net.minecraft.item.ItemStack;
@@ -27,7 +27,7 @@ public class ItemInHandRendererMixin {
 	@Unique
 	private int retroapi$currentItemId = 0;
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 	// --- render(): 3D block check + atlas size for held items ---
 
 	@Inject(
@@ -124,7 +124,7 @@ public class ItemInHandRendererMixin {
 
 	@ModifyConstant(
 		method = "renderInWallEffect",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(floatValue = 256.0F)
 #else
 		constant = @Constant(floatValue = 256.0F),
@@ -144,7 +144,7 @@ public class ItemInHandRendererMixin {
 
 	@ModifyConstant(
 		method = "renderOnFireEffect",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(intValue = 240)
 #else
 		constant = @Constant(intValue = 240),
@@ -157,7 +157,7 @@ public class ItemInHandRendererMixin {
 
 	@ModifyConstant(
 		method = "renderOnFireEffect",
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		constant = @Constant(floatValue = 256.0F)
 #else
 		constant = @Constant(floatValue = 256.0F),

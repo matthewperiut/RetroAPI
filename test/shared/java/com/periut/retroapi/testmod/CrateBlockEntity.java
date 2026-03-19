@@ -72,6 +72,16 @@ public class CrateBlockEntity extends BlockEntity implements Inventory {
 	public void markDirty() {
 	}
 
+#if MC_VER >= 180
+	@Override
+	public void onOpen() {
+	}
+
+	@Override
+	public void onClose() {
+	}
+#endif
+
 	@Override
 	public void readNbt(NbtCompound nbt) {
 		super.readNbt(nbt);
@@ -83,7 +93,11 @@ public class CrateBlockEntity extends BlockEntity implements Inventory {
 			NbtCompound itemNbt = (NbtCompound) list.get(i);
 			int slot = itemNbt.getByte("Slot") & 0xFF;
 			if (slot < items.length) {
+#if MC_VER >= 180
+				items[slot] = ItemStack.fromNbt(itemNbt);
+#else
 				items[slot] = new ItemStack(itemNbt);
+#endif
 			}
 		}
 	}

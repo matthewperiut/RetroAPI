@@ -4,6 +4,9 @@ build/
 out/
 classes/
 
+# Compiled classes
+*.class
+
 # Quilt Loom
 remappedSrc/
 run/

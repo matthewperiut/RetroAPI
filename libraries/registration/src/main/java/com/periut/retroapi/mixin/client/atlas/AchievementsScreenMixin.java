@@ -1,4 +1,4 @@
-#if MC_HAS_ACHIEVEMENTS
+#if MC_VER >= 160
 package com.periut.retroapi.mixin.client.atlas;
 
 import com.periut.retroapi.client.texture.AtlasExpander;

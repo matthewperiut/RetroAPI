@@ -36,7 +36,11 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 	@Shadow public ChunkNibbleStorage skyLight;
 
 	@Shadow public abstract int getHeight(int x, int z);
+#if MC_VER >= 180
+	@Shadow private void lightGaps() {}
+#else
 	@Shadow private void lightGaps(int localX, int localZ) {}
+#endif
 	@Shadow private void lightGap(int x, int z, int height) {}
 
 	@Unique
@@ -90,7 +94,11 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 			int worldZ = chunkZ * 16 + z;
 			world.updateLight(LightType.SKY, worldX, y, worldZ, worldX, y, worldZ);
 			world.updateLight(LightType.BLOCK, worldX, y, worldZ, worldX, y, worldZ);
+			#if MC_VER >= 180
+			lightGaps();
+#else
 			lightGaps(x, z);
+#endif
 
 			// Call onAdded for the new block
 			Block newBlock = Block.BY_ID[rawId];
@@ -151,7 +159,11 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 			int worldZ = chunkZ * 16 + z;
 			world.updateLight(LightType.SKY, worldX, y, worldZ, worldX, y, worldZ);
 			world.updateLight(LightType.BLOCK, worldX, y, worldZ, worldX, y, worldZ);
+			#if MC_VER >= 180
+			lightGaps();
+#else
 			lightGaps(x, z);
+#endif
 
 			// Call onAdded for the new block
 			Block newBlock = Block.BY_ID[rawId];
@@ -194,7 +206,7 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 			be.x = chunkX * 16 + x;
 			be.y = y;
 			be.z = chunkZ * 16 + z;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 170
 			be.cancelRemoval();
 #endif
 			blockEntities.put(new BlockPos(x, y, z), be);
@@ -207,7 +219,7 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 		BlockPos pos = new BlockPos(x, y, z);
 		BlockEntity existing = blockEntities.get(pos);
 		if (existing != null) {
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 170
 			if (existing.isRemoved()) {
 				blockEntities.remove(pos);
 				cir.setReturnValue(null);
@@ -292,7 +304,11 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 				int localX = hmIndex & 15;
 				int localZ = hmIndex >> 4;
 				retroapi$recalculateColumnSkyLight(localX, localZ);
+#if MC_VER >= 180
+				lightGaps();
+#else
 				lightGaps(localX, localZ);
+#endif
 			}
 		}
 	}

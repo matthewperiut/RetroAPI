@@ -2,6 +2,17 @@ package com.periut.retroapi.mixin.storage;
 
 import com.periut.retroapi.storage.ChunkExtendedBlocks;
 import com.periut.retroapi.storage.ExtendedBlocksAccess;
+#if MC_VER < 140
+import com.periut.retroapi.registry.IdAssigner;
+import com.periut.retroapi.registry.RetroRegistry;
+import com.periut.retroapi.storage.SidecarManager;
+import net.minecraft.util.ProgressListener;
+import net.minecraft.world.dimension.Dimension;
+import org.spongepowered.asm.mixin.Unique;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import java.io.File;
+#endif
 import net.minecraft.block.Block;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.World;
@@ -9,7 +20,7 @@ import net.minecraft.world.chunk.WorldChunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-#if MC_HAS_UPDATE_CLIENTS
+#if MC_VER >= 160
 import org.spongepowered.asm.mixin.injection.Constant;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 #endif
@@ -22,6 +33,13 @@ import java.util.Set;
 
 @Mixin(World.class)
 public abstract class WorldMixin {
+#if MC_VER < 140
+	private static final Logger LOGGER = LogManager.getLogger("RetroAPI");
+
+	@Shadow
+	public File saveDir;
+#endif
+
 	@Shadow
 	public Random random;
 
@@ -31,7 +49,30 @@ public abstract class WorldMixin {
 	@Shadow
 	public abstract WorldChunk getChunkAt(int chunkX, int chunkZ);
 
-#if MC_HAS_UPDATE_CLIENTS
+#if MC_VER < 140
+	@Inject(method = "<init>(Ljava/io/File;Ljava/lang/String;JLnet/minecraft/world/dimension/Dimension;)V", at = @At("TAIL"))
+	private void retroapi$assignIdsOnWorldInit(File dir, String saveName, long seed, Dimension dimension, CallbackInfo ci) {
+		retroapi$initWorldStorage();
+	}
+
+	@Unique
+	private void retroapi$initWorldStorage() {
+		if (RetroRegistry.getBlocks().isEmpty() && RetroRegistry.getItems().isEmpty()) return;
+		if (this.saveDir == null) return;
+		if (this.saveDir.equals(SidecarManager.getWorldDir())) return;
+
+		SidecarManager.setWorldDir(this.saveDir);
+		LOGGER.info("Assigning IDs for world: {}", this.saveDir);
+		IdAssigner.assignIds(this.saveDir);
+	}
+
+	@Inject(method = "save(ZLnet/minecraft/util/ProgressListener;)V", at = @At("RETURN"))
+	private void retroapi$onWorldSave(boolean saveEntities, ProgressListener listener, CallbackInfo ci) {
+		SidecarManager.saveAll();
+	}
+#endif
+
+#if MC_VER >= 160
 	@ModifyConstant(method = "setBlockMetadata(IIII)V", constant = @Constant(intValue = 255))
 	private int retroapi$widenUpdateClientsIndex(int original) {
 		return 0xFFF;

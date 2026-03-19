@@ -280,22 +280,30 @@ public class InventorySidecar {
 
 				ItemStack stack = new ItemStack(numericId, count, damage);
 
-				// Try original slot first
-				if (slot < inv.getSize() && inv.getItem(slot) == null) {
-					inv.setItem(slot, stack);
-				} else {
-					// Find next free slot
-					boolean placed = false;
-					for (int s = 0; s < inv.getSize(); s++) {
-						if (inv.getItem(s) == null) {
-							inv.setItem(s, stack);
-							placed = true;
-							break;
+				// Temporarily null out world to prevent markDirty from triggering
+				// recursive chunk loading during restore (b1.8+ markDirty accesses world)
+				World beWorld = be.world;
+				be.world = null;
+				try {
+					// Try original slot first
+					if (slot < inv.getSize() && inv.getItem(slot) == null) {
+						inv.setItem(slot, stack);
+					} else {
+						// Find next free slot
+						boolean placed = false;
+						for (int s = 0; s < inv.getSize(); s++) {
+							if (inv.getItem(s) == null) {
+								inv.setItem(s, stack);
+								placed = true;
+								break;
+							}
+						}
+						if (!placed) {
+							LOGGER.warn("No free slot for {} at {},{},{} - discarding", stringId, bx, by, bz);
 						}
 					}
-					if (!placed) {
-						LOGGER.warn("No free slot for {} at {},{},{} - discarding", stringId, bx, by, bz);
-					}
+				} finally {
+					be.world = beWorld;
 				}
 			}
 		}

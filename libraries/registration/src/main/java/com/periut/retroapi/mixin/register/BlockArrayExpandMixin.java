@@ -16,7 +16,7 @@ public class BlockArrayExpandMixin {
 	private static void retroapi$expandArrays(CallbackInfo ci) {
 		if (Block.BY_ID.length < EXPANDED_SIZE) {
 			Block.BY_ID = Arrays.copyOf(Block.BY_ID, EXPANDED_SIZE);
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 			Block.IS_SOLID_RENDER = Arrays.copyOf(Block.IS_SOLID_RENDER, EXPANDED_SIZE);
 #else
 			Block.IS_SOLID = Arrays.copyOf(Block.IS_SOLID, EXPANDED_SIZE);
@@ -26,7 +26,7 @@ public class BlockArrayExpandMixin {
 			Block.HAS_BLOCK_ENTITY = Arrays.copyOf(Block.HAS_BLOCK_ENTITY, EXPANDED_SIZE);
 			Block.TICKS_RANDOMLY = Arrays.copyOf(Block.TICKS_RANDOMLY, EXPANDED_SIZE);
 			Block.LIGHT = Arrays.copyOf(Block.LIGHT, EXPANDED_SIZE);
-#if MC_HAS_UPDATE_CLIENTS
+#if MC_VER >= 160
 			Block.UPDATE_CLIENTS = Arrays.copyOf(Block.UPDATE_CLIENTS, EXPANDED_SIZE);
 #endif
 		}

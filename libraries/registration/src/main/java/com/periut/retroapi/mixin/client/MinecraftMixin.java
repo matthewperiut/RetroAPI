@@ -1,3 +1,4 @@
+#if MC_VER >= 140
 package com.periut.retroapi.mixin.client;
 
 import com.periut.retroapi.client.screen.StationAPIWorldScreen;
@@ -49,13 +50,24 @@ public abstract class MinecraftMixin extends Screen {
 						if (name == null || name.trim().isEmpty()) {
 							name = "World " + (i + 1);
 						}
-						this.saves.set(i, new WorldSaveInfo(
+	#if MC_VER >= 180
+					this.saves.set(i, new WorldSaveInfo(
+							info.getSaveName(),
+							"\u00a7c[StationAPI] \u00a7r" + name,
+							info.getLastPlayed(),
+							info.getSize(),
+							info.getGameMode(),
+							true
+						));
+#else
+					this.saves.set(i, new WorldSaveInfo(
 							info.getSaveName(),
 							"\u00a7c[StationAPI] \u00a7r" + name,
 							info.getLastPlayed(),
 							info.getSize(),
 							true
 						));
+#endif
 					}
 				} catch (Exception e) {
 					LOGGER.error("Failed to read level.dat for StationAPI detection", e);
@@ -90,3 +102,4 @@ public abstract class MinecraftMixin extends Screen {
 		}
 	}
 }
+#endif

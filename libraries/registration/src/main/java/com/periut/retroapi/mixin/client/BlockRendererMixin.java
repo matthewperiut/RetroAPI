@@ -22,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Environment(EnvType.CLIENT)
 public class BlockRendererMixin implements RetroBlockRendererAccess {
 	@Shadow private WorldView world;
+#if MC_VER >= 140
 	@Shadow private boolean ambientOcclusion;
 	@Shadow private float vertex1R;
 	@Shadow private float vertex1G;
@@ -35,19 +36,24 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 	@Shadow private float vertex4R;
 	@Shadow private float vertex4G;
 	@Shadow private float vertex4B;
+#endif
 
 	@Override
 	public void retroapi$setupSmoothFace(float v1, float v2, float v3, float v4, float shade) {
+#if MC_VER >= 140
 		this.ambientOcclusion = true;
 		this.vertex1R = this.vertex1G = this.vertex1B = shade * v1;
 		this.vertex2R = this.vertex2G = this.vertex2B = shade * v2;
 		this.vertex3R = this.vertex3G = this.vertex3B = shade * v3;
 		this.vertex4R = this.vertex4G = this.vertex4B = shade * v4;
+#endif
 	}
 
 	@Override
 	public void retroapi$cleanupSmoothFace() {
+#if MC_VER >= 140
 		this.ambientOcclusion = false;
+#endif
 	}
 
 	// --- Custom render type handling ---
@@ -68,10 +74,15 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 	}
 
 	@Inject(method = "renderAsItem", at = @At("HEAD"), cancellable = true)
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 170
 	private void retroapi$handleCustomRenderAsItem(Block block, int metadata, float brightness, CallbackInfo ci) {
-#else
+#elif MC_VER >= 120
 	private void retroapi$handleCustomRenderAsItem(Block block, int metadata, CallbackInfo ci) {
+#else
+	private void retroapi$handleCustomRenderAsItem(Block block, CallbackInfo ci) {
+#endif
+#if MC_VER < 120
+		int metadata = 0;
 #endif
 		int type = block.getRenderType();
 		if (RenderType.isCustom(type)) {

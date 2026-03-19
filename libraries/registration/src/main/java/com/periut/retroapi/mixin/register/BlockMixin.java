@@ -7,7 +7,7 @@ import com.periut.retroapi.register.block.RetroTexture;
 import com.periut.retroapi.register.block.RetroTextures;
 import com.periut.retroapi.register.blockentity.RetroBlockEntityType;
 import com.periut.retroapi.register.rendertype.RenderType;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 import com.periut.retroapi.compat.StationAPICompat;
 #endif
 import com.periut.retroapi.registry.BlockRegistration;
@@ -91,7 +91,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	public RetroBlockAccess nonOpaque() {
 		this.retroapi$solidRenderSet = true;
 		this.retroapi$solidRender = false;
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		Block.IS_SOLID_RENDER[this.id] = false;
 #else
 		Block.IS_SOLID[this.id] = false;
@@ -145,7 +145,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		Block self = (Block) (Object) this;
 		self.setKey(id.namespace() + "." + id.identifier());
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 		boolean hasStationAPI = FabricLoader.getInstance().isModLoaded("stationapi");
 
 		BlockItem blockItem = null;
@@ -168,7 +168,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 
 	// --- Mixin injections ---
 
-#if MC_B1_6_OR_LATER
+#if MC_VER >= 160
 	@Inject(method = "isSolidRender", at = @At("HEAD"), cancellable = true, require = 0)
 #else
 	@Inject(method = "isSolid", at = @At("HEAD"), cancellable = true)

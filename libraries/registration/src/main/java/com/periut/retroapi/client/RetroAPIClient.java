@@ -8,7 +8,9 @@ import com.periut.retroapi.registry.IdAssigner;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.inventory.Inventory;
 import net.ornithemc.osl.entrypoints.api.client.ClientModInitializer;
+#if MC_VER != 131
 import net.ornithemc.osl.lifecycle.api.client.MinecraftClientEvents;
+#endif
 import net.ornithemc.osl.networking.api.client.ClientPlayNetworking;
 
 public class RetroAPIClient implements ClientModInitializer {
@@ -38,9 +40,13 @@ public class RetroAPIClient implements ClientModInitializer {
 
 		boolean hasStationAPI = FabricLoader.getInstance().isModLoaded("stationapi");
 
+#if MC_VER != 131
 		MinecraftClientEvents.READY.register(minecraft -> {
 			LangLoader.loadTranslations();
 		});
+#else
+		LangLoader.loadTranslations();
+#endif
 
 		if (!hasStationAPI) {
 			ClientPlayNetworking.registerListener(RetroAPINetworking.ID_SYNC_CHANNEL, (ctx, buffer) -> {

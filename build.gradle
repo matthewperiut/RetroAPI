@@ -137,7 +137,7 @@ def setUpLibrary(project) {
 
 /**
  * Sets up a version-specific module (with Loom, MC dependency, mappings, etc.).
- * @param dependencies - module names like 'blockentity-mcb1.4-mcb1.7.3' that this module depends on
+ * @param dependencies - module names like 'blockentity-mcb1.0-mcb1.7.3' that this module depends on
  */
 def setUpModule(project, String... dependencies) {
 	def library = project.parent

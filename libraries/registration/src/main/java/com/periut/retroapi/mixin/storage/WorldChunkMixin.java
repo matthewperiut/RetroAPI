@@ -199,9 +199,10 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 		Block block = Block.BY_ID[blockId];
 		if (block == null) return;
 
-		// For non-BlockWithBlockEntity blocks that have HAS_BLOCK_ENTITY set (RetroAPI blocks),
+		// For non-BlockWithBlockEntity blocks that are RetroAPI blocks with block entities,
 		// bypass the vanilla instanceof check and store the BE directly
-		if (!(block instanceof BlockWithBlockEntity) && Block.HAS_BLOCK_ENTITY[blockId]) {
+		if (!(block instanceof BlockWithBlockEntity)
+			&& (Block.HAS_BLOCK_ENTITY[blockId] || RetroRegistry.getBlockRegistration(block) != null)) {
 			be.world = world;
 			be.x = chunkX * 16 + x;
 			be.y = y;

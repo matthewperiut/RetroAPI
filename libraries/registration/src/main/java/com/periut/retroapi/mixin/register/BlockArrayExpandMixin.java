@@ -29,6 +29,9 @@ public class BlockArrayExpandMixin {
 #if MC_VER >= 160
 			Block.UPDATE_CLIENTS = Arrays.copyOf(Block.UPDATE_CLIENTS, EXPANDED_SIZE);
 #endif
+#if MC_VER >= 190
+			Block.USES_NEIGHBOR_LIGHT = Arrays.copyOf(Block.USES_NEIGHBOR_LIGHT, EXPANDED_SIZE);
+#endif
 		}
 	}
 }

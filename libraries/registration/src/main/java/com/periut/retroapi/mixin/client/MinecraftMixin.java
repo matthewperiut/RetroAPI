@@ -50,7 +50,17 @@ public abstract class MinecraftMixin extends Screen {
 						if (name == null || name.trim().isEmpty()) {
 							name = "World " + (i + 1);
 						}
-	#if MC_VER >= 180
+	#if MC_VER >= 190
+					this.saves.set(i, new WorldSaveInfo(
+							info.getSaveName(),
+							"\u00a7c[StationAPI] \u00a7r" + name,
+							info.getLastPlayed(),
+							0L,
+							info.getGameMode(),
+							info.isSameVersion(),
+							true
+						));
+#elif MC_VER >= 180
 					this.saves.set(i, new WorldSaveInfo(
 							info.getSaveName(),
 							"\u00a7c[StationAPI] \u00a7r" + name,

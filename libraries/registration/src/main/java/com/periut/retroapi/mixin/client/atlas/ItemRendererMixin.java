@@ -35,6 +35,7 @@ public class ItemRendererMixin {
 	)
 	private void retroapi$captureItemIdForRender(ItemEntity itemEntity, double d, double e, double f, float g, float h, CallbackInfo ci) {
 		retroapi$currentItemId = itemEntity.item.id;
+		retroapi$atlasSize = 256;
 	}
 
 	@Inject(
@@ -66,18 +67,32 @@ public class ItemRendererMixin {
 		return original;
 	}
 
+#if MC_VER >= 190
+	@ModifyConstant(
+		method = "render(II)V",
+		constant = @Constant(floatValue = 256.0F)
+	)
+	private float retroapi$fixRenderDivisor(float original) {
+		return retroapi$atlasSize != 256 ? (float) retroapi$atlasSize : original;
+	}
+#elif MC_VER >= 160
 	@ModifyConstant(
 		method = "render(Lnet/minecraft/entity/ItemEntity;DDDFF)V",
-#if MC_VER >= 160
 		constant = @Constant(floatValue = 256.0F)
-#else
-		constant = @Constant(floatValue = 256.0F),
-		require = 0
-#endif
 	)
 	private float retroapi$fixRenderDivisor(float original) {
 		return (float) retroapi$atlasSize;
 	}
+#else
+	@ModifyConstant(
+		method = "render(Lnet/minecraft/entity/ItemEntity;DDDFF)V",
+		constant = @Constant(floatValue = 256.0F),
+		require = 0
+	)
+	private float retroapi$fixRenderDivisor(float original) {
+		return (float) retroapi$atlasSize;
+	}
+#endif
 
 #if MC_VER >= 150
 	// --- renderGuiItem: b1.5+ takes (TextRenderer, TextureManager, int, int, int, int, int) ---

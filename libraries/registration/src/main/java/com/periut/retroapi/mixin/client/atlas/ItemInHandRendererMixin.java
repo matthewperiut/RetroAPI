@@ -27,8 +27,46 @@ public class ItemInHandRendererMixin {
 	@Unique
 	private int retroapi$currentItemId = 0;
 
-#if MC_VER >= 160
-	// --- render(): 3D block check + atlas size for held items ---
+#if MC_VER >= 190
+	// --- render(): b1.9+ takes (MobEntity, ItemStack, int) ---
+
+	@Inject(
+		method = "render(Lnet/minecraft/entity/mob/MobEntity;Lnet/minecraft/item/ItemStack;I)V",
+		at = @At("HEAD")
+	)
+	private void retroapi$captureItemId(MobEntity mob, ItemStack itemInHand, int transformType, CallbackInfo ci) {
+		retroapi$currentItemId = itemInHand != null ? itemInHand.id : 0;
+		retroapi$atlasSize = RetroAPI.isBlock(retroapi$currentItemId) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
+	}
+
+	@ModifyConstant(
+		method = "render(Lnet/minecraft/entity/mob/MobEntity;Lnet/minecraft/item/ItemStack;I)V",
+		constant = @Constant(intValue = 256)
+	)
+	private int retroapi$fixBlockCheck(int original) {
+		if (RetroAPI.isBlock(retroapi$currentItemId)) {
+			return retroapi$currentItemId + 1;
+		}
+		return original;
+	}
+
+	@ModifyConstant(
+		method = "render(Lnet/minecraft/entity/mob/MobEntity;Lnet/minecraft/item/ItemStack;I)V",
+		constant = @Constant(floatValue = 256.0F)
+	)
+	private float retroapi$fixRenderDivisor(float original) {
+		return retroapi$atlasSize != 256 ? (float) retroapi$atlasSize : original;
+	}
+
+	@ModifyConstant(
+		method = "draw",
+		constant = @Constant(floatValue = 0.001953125F)
+	)
+	private float retroapi$fixEdgeBias(float original) {
+		return retroapi$atlasSize != 256 ? 0.5F / retroapi$atlasSize : original;
+	}
+#elif MC_VER >= 160
+	// --- render(): b1.6-b1.8 takes (MobEntity, ItemStack) ---
 
 	@Inject(
 		method = "render(Lnet/minecraft/entity/mob/MobEntity;Lnet/minecraft/item/ItemStack;)V",

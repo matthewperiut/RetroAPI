@@ -1,0 +1,17 @@
+{
+	"schemaVersion": 1,
+	"id": "retroapi-blockentity",
+	"version": "${version}",
+	"name": "RetroAPI Block Entity",
+	"description": "Block entity types, menus, and sync fields.",
+	"authors": ["periut"],
+	"license": "MIT",
+	"environment": "*",
+	"mixins": [
+		"retroapi.blockentity.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": ">=1.0.0-beta.8 <=1.0.0-beta.8.1"
+	}
+}

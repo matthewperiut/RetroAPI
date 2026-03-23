@@ -24,7 +24,14 @@ public class BlockRendererAtlasMixin {
 			"tesselateLiquid",
 			"tesselateBottomFace", "tesselateTopFace",
 			"tesselateNorthFace", "tesselateSouthFace",
-			"tesselateWestFace", "tesselateEastFace"
+			"tesselateWestFace", "tesselateEastFace",
+#if MC_VER >= 180
+			"tesselateStem(Lnet/minecraft/block/Block;IDDDD)V",
+			"tesselateConnectedStem", "tesselatePaneBlock", "tesselateVine", "tesselateFenceGate",
+#endif
+#if MC_VER >= 190
+			"tesselateLilyPad", "tesselateCauldron", "tesselateBrewingStand", "tesselateEndPortalFrame",
+#endif
 		},
 		constant = @Constant(intValue = 240)
 	)
@@ -44,7 +51,14 @@ public class BlockRendererAtlasMixin {
 			"tesselateLiquid",
 			"tesselateBottomFace", "tesselateTopFace",
 			"tesselateNorthFace", "tesselateSouthFace",
-			"tesselateWestFace", "tesselateEastFace"
+			"tesselateWestFace", "tesselateEastFace",
+#if MC_VER >= 180
+			"tesselateStem(Lnet/minecraft/block/Block;IDDDD)V",
+			"tesselateConnectedStem", "tesselatePaneBlock", "tesselateVine", "tesselateFenceGate",
+#endif
+#if MC_VER >= 190
+			"tesselateLilyPad", "tesselateCauldron", "tesselateBrewingStand", "tesselateEndPortalFrame",
+#endif
 		},
 		constant = @Constant(doubleValue = 256.0)
 	)
@@ -64,7 +78,14 @@ public class BlockRendererAtlasMixin {
 			"tesselateLiquid",
 			"tesselateBottomFace", "tesselateTopFace",
 			"tesselateNorthFace", "tesselateSouthFace",
-			"tesselateWestFace", "tesselateEastFace"
+			"tesselateWestFace", "tesselateEastFace",
+#if MC_VER >= 180
+			"tesselateStem(Lnet/minecraft/block/Block;IDDDD)V",
+			"tesselateConnectedStem", "tesselatePaneBlock", "tesselateVine", "tesselateFenceGate",
+#endif
+#if MC_VER >= 190
+			"tesselateLilyPad", "tesselateCauldron", "tesselateBrewingStand", "tesselateEndPortalFrame",
+#endif
 		},
 		constant = @Constant(floatValue = 256.0F)
 	)

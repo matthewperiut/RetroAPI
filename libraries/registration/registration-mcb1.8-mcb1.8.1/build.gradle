@@ -1,4 +1,4 @@
-setUpModule(project, 'blockentity-mcb1.4-mcb1.7.3', 'rendering-mcb1.4-mcb1.7.3')
+setUpModule(project, 'blockentity-mcb1.8-mcb1.8.1', 'rendering-mcb1.8-mcb1.8.1')
 
 loom {
 	accessWidenerPath = file("src/main/resources/retroapi.registration.accesswidener")

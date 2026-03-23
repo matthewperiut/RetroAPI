@@ -219,7 +219,7 @@ public class InventorySidecar {
 
 				// Check for existing vanilla block entity at this position
 				BlockPos pos = new BlockPos(localX, by, localZ);
-				BlockEntity existing = chunk.blockEntities.get(pos);
+				BlockEntity existing = (BlockEntity) chunk.blockEntities.get(pos);
 				if (existing != null) {
 					// Vanilla block entity here - don't overwrite, keep data for next load
 					deferredBEs.addElement(beNbt);

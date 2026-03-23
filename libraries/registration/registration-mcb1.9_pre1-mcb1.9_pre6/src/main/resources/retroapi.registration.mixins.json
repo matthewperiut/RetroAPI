@@ -1,0 +1,48 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.periut.retroapi.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"plugin": "com.periut.retroapi.mixin.RetroAPIMixinPlugin",
+	"mixins": [
+		"register.BlockArrayExpandMixin",
+		"register.StatsExpandMixin",
+		"register.BlockMixin",
+		"register.ItemMixin",
+		"register.ItemStackMixin",
+		"network.BlockUpdatePacketMixin",
+		"network.BlocksUpdatePacketMixin",
+		"network.WorldChunkPacketMixin",
+		"storage.AlphaWorldStorageMixin",
+		"storage.ChunkStorageMixin",
+		"storage.RegionWorldStorageSourceAccessor",
+		"storage.WorldAccessor",
+		"storage.WorldChunkMixin",
+		"storage.WorldMixin",
+		"storage.WorldStorageAccessor",
+		"client.LanguageAccessor"
+	],
+	"client": [
+		"client.BlockRendererMixin",
+		"client.ClientNetworkHandlerMixin",
+		"client.ClientPlayerInteractionManagerMixin",
+		"client.MinecraftAccessor",
+		"client.MinecraftMixin",
+		"client.PlayerRendererMixin",
+		"client.WorldRendererMixin",
+		"client.atlas.AchievementsScreenMixin",
+		"client.atlas.BlockParticleMixin",
+		"client.atlas.BlockRendererAtlasMixin",
+		"client.atlas.ItemInHandRendererMixin",
+		"client.atlas.ItemRendererMixin",
+		"client.atlas.TextureManagerMixin"
+	],
+	"server": [
+		"network.ChunkSendMixin",
+		"network.ServerPlayerEntityAccessor",
+		"network.ServerPlayerInteractionManagerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

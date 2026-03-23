@@ -1,0 +1,9 @@
+setUpModule(project, 'registration-mcb1.7-mcb1.7.3')
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-AMC_VER=173']
+}
+
+dependencies {
+	modCompileOnly("net.modificationstation:StationAPI:${project.rootProject.stapi_version}")
+}

@@ -1,0 +1,26 @@
+{
+	"schemaVersion": 1,
+	"id": "retroapi-stationapi",
+	"version": "${version}",
+	"name": "RetroAPI StationAPI Compat",
+	"description": "StationAPI compatibility bridge for b1.7.3.",
+	"authors": ["periut"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"stationapi:event_bus": [
+			"com.periut.retroapi.compat.StationAPIRegistryForwarder"
+		]
+	},
+	"mixins": [
+		"retroapi.stationapi.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "1.0.0-beta.7.3",
+		"retroapi-registration": ">=1.0.0"
+	},
+	"suggests": {
+		"stationapi": ">=2.0.0-alpha.5"
+	}
+}

@@ -1,0 +1,21 @@
+setUpModule(project, 'rendering-mc1.0.0-mc1.0.0')
+
+loom {
+	accessWidenerPath = file("src/main/resources/retroapi.registration.accesswidener")
+	mods {
+		"retroapi-registration" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-AMC_VER=200']
+}
+
+dependencies {
+	include "io.netty:netty-buffer:4.1.77.Final"
+	include "io.netty:netty-common:4.1.77.Final"
+
+	modCompileOnly("net.modificationstation:StationAPI:${project.rootProject.stapi_version}")
+}

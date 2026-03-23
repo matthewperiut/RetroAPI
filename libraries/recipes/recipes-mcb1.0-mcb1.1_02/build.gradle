@@ -1,0 +1,5 @@
+setUpModule(project, 'registration-mcb1.0-mcb1.1_02')
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-AMC_VER=112']
+}

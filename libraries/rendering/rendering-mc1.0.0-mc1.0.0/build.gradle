@@ -1,0 +1,5 @@
+setUpModule(project)
+
+tasks.withType(JavaCompile).configureEach {
+	options.compilerArgs += ['-AMC_VER=200']
+}

@@ -1,0 +1,14 @@
+{
+	"schemaVersion": 1,
+	"id": "retroapi",
+	"version": "${version}",
+	"name": "RetroAPI",
+	"description": "Block, Item, and Recipe registration API for legacy Minecraft.",
+	"authors": ["periut"],
+	"license": "MIT",
+	"environment": "*",
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "*"
+	}
+}

@@ -129,7 +129,7 @@ Key version differences:
 | `ItemRenderer.renderGuiItem` | `(TextRenderer, TextureManager, ItemStack, int, int)` | `(TextRenderer, TextureManager, int, int, int, int, int)` |
 | `BlockRenderer.renderAsItem` | `(Block, int)` | `(Block, int)` b1.6.x / `(Block, int, float)` b1.7+ |
 | `AchievementsScreen` | doesn't exist | exists |
-| `Block$Sounds` (access widener) | `Block$Sounds` | `Block__Sounds` |
+| `Block$Sounds` (access widener) | `Block$Sounds` | `Block$Sounds` |
 
 ### Adding a New Version Range
 1. Create `libraries/{module}/{module}-mc{min}-mc{max}/` with `build.gradle`, `gradle.properties`
@@ -215,7 +215,7 @@ Located in `test/`. Shared source in `test/shared/`, per-version runners in `tes
 
 ## Access Widener
 
-Each registration version module has its own `retroapi.registration.accesswidener` — makes Block/Item fields mutable, Block constructor accessible, and Block static arrays accessible + mutable for runtime expansion. Also exposes BlockItem.block field. Field names differ between versions (e.g. `IS_SOLID` in b1.4 vs `IS_SOLID_RENDER` in b1.6+, `Block$Sounds` in b1.4 vs `Block__Sounds` in b1.7.3).
+Each registration version module has its own `retroapi.registration.accesswidener` — makes Block/Item fields mutable, Block constructor accessible, and Block static arrays accessible + mutable for runtime expansion. Also exposes BlockItem.block field. Field names differ between versions (e.g. `IS_SOLID` in b1.4 vs `IS_SOLID_RENDER` in b1.6+, `Block$Sounds` in b1.4 vs `Block$Sounds` in b1.7.3).
 
 ## Important Implementation Notes
 

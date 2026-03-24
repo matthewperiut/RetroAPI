@@ -32,7 +32,7 @@ mutable field net/minecraft/stat/Stats BLOCKS_MINED [Lnet/minecraft/stat/Stat;
 accessible method net/minecraft/block/Block <init> (ILnet/minecraft/block/material/Material;)V
 
 # Block protected methods
-accessible method net/minecraft/block/Block setSounds (Lnet/minecraft/block/Block__Sounds;)Lnet/minecraft/block/Block;
+accessible method net/minecraft/block/Block setSounds (Lnet/minecraft/block/Block$Sounds;)Lnet/minecraft/block/Block;
 accessible method net/minecraft/block/Block setStrength (F)Lnet/minecraft/block/Block;
 accessible method net/minecraft/block/Block setBlastResistance (F)Lnet/minecraft/block/Block;
 accessible method net/minecraft/block/Block setLight (F)Lnet/minecraft/block/Block;

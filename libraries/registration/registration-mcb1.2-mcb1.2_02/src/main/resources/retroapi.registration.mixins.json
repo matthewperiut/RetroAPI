@@ -9,6 +9,7 @@
 		"register.BlockMixin",
 		"register.ItemMixin",
 		"register.ItemStackMixin",
+		"register.PlayerEntityMixin",
 		"network.BlockUpdatePacketMixin",
 		"network.BlocksUpdatePacketMixin",
 		"network.WorldChunkPacketMixin",

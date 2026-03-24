@@ -3,14 +3,12 @@ package com.periut.retroapi.testmod;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifiers;
 import com.periut.retroapi.register.block.RetroBlockAccess;
-import com.periut.retroapi.register.blockentity.RetroBlockEntityType;
-import com.periut.retroapi.register.blockentity.RetroMenu;
 import com.periut.retroapi.register.item.RetroItemAccess;
 import com.periut.retroapi.register.recipe.RetroRecipes;
 import com.periut.retroapi.register.rendertype.RenderType;
 import com.periut.retroapi.register.rendertype.RenderTypes;
+import net.minecraft.item.PickaxeItem;
 import net.minecraft.block.Block;
-import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.material.Material;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -29,18 +27,6 @@ public class TestMod implements ModInitializer {
 		}
 	);
 
-	public static final RetroBlockEntityType<CrateBlockEntity> CRATE_TYPE =
-		new RetroBlockEntityType<>(
-			NamespacedIdentifiers.from("retroapi_test", "crate"),
-			CrateBlockEntity.class, CrateBlockEntity::new
-		);
-
-	public static final RetroBlockEntityType<FreezerBlockEntity> FREEZER_TYPE =
-		new RetroBlockEntityType<>(
-			NamespacedIdentifiers.from("retroapi_test", "freezer"),
-			FreezerBlockEntity.class, FreezerBlockEntity::new
-		);
-
 	public static final int BLOCK_COUNT = 200;
 	public static final Block[] BLOCKS = new Block[BLOCK_COUNT];
 	public static final int ITEM_COUNT = 200;
@@ -49,8 +35,6 @@ public class TestMod implements ModInitializer {
 	public static Block TEST_BLOCK;
 	public static Block COLOR_BLOCK;
 	public static Block PIPE_BLOCK;
-	public static Block CRATE_BLOCK;
-	public static Block FREEZER_BLOCK;
 	public static Item TEST_ITEM;
 
 	private static NamespacedIdentifier id(String name) {
@@ -71,6 +55,8 @@ public class TestMod implements ModInitializer {
 			.sounds(Block.STONE_SOUNDS)
 			.strength(1.5f, 10.0f)
 			.renderType(RenderTypes.BLOCK)
+			.alwaysEffectiveTool()
+			.alwaysDrops()
 			.register(id("color_block"));
 
 		PIPE_BLOCK = RetroBlockAccess.create(Material.STONE)
@@ -81,35 +67,6 @@ public class TestMod implements ModInitializer {
 			.renderType(PIPE_RENDER_TYPE)
 			.sprite(4)
 			.register(id("pipe"));
-
-		CRATE_BLOCK = RetroBlockAccess.create(Material.WOOD)
-			.sounds(Block.WOOD_SOUNDS)
-			.strength(2.5f)
-			.texture(id("crate"))
-			.blockEntity(CRATE_TYPE)
-			.activated((world, x, y, z, player) -> {
-				BlockEntity be = world.getBlockEntity(x, y, z);
-				if (be instanceof CrateBlockEntity crate) {
-					crate.openCount++;
-					RetroMenu.open(player, new CrateMenu(player.inventory, crate));
-				}
-				return true;
-			})
-			.register(id("crate"));
-
-		FREEZER_BLOCK = RetroBlockAccess.create(Material.STONE)
-			.sounds(Block.STONE_SOUNDS)
-			.strength(3.5f)
-			.texture(id("freezer"))
-			.blockEntity(FREEZER_TYPE)
-			.activated((world, x, y, z, player) -> {
-				BlockEntity be = world.getBlockEntity(x, y, z);
-				if (be instanceof FreezerBlockEntity freezer) {
-					RetroMenu.open(player, new FreezerMenu(player.inventory, freezer), RetroMenu.MENU_FURNACE);
-				}
-				return true;
-			})
-			.register(id("freezer"));
 
 		TEST_ITEM = RetroItemAccess.create()
 			.maxStackSize(64)
@@ -132,6 +89,6 @@ public class TestMod implements ModInitializer {
 
 		RetroRecipes.addShaped(new ItemStack(Block.PLANKS), "SSS", "SSS", "SSS", 'S', new ItemStack(Item.STICK));
 
-		LOGGER.info("Registered test_block, color_block, pipe, crate, freezer, test_item, + " + BLOCK_COUNT + " numbered blocks, + " + ITEM_COUNT + " numbered items");
+		LOGGER.info("Registered test_block, color_block, pipe, test_item, + " + BLOCK_COUNT + " numbered blocks, + " + ITEM_COUNT + " numbered items");
 	}
 }

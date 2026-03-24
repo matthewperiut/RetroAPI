@@ -12,7 +12,11 @@ apply plugin: 'ploceus'
 base {
 	archivesName = project.archives_base_name
 }
-version = "${project.version}+mcb1.4-mcb1.7.3"
+if (project.hasProperty('mc')) {
+	version = "${project.version}+mc${project.mc}"
+} else {
+	version = "${project.version}+mcb1.4-mcb1.7.3"
+}
 group = project.maven_group
 
 ploceus {
@@ -98,6 +102,11 @@ def addPomDependency(project) {
 def setUpLibrary(project) {
 	project.apply plugin: 'java-library'
 
+	project.java {
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
+	}
+
 	project.base {
 		archivesName = "${project.rootProject.mod_id}-${project.library_id}"
 	}
@@ -137,7 +146,7 @@ def setUpLibrary(project) {
 
 /**
  * Sets up a version-specific module (with Loom, MC dependency, mappings, etc.).
- * @param dependencies - module names like 'blockentity-mcb1.0-mcb1.7.3' that this module depends on
+ * @param dependencies - module names like 'rendering-mcb1.0-mcb1.7.3' that this module depends on
  */
 def setUpModule(project, String... dependencies) {
 	def library = project.parent
@@ -247,6 +256,8 @@ def setUpModule(project, String... dependencies) {
 	}
 
 	project.java {
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
 		withSourcesJar()
 	}
 

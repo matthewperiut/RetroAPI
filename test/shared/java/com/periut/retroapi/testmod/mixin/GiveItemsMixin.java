@@ -46,14 +46,6 @@ public class GiveItemsMixin {
 				retroapi_test$safeAddItem(inventory, new ItemStack(TestMod.COLOR_BLOCK, 64));
 				retroapi_test$safeAddItem(inventory, new ItemStack(TestMod.PIPE_BLOCK, 64));
 			}
-			if (TestMod.CRATE_BLOCK != null) {
-				retroapi_test$safeAddItem(inventory, new ItemStack(TestMod.CRATE_BLOCK, 64));
-			}
-			if (TestMod.FREEZER_BLOCK != null) {
-				retroapi_test$safeAddItem(inventory, new ItemStack(TestMod.FREEZER_BLOCK, 64));
-				retroapi_test$safeAddItem(inventory, new ItemStack(Item.WATER_BUCKET, 1));
-				retroapi_test$safeAddItem(inventory, new ItemStack(Item.COAL, 64));
-			}
 			if (TestMod.TEST_ITEM != null) {
 				retroapi_test$safeAddItem(inventory, new ItemStack(TestMod.TEST_ITEM, 64));
 			}

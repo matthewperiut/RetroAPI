@@ -1,11 +1,9 @@
 package com.periut.retroapi.mixin.register;
 
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
-import com.periut.retroapi.register.block.BlockActivatedHandler;
 import com.periut.retroapi.register.block.RetroBlockAccess;
 import com.periut.retroapi.register.block.RetroTexture;
 import com.periut.retroapi.register.block.RetroTextures;
-import com.periut.retroapi.register.blockentity.RetroBlockEntityType;
 import com.periut.retroapi.register.rendertype.RenderType;
 #if MC_VER >= 160
 import com.periut.retroapi.compat.StationAPICompat;
@@ -14,9 +12,7 @@ import com.periut.retroapi.registry.BlockRegistration;
 import com.periut.retroapi.registry.RetroRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
-import net.minecraft.entity.mob.player.PlayerEntity;
 import net.minecraft.item.BlockItem;
-import net.minecraft.world.World;
 import net.minecraft.world.WorldView;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -42,8 +38,9 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Unique private boolean retroapi$solidRenderSet = false;
 	@Unique private boolean retroapi$solidRender = true;
 	@Unique private float[] retroapi$customBounds = null;
-	@Unique private RetroBlockEntityType<?> retroapi$blockEntityType = null;
-	@Unique private BlockActivatedHandler retroapi$activatedHandler = null;
+	@Unique private boolean retroapi$alwaysDrops = false;
+	@Unique private boolean retroapi$alwaysEffectiveTool = false;
+	@Unique private Class<?> retroapi$effectiveTool = null;
 
 	// --- Block property wrappers ---
 
@@ -88,6 +85,40 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	// --- RetroAPI extensions ---
 
 	@Override
+	public RetroBlockAccess alwaysDrops() {
+		this.retroapi$alwaysDrops = true;
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess alwaysEffectiveTool() {
+		this.retroapi$alwaysEffectiveTool = true;
+		return this;
+	}
+
+	@Override
+	public boolean isAlwaysDrops() {
+		return this.retroapi$alwaysDrops;
+	}
+
+	@Override
+	public boolean isAlwaysEffectiveTool() {
+		return this.retroapi$alwaysEffectiveTool;
+	}
+
+	@Override
+	public RetroBlockAccess effectiveTool(Class<? extends net.minecraft.item.Item> toolClass) {
+		this.retroapi$effectiveTool = toolClass;
+		return this;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public Class<? extends net.minecraft.item.Item> getEffectiveTool() {
+		return (Class<? extends net.minecraft.item.Item>) this.retroapi$effectiveTool;
+	}
+
+	@Override
 	public RetroBlockAccess nonOpaque() {
 		this.retroapi$solidRenderSet = true;
 		this.retroapi$solidRender = false;
@@ -124,19 +155,6 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		RetroTexture tex = RetroTextures.addBlockTexture(textureId);
 		this.sprite = tex.id;
 		RetroTextures.trackBlock((Block) (Object) this, tex);
-		return this;
-	}
-
-	@Override
-	public RetroBlockAccess blockEntity(RetroBlockEntityType<?> type) {
-		this.retroapi$blockEntityType = type;
-		Block.HAS_BLOCK_ENTITY[this.id] = true;
-		return this;
-	}
-
-	@Override
-	public RetroBlockAccess activated(BlockActivatedHandler handler) {
-		this.retroapi$activatedHandler = handler;
 		return this;
 	}
 
@@ -204,28 +222,4 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		}
 	}
 
-	@Inject(method = "onAdded", at = @At("HEAD"))
-	private void retroapi$onAdded(World world, int x, int y, int z, CallbackInfo ci) {
-		if (this.retroapi$blockEntityType != null) {
-			world.setBlockEntity(x, y, z, this.retroapi$blockEntityType.create());
-		}
-	}
-
-	@Inject(method = "onRemoved", at = @At("HEAD"))
-	private void retroapi$onRemoved(World world, int x, int y, int z, CallbackInfo ci) {
-		if (this.retroapi$blockEntityType != null) {
-			world.removeBlockEntity(x, y, z);
-		}
-	}
-
-	@Inject(method = "use", at = @At("HEAD"), cancellable = true)
-	private void retroapi$use(World world, int x, int y, int z, PlayerEntity player, CallbackInfoReturnable<Boolean> cir) {
-		if (this.retroapi$activatedHandler != null) {
-			if (world.isMultiplayer) {
-				cir.setReturnValue(true);
-				return;
-			}
-			cir.setReturnValue(this.retroapi$activatedHandler.onActivated(world, x, y, z, player));
-		}
-	}
 }

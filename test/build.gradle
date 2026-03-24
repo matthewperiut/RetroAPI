@@ -24,10 +24,10 @@ def versionConfigs = [
 	'b1.6.4':  [dep: '1.0.0-beta.6.4', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
 	'b1.6.5':  [dep: '1.0.0-beta.6.5', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
 	'b1.6.6':  [dep: '1.0.0-beta.6.6', reg: 'mcb1.6-mcb1.6.6',  nests: [6, 4]],
-	'b1.7':    [dep: '1.0.0-beta.7',   reg: 'mcb1.7-mcb1.7.3'],
-	'b1.7_01': [dep: '1.0.0-beta.7.1', reg: 'mcb1.7-mcb1.7.3'],
-	'b1.7.2':  [dep: '1.0.0-beta.7.2', reg: 'mcb1.7-mcb1.7.3'],
-	'b1.7.3':  [dep: '1.0.0-beta.7.3', reg: 'mcb1.7-mcb1.7.3', raven: [2, 2], sparrow: [2, 2], stationapi: true],
+	'b1.7':    [dep: '1.0.0-beta.7',   reg: 'mcb1.7-mcb1.7.3', nests: [6, 3]],
+	'b1.7_01': [dep: '1.0.0-beta.7.1', reg: 'mcb1.7-mcb1.7.3', nests: [6, 3]],
+	'b1.7.2':  [dep: '1.0.0-beta.7.2', reg: 'mcb1.7-mcb1.7.3', nests: [6, 3]],
+	'b1.7.3':  [dep: '1.0.0-beta.7.3', reg: 'mcb1.7-mcb1.7.3', raven: [2, 2], sparrow: [2, 2], nests: [6, 3], stationapi: true],
 	'b1.8':       [dep: '1.0.0-beta.8.0.r', reg: 'mcb1.8-mcb1.8.1', nests: [8, 5], mcVer: 180],
 	'b1.8.1':     [dep: '1.0.0-beta.8.1', reg: 'mcb1.8-mcb1.8.1', nests: [8, 5], mcVer: 181],
 	'b1.9-pre1':  [dep: '1.0.0-beta.9.0.1', reg: 'mcb1.9_pre1-mcb1.9_pre6', nests: [8, 5], mcVer: 191],
@@ -103,23 +103,18 @@ dependencies {
 	// Module dependencies
 	def regModule = "registration-${config.reg}"
 	def regLibrary = ':libraries:registration'
-	def renderingModule, blockentityModule
+	def renderingModule
 	if (config.reg.startsWith('mc1.0')) {
 		renderingModule = 'rendering-mc1.0.0-mc1.0.0'
-		blockentityModule = 'blockentity-mc1.0.0-mc1.0.0'
 	} else if (config.reg.startsWith('mcb1.9')) {
 		renderingModule = 'rendering-mcb1.9_pre1-mcb1.9_pre6'
-		blockentityModule = 'blockentity-mcb1.9_pre1-mcb1.9_pre6'
 	} else if (config.reg.startsWith('mcb1.8')) {
 		renderingModule = 'rendering-mcb1.8-mcb1.8.1'
-		blockentityModule = 'blockentity-mcb1.8-mcb1.8.1'
 	} else {
 		renderingModule = 'rendering-mcb1.0-mcb1.7.3'
-		blockentityModule = 'blockentity-mcb1.0-mcb1.7.3'
 	}
 	def modules = [
 		[lib: regLibrary, mod: ":libraries:registration:${regModule}"],
-		[lib: ':libraries:blockentity', mod: ":libraries:blockentity:${blockentityModule}"],
 		[lib: ':libraries:rendering', mod: ":libraries:rendering:${renderingModule}"],
 		[lib: ':libraries:recipes', mod: ":libraries:recipes:recipes-${config.getOrDefault('recipes', 'mcb1.2-mcb1.7.3')}"],
 	]

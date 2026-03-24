@@ -1,6 +1,5 @@
 package com.periut.retroapi.register.block;
 
-import com.periut.retroapi.register.blockentity.RetroBlockEntityType;
 import com.periut.retroapi.register.rendertype.RenderType;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
 import net.minecraft.block.Block;
@@ -38,6 +37,39 @@ public interface RetroBlockAccess {
 
 	RetroBlockAccess opacity(int opacity);
 
+	/**
+	 * Makes this block always drop items when broken, regardless of which tool is used.
+	 * By default, blocks with stone/metal material only drop when mined with the correct tool.
+	 */
+	RetroBlockAccess alwaysDrops();
+
+	/**
+	 * Makes any tool effective at mining this block (not just the material-appropriate tool).
+	 */
+	RetroBlockAccess alwaysEffectiveTool();
+
+	/**
+	 * Sets a specific tool class as the effective tool for this block.
+	 * Use with {@link net.minecraft.item.PickaxeItem}, {@link net.minecraft.item.AxeItem},
+	 * {@link net.minecraft.item.ShovelItem}, or {@link net.minecraft.item.SwordItem}.
+	 */
+	RetroBlockAccess effectiveTool(Class<? extends Item> toolClass);
+
+	/**
+	 * Check if this block always drops items regardless of tool.
+	 */
+	boolean isAlwaysDrops();
+
+	/**
+	 * Check if any tool is effective at mining this block.
+	 */
+	boolean isAlwaysEffectiveTool();
+
+	/**
+	 * Get the effective tool class for this block, or null if not set.
+	 */
+	Class<? extends Item> getEffectiveTool();
+
 	// --- RetroAPI extensions ---
 
 	/**
@@ -70,16 +102,6 @@ public interface RetroBlockAccess {
 	 * Texture file: assets/{id.namespace()}/textures/block/{id.identifier()}.png
 	 */
 	RetroBlockAccess texture(NamespacedIdentifier textureId);
-
-	/**
-	 * Associate a block entity type with this block.
-	 */
-	RetroBlockAccess blockEntity(RetroBlockEntityType<?> type);
-
-	/**
-	 * Set a callback for when a player right-clicks this block.
-	 */
-	RetroBlockAccess activated(BlockActivatedHandler handler);
 
 	/**
 	 * Register this block with RetroAPI.

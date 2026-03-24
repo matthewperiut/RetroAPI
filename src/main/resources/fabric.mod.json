@@ -3,7 +3,7 @@
 	"id": "retroapi",
 	"version": "${version}",
 	"name": "RetroAPI",
-	"description": "Block and item registration API for legacy Minecraft.",
+	"description": "Block, Item, and Recipe registration API for legacy Minecraft.",
 	"authors": ["periut"],
 	"license": "MIT",
 	"environment": "*",

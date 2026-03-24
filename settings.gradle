@@ -52,12 +52,6 @@ if (mcVersion == null) {
 	include ':libraries:registration:registration-mcb1.9_pre1-mcb1.9_pre6'
 	include ':libraries:registration:registration-mc1.0.0-mc1.0.0'
 
-	include ':libraries:blockentity'
-	include ':libraries:blockentity:blockentity-mcb1.0-mcb1.7.3'
-	include ':libraries:blockentity:blockentity-mcb1.8-mcb1.8.1'
-	include ':libraries:blockentity:blockentity-mcb1.9_pre1-mcb1.9_pre6'
-	include ':libraries:blockentity:blockentity-mc1.0.0-mc1.0.0'
-
 	include ':libraries:rendering'
 	include ':libraries:rendering:rendering-mcb1.0-mcb1.7.3'
 	include ':libraries:rendering:rendering-mcb1.8-mcb1.8.1'
@@ -77,16 +71,15 @@ if (mcVersion == null) {
 	def regSuffix = regMap[mcVersion]
 	if (regSuffix == null) throw new GradleException("Unknown MC version: ${mcVersion}. Valid: ${regMap.keySet()}")
 
-	def isB18Plus = regSuffix.startsWith('mcb1.8') || regSuffix.startsWith('mcb1.9')
-	def beRendSuffix
+	def rendSuffix
 	if (regSuffix.startsWith('mc1.0')) {
-		beRendSuffix = 'mc1.0.0-mc1.0.0'
+		rendSuffix = 'mc1.0.0-mc1.0.0'
 	} else if (regSuffix.startsWith('mcb1.9')) {
-		beRendSuffix = 'mcb1.9_pre1-mcb1.9_pre6'
+		rendSuffix = 'mcb1.9_pre1-mcb1.9_pre6'
 	} else if (regSuffix.startsWith('mcb1.8')) {
-		beRendSuffix = 'mcb1.8-mcb1.8.1'
+		rendSuffix = 'mcb1.8-mcb1.8.1'
 	} else {
-		beRendSuffix = 'mcb1.0-mcb1.7.3'
+		rendSuffix = 'mcb1.0-mcb1.7.3'
 	}
 	def recipesSuffix = regSuffix.startsWith('mcb1.0') ? 'mcb1.0-mcb1.1_02' : 'mcb1.2-mcb1.7.3'
 	// recipes-mcb1.2-mcb1.7.3 compiles against registration-mcb1.7-mcb1.7.3
@@ -95,11 +88,8 @@ if (mcVersion == null) {
 	include ':libraries:registration'
 	include ":libraries:registration:registration-${regSuffix}"
 
-	include ':libraries:blockentity'
-	include ":libraries:blockentity:blockentity-${beRendSuffix}"
-
 	include ':libraries:rendering'
-	include ":libraries:rendering:rendering-${beRendSuffix}"
+	include ":libraries:rendering:rendering-${rendSuffix}"
 
 	include ':libraries:recipes'
 	include ":libraries:recipes:recipes-${recipesSuffix}"
@@ -107,8 +97,7 @@ if (mcVersion == null) {
 	// Include the recipes module's compile-time registration dependency if different
 	if (recipesRegSuffix != regSuffix) {
 		include ":libraries:registration:registration-${recipesRegSuffix}"
-		// Also include its transitive deps (blockentity + rendering for b1.0-b1.7.3)
-		include ':libraries:blockentity:blockentity-mcb1.0-mcb1.7.3'
+		// Also include its transitive deps (rendering for b1.0-b1.7.3)
 		include ':libraries:rendering:rendering-mcb1.0-mcb1.7.3'
 	}
 

@@ -102,6 +102,11 @@ def addPomDependency(project) {
 def setUpLibrary(project) {
 	project.apply plugin: 'java-library'
 
+	project.java {
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
+	}
+
 	project.base {
 		archivesName = "${project.rootProject.mod_id}-${project.library_id}"
 	}
@@ -251,6 +256,8 @@ def setUpModule(project, String... dependencies) {
 	}
 
 	project.java {
+		sourceCompatibility = JavaVersion.VERSION_21
+		targetCompatibility = JavaVersion.VERSION_21
 		withSourcesJar()
 	}
 

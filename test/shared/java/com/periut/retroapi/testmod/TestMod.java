@@ -7,6 +7,7 @@ import com.periut.retroapi.register.item.RetroItemAccess;
 import com.periut.retroapi.register.recipe.RetroRecipes;
 import com.periut.retroapi.register.rendertype.RenderType;
 import com.periut.retroapi.register.rendertype.RenderTypes;
+import net.minecraft.item.PickaxeItem;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.item.Item;
@@ -54,6 +55,8 @@ public class TestMod implements ModInitializer {
 			.sounds(Block.STONE_SOUNDS)
 			.strength(1.5f, 10.0f)
 			.renderType(RenderTypes.BLOCK)
+			.alwaysEffectiveTool()
+			.alwaysDrops()
 			.register(id("color_block"));
 
 		PIPE_BLOCK = RetroBlockAccess.create(Material.STONE)

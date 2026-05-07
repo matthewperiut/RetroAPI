@@ -16,6 +16,6 @@
 		"retroapi_test.mixins.json"
 	],
 	"depends": {
-		"retroapi-registration": "*"
+		"retroapi": "*"
 	}
 }

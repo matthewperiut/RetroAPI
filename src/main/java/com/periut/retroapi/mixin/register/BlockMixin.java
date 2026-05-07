@@ -1,0 +1,212 @@
+package com.periut.retroapi.mixin.register;
+
+import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
+import com.periut.retroapi.register.block.RetroBlockAccess;
+import com.periut.retroapi.register.block.RetroTexture;
+import com.periut.retroapi.register.block.RetroTextures;
+import com.periut.retroapi.register.rendertype.RenderType;
+import com.periut.retroapi.compat.StationAPICompat;
+import com.periut.retroapi.registry.BlockRegistration;
+import com.periut.retroapi.registry.RetroRegistry;
+import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.block.Block;
+import net.minecraft.block.Block__Sounds;
+import net.minecraft.item.BlockItem;
+import net.minecraft.world.WorldView;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin(Block.class)
+public abstract class BlockMixin implements RetroBlockAccess {
+
+	@Shadow public int id;
+	@Shadow public int sprite;
+
+	@Shadow protected abstract Block setSounds(Block__Sounds sounds);
+	@Shadow protected abstract Block setStrength(float strength);
+	@Shadow protected abstract Block setBlastResistance(float resistance);
+	@Shadow protected abstract Block setLight(float light);
+	@Shadow protected abstract Block setOpacity(int opacity);
+
+	@Unique private int retroapi$renderType = -1;
+	@Unique private boolean retroapi$solidRenderSet = false;
+	@Unique private boolean retroapi$solidRender = true;
+	@Unique private float[] retroapi$customBounds = null;
+	@Unique private boolean retroapi$alwaysDrops = false;
+	@Unique private boolean retroapi$alwaysEffectiveTool = false;
+	@Unique private Class<?> retroapi$effectiveTool = null;
+
+	// --- Block property wrappers ---
+
+	@Override
+	public RetroBlockAccess sounds(Block__Sounds sounds) {
+		this.setSounds(sounds);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess strength(float strength) {
+		this.setStrength(strength);
+		this.setBlastResistance(strength);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess strength(float strength, float resistance) {
+		this.setStrength(strength);
+		this.setBlastResistance(resistance);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess resistance(float resistance) {
+		this.setBlastResistance(resistance);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess light(float light) {
+		this.setLight(light);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess opacity(int opacity) {
+		this.setOpacity(opacity);
+		return this;
+	}
+
+	// --- RetroAPI extensions ---
+
+	@Override
+	public RetroBlockAccess alwaysDrops() {
+		this.retroapi$alwaysDrops = true;
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess alwaysEffectiveTool() {
+		this.retroapi$alwaysEffectiveTool = true;
+		return this;
+	}
+
+	@Override
+	public boolean isAlwaysDrops() {
+		return this.retroapi$alwaysDrops;
+	}
+
+	@Override
+	public boolean isAlwaysEffectiveTool() {
+		return this.retroapi$alwaysEffectiveTool;
+	}
+
+	@Override
+	public RetroBlockAccess effectiveTool(Class<? extends net.minecraft.item.Item> toolClass) {
+		this.retroapi$effectiveTool = toolClass;
+		return this;
+	}
+
+	@Override
+	@SuppressWarnings("unchecked")
+	public Class<? extends net.minecraft.item.Item> getEffectiveTool() {
+		return (Class<? extends net.minecraft.item.Item>) this.retroapi$effectiveTool;
+	}
+
+	@Override
+	public RetroBlockAccess nonOpaque() {
+		this.retroapi$solidRenderSet = true;
+		this.retroapi$solidRender = false;
+		Block.IS_SOLID_RENDER[this.id] = false;
+		Block.OPACITIES[this.id] = 0;
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess bounds(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) {
+		this.retroapi$customBounds = new float[]{minX, minY, minZ, maxX, maxY, maxZ};
+		((Block) (Object) this).setShape(minX, minY, minZ, maxX, maxY, maxZ);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess renderType(NamespacedIdentifier renderTypeId) {
+		this.retroapi$renderType = RenderType.resolve(renderTypeId);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess sprite(int spriteId) {
+		this.sprite = spriteId;
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess texture(NamespacedIdentifier textureId) {
+		RetroTexture tex = RetroTextures.addBlockTexture(textureId);
+		this.sprite = tex.id;
+		RetroTextures.trackBlock((Block) (Object) this, tex);
+		return this;
+	}
+
+	@Override
+	public Block register(NamespacedIdentifier id) {
+		Block self = (Block) (Object) this;
+		self.setKey(id.namespace() + "." + id.identifier());
+
+		boolean hasStationAPI = FabricLoader.getInstance().isModLoaded("stationapi");
+
+		BlockItem blockItem = null;
+		if (!hasStationAPI) {
+			blockItem = new BlockItem(this.id - 256);
+		}
+
+		RetroRegistry.registerBlock(new BlockRegistration(id, self, blockItem));
+
+		if (hasStationAPI) {
+			StationAPICompat.registerBlock(id.namespace(), id.identifier(), self);
+		}
+
+		return self;
+	}
+
+	// --- Mixin injections ---
+
+	@Inject(method = "isSolidRender", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$isSolidRender(CallbackInfoReturnable<Boolean> cir) {
+		if (this.retroapi$solidRenderSet) {
+			cir.setReturnValue(this.retroapi$solidRender);
+		}
+	}
+
+	@Inject(method = "isCube", at = @At("HEAD"), cancellable = true)
+	private void retroapi$isCube(CallbackInfoReturnable<Boolean> cir) {
+		if (this.retroapi$solidRenderSet) {
+			cir.setReturnValue(this.retroapi$solidRender);
+		}
+	}
+
+	@Inject(method = "updateShape", at = @At("HEAD"), cancellable = true)
+	private void retroapi$updateShape(WorldView world, int x, int y, int z, CallbackInfo ci) {
+		if (this.retroapi$customBounds != null) {
+			((Block) (Object) this).setShape(
+				retroapi$customBounds[0], retroapi$customBounds[1], retroapi$customBounds[2],
+				retroapi$customBounds[3], retroapi$customBounds[4], retroapi$customBounds[5]
+			);
+			ci.cancel();
+		}
+	}
+
+	@Inject(method = "getRenderType", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$getRenderType(CallbackInfoReturnable<Integer> cir) {
+		if (this.retroapi$renderType != -1) {
+			cir.setReturnValue(this.retroapi$renderType);
+		}
+	}
+
+}
+

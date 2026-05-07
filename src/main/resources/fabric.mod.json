@@ -3,12 +3,36 @@
 	"id": "retroapi",
 	"version": "${version}",
 	"name": "RetroAPI",
-	"description": "Block, Item, and Recipe registration API for legacy Minecraft.",
+	"description": "Block, item, recipe registration API for Minecraft Beta 1.7.3.",
 	"authors": ["periut"],
 	"license": "MIT",
 	"environment": "*",
+	"entrypoints": {
+		"init": [
+			"com.periut.retroapi.RetroAPI"
+		],
+		"client-init": [
+			"com.periut.retroapi.client.RetroAPIClient"
+		],
+		"server-init": [
+			"com.periut.retroapi.server.RetroAPIServer"
+		],
+		"stationapi:event_bus": [
+			"com.periut.retroapi.compat.StationAPIRegistryForwarder"
+		]
+	},
+	"accessWidener": "retroapi.accesswidener",
+	"mixins": [
+		"retroapi.mixins.json"
+	],
 	"depends": {
 		"fabricloader": ">=0.17.3",
-		"minecraft": "*"
+		"minecraft": "1.0.0-beta.7.3",
+		"osl-entrypoints": ">=0.4.0",
+		"osl-lifecycle-events": ">=0.5.0",
+		"osl-networking": ">=0.9.0-"
+	},
+	"suggests": {
+		"stationapi": ">=2.0.0-alpha.5"
 	}
 }

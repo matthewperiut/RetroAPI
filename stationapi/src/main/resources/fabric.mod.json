@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "retroapi-stationapi",
+	"version": "${version}",
+	"name": "RetroAPI StationAPI Compat",
+	"description": "Optional StationAPI compatibility layer for RetroAPI. Loaded only when both RetroAPI and StationAPI are present; delegates RetroAPI registration, rendering, world conversion and dimensions to StationAPI.",
+	"authors": ["Slainlight"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"stationapi:event_bus": [
+			"com.periut.retroapi.stationapi.StationAPIRegistryForwarder"
+		]
+	},
+	"accessWidener": "retroapi-stationapi.accesswidener",
+	"mixins": [
+		"retroapi-stationapi.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "1.0.0-beta.7.3",
+		"retroapi": "*",
+		"stationapi": ">=2.0.0-alpha.6"
+	}
+}

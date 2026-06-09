@@ -1,0 +1,133 @@
+apply plugin: 'java-library'
+apply plugin: 'fabric-loom'
+apply plugin: 'ploceus'
+
+base {
+	archivesName = 'retroapi-test'
+}
+version = "1.0.0+mcb1.7.3"
+group = rootProject.maven_group
+
+ploceus {
+	setIntermediaryGeneration(2)
+}
+
+repositories {
+	maven { url = "https://matthewperiut.github.io/repository" }
+	exclusiveContent {
+		forRepository {
+			maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+	maven { name = 'Jitpack'; url = 'https://jitpack.io' }
+	maven { name = 'Glass Releases'; url = "https://maven.glass-launcher.net/releases" }
+	maven { name = 'Glass Snapshots'; url = "https://maven.glass-launcher.net/snapshots" }
+	maven { name = 'Glass Babric'; url = "https://maven.glass-launcher.net/babric" }
+	mavenCentral()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:b1.7.3"
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
+
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
+	clientExceptions ploceus.raven('2', 'client')
+	serverExceptions ploceus.raven('2', 'server')
+	clientSignatures ploceus.sparrow('2', 'client')
+	serverSignatures ploceus.sparrow('2', 'server')
+	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${rootProject.client_nests_build}"
+	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${rootProject.server_nests_build}"
+
+	ploceus.dependOsl(rootProject.osl_version)
+
+	implementation project(path: ':', configuration: 'namedElements')
+
+	// NOTE: this (non-StationAPI) test mod has NO StationAPI dependency. The StationAPI-dependent conversion
+	// round-trip helpers live in the :test:stapi source set, so a fresh clone can run the test mod
+	// (./gradlew :test:runClient) without ever downloading StationAPI.
+
+	// starac brings LWJGL 3, which would clash with vanilla
+	// Minecraft's LWJGL 2 API, so keep it off the compile classpath.
+	modRuntimeOnly "com.periut:starac:${project.starac_version}"
+}
+
+// Don't fail test task when no tests are discovered (these are mod test classes, not unit tests)
+tasks.withType(Test) {
+	failOnNoDiscoveredTests = false
+}
+
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3).
+// It must stay on the compile/minecraft classpath so Condor (Ploceus LVT generator)
+// can resolve org.lwjgl.* classes referenced by b1.7.3 - a blanket exclude here
+// strips LWJGL 2 from minecraftCompileLibraries and crashes LVT generation.
+configurations.matching { it.name.toLowerCase().contains('runtime') }.configureEach {
+	exclude group: 'org.lwjgl.lwjgl'
+}
+
+sourceSets {
+	main {
+		java { srcDirs = [file('shared/java')] }
+		resources { srcDirs = [file('shared/resources')] }
+	}
+}
+
+loom {
+	mods {
+		"retroapi_test" {
+			sourceSet sourceSets.main
+		}
+	}
+
+	runs {
+		testClient {
+			client()
+			ideConfigGenerated true
+			name = "Test Client (b1.7.3)"
+			runDir "run"
+		}
+		testServer {
+			server()
+			ideConfigGenerated true
+			name = "Test Server (b1.7.3)"
+			runDir "run"
+		}
+		// Headless conversion round-trip, step 1: place deterministic modded content into a fresh
+		// McRegion + sidecar world and write the manifest (no StationAPI). Stops itself when done.
+		populateServer {
+			server()
+			ideConfigGenerated true
+			name = "Conv: Populate (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "populate"
+		}
+		// Headless conversion round-trip, step 3: load the reverse-converted (un-flattened) world and
+		// prove the modded content is runtime-valid in plain RetroAPI. Stops itself when done.
+		verifyServer {
+			server()
+			ideConfigGenerated true
+			name = "Conv: Verify McRegion (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "verify"
+		}
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 21
+}
+
+processResources {
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+jar {
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${base.archivesName.get()}" }
+	}
+}

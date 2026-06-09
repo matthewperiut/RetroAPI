@@ -1,0 +1,81 @@
+accessWidener v2 named
+
+# Block fields
+transitive-accessible field net/minecraft/block/Block id I
+transitive-mutable field net/minecraft/block/Block id I
+transitive-accessible field net/minecraft/block/Block translationKey Ljava/lang/String;
+transitive-mutable field net/minecraft/block/Block translationKey Ljava/lang/String;
+
+# Block static arrays (for expansion beyond 256)
+transitive-accessible field net/minecraft/block/Block BLOCKS [Lnet/minecraft/block/Block;
+transitive-mutable field net/minecraft/block/Block BLOCKS [Lnet/minecraft/block/Block;
+transitive-accessible field net/minecraft/block/Block BLOCKS_OPAQUE [Z
+transitive-mutable field net/minecraft/block/Block BLOCKS_OPAQUE [Z
+transitive-accessible field net/minecraft/block/Block BLOCKS_LIGHT_OPACITY [I
+transitive-mutable field net/minecraft/block/Block BLOCKS_LIGHT_OPACITY [I
+transitive-accessible field net/minecraft/block/Block BLOCKS_ALLOW_VISION [Z
+transitive-mutable field net/minecraft/block/Block BLOCKS_ALLOW_VISION [Z
+transitive-accessible field net/minecraft/block/Block BLOCKS_WITH_ENTITY [Z
+transitive-mutable field net/minecraft/block/Block BLOCKS_WITH_ENTITY [Z
+transitive-accessible field net/minecraft/block/Block BLOCKS_RANDOM_TICK [Z
+transitive-mutable field net/minecraft/block/Block BLOCKS_RANDOM_TICK [Z
+transitive-accessible field net/minecraft/block/Block BLOCKS_LIGHT_LUMINANCE [I
+transitive-mutable field net/minecraft/block/Block BLOCKS_LIGHT_LUMINANCE [I
+transitive-accessible field net/minecraft/block/Block BLOCKS_IGNORE_META_UPDATE [Z
+transitive-mutable field net/minecraft/block/Block BLOCKS_IGNORE_META_UPDATE [Z
+
+# Stats arrays (for expansion beyond 256)
+transitive-accessible field net/minecraft/stat/Stats MINE_BLOCK [Lnet/minecraft/stat/Stat;
+transitive-mutable field net/minecraft/stat/Stats MINE_BLOCK [Lnet/minecraft/stat/Stat;
+transitive-accessible field net/minecraft/stat/Stats CRAFTED [Lnet/minecraft/stat/Stat;
+transitive-mutable field net/minecraft/stat/Stats CRAFTED [Lnet/minecraft/stat/Stat;
+transitive-accessible field net/minecraft/stat/Stats USED [Lnet/minecraft/stat/Stat;
+transitive-mutable field net/minecraft/stat/Stats USED [Lnet/minecraft/stat/Stat;
+transitive-accessible field net/minecraft/stat/Stats BROKEN [Lnet/minecraft/stat/Stat;
+transitive-mutable field net/minecraft/stat/Stats BROKEN [Lnet/minecraft/stat/Stat;
+
+# Achievement / Stat fields (registration + screen page filtering)
+transitive-accessible field net/minecraft/stat/Stat id I
+transitive-accessible field net/minecraft/achievement/Achievement parent Lnet/minecraft/achievement/Achievement;
+transitive-accessible field net/minecraft/achievement/Achievements ACHIEVEMENTS Ljava/util/List;
+transitive-mutable field net/minecraft/achievement/Achievements ACHIEVEMENTS Ljava/util/List;
+
+# Block sound group (top-level class in biny 57cc158, not a Block inner class)
+transitive-accessible class net/minecraft/sound/BlockSoundGroup
+
+# Block constructor
+transitive-accessible method net/minecraft/block/Block <init> (ILnet/minecraft/block/material/Material;)V
+
+# Block protected methods
+transitive-accessible method net/minecraft/block/Block setSoundGroup (Lnet/minecraft/sound/BlockSoundGroup;)Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/block/Block setHardness (F)Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/block/Block setResistance (F)Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/block/Block setLuminance (F)Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/block/Block setOpacity (I)Lnet/minecraft/block/Block;
+
+# Vanilla fluent setters + tool ctors consumers call from registration code (Fabric-API-style convenience)
+transitive-accessible method net/minecraft/item/Item setHasSubtypes (Z)Lnet/minecraft/item/Item;
+transitive-accessible method net/minecraft/item/Item setMaxDamage (I)Lnet/minecraft/item/Item;
+transitive-accessible method net/minecraft/block/Block ignoreMetaUpdates ()Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/block/Block disableTrackingStatistics ()Lnet/minecraft/block/Block;
+transitive-accessible method net/minecraft/item/PickaxeItem <init> (ILnet/minecraft/item/ToolMaterial;)V
+transitive-accessible method net/minecraft/item/AxeItem <init> (ILnet/minecraft/item/ToolMaterial;)V
+
+# Item fields
+transitive-accessible field net/minecraft/item/Item id I
+transitive-mutable field net/minecraft/item/Item id I
+transitive-accessible field net/minecraft/item/Item translationKey Ljava/lang/String;
+transitive-mutable field net/minecraft/item/Item translationKey Ljava/lang/String;
+
+# Item constructor
+transitive-accessible method net/minecraft/item/Item <init> (I)V
+
+# BlockItem fields
+transitive-accessible field net/minecraft/item/BlockItem blockId I
+transitive-mutable field net/minecraft/item/BlockItem blockId I
+
+# Biome weather flags (so a custom-dimension biome can disable rain/snow)
+transitive-accessible field net/minecraft/world/biome/Biome hasRain Z
+transitive-mutable field net/minecraft/world/biome/Biome hasRain Z
+transitive-accessible field net/minecraft/world/biome/Biome hasSnow Z
+transitive-mutable field net/minecraft/world/biome/Biome hasSnow Z

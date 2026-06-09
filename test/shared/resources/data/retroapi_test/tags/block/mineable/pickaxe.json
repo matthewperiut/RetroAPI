@@ -1,0 +1,7 @@
+{
+  "values": [
+    "retroapi_test:tagged_ore",
+    "minecraft:glass",
+    { "id": "futuremod:not_installed", "required": false }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "variants": {
+    "lit=false": { "model": "retroapi_test:block/lamp_off" },
+    "lit=true": { "model": "retroapi_test:block/lamp_on" }
+  }
+}

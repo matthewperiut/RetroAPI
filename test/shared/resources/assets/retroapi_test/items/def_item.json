@@ -1,0 +1,9 @@
+{
+  "model": {
+    "type": "minecraft:composite",
+    "models": [
+      { "type": "minecraft:model", "model": "retroapi_test:item/def_item_base" },
+      { "type": "minecraft:model", "model": "retroapi_test:item/def_item_apple" }
+    ]
+  }
+}

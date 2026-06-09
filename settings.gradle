@@ -1,0 +1,38 @@
+pluginManagement {
+	repositories {
+		maven {
+			name = 'Fabric'
+			url = 'https://maven.fabricmc.net/'
+		}
+		maven {
+			name = 'Ornithe Releases'
+			url = 'https://maven.ornithemc.net/releases'
+		}
+		maven {
+			name = 'Ornithe Snapshots'
+			url = 'https://maven.ornithemc.net/snapshots'
+		}
+		// RetroAPI repository - hosts the com.periut.retroconvert plugin.
+		maven {
+			name = 'RetroAPI'
+			url = 'https://matthewperiut.github.io/repository'
+		}
+		mavenCentral()
+		mavenLocal()
+		gradlePluginPortal()
+	}
+}
+
+rootProject.name = 'retroapi'
+
+include ':test'
+
+// StationAPI integration (the :stationapi module) and its tests (:test:stapi) are OPT-IN. Leaving them out
+// of the default build means a fresh `git clone` can sync in the IDE, run the test mod, and develop RetroAPI
+// core WITHOUT ever resolving or downloading StationAPI. Enable them with `-Pstationapi` on the command line,
+// or by setting `stationapi=true` in gradle.properties. `./gradlew build` (default) builds core + test only;
+// `./gradlew build -Pstationapi` builds everything including the StationAPI compat + conversion round-trip.
+if (providers.gradleProperty('stationapi').isPresent()) {
+	include ':stationapi'
+	include ':test:stapi'
+}

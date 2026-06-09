@@ -1,0 +1,216 @@
+plugins {
+	id 'java'
+	id 'maven-publish'
+	id 'fabric-loom' version '1.15-SNAPSHOT'
+	id 'ploceus' version '1.15-SNAPSHOT'
+	// Emits retroapi-<version>-babric.jar: reverse-converted to babric and bundled with OSL + joptsimple.
+	id 'com.periut.retroconvert' version '1.0.0'
+}
+
+base {
+	archivesName = project.archives_base_name
+}
+version = project.version
+group = project.maven_group
+
+ploceus {
+	setIntermediaryGeneration(2)
+}
+
+repositories {
+	maven { url = "https://matthewperiut.github.io/repository" }
+	maven { name = 'Glass Releases'; url = "https://maven.glass-launcher.net/releases" }
+	maven { name = 'Glass Snapshots'; url = "https://maven.glass-launcher.net/snapshots" }
+	maven { name = 'Glass Babric'; url = "https://maven.glass-launcher.net/babric" }
+	exclusiveContent {
+		forRepository {
+			maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+	maven { name = 'Jitpack'; url = 'https://jitpack.io' }
+	maven { name = 'Ornithe Releases'; url = 'https://maven.ornithemc.net/releases' } // gen2 OSL for the babric bundle
+	mavenCentral()
+	mavenLocal()
+}
+
+// The -babric jar bundles these OSL gen2 modules (reverse-converted) + joptsimple under
+// META-INF/jars/, matching the standalone retroapi bundle. Versions track OSL 0.18.0.
+retroconvert {
+	bundle "net.ornithemc.osl-gen2:core:0.7.1"
+	bundle "net.ornithemc.osl-gen2:entrypoints:0.6.0+mca1.0.1_01-mc1.5.2"
+	bundle "net.ornithemc.osl-gen2:lifecycle-events:0.6.0+mcb1.3-mcb1.7.3"
+	bundle "net.ornithemc.osl-gen2:networking:0.9.0+mcb1.0-mc13w39b"
+	bundle "net.ornithemc.osl-gen2:networking-impl:0.1.1+mcb1.5-mc11w48a"
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${project.biny_mappings}:mergedv2")
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+	clientExceptions ploceus.raven(project.client_raven_build, 'client')
+	serverExceptions ploceus.raven(project.server_raven_build, 'server')
+	clientSignatures ploceus.sparrow(project.client_sparrow_build, 'client')
+	serverSignatures ploceus.sparrow(project.server_sparrow_build, 'server')
+	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${project.client_nests_build}"
+	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${project.server_nests_build}"
+
+	ploceus.dependOsl(project.osl_version)
+
+	include "io.netty:netty-buffer:4.1.77.Final"
+	include "io.netty:netty-common:4.1.77.Final"
+
+	// When built with -Pstationapi, JiJ the StationAPI compat mod into the distribution. Its fabric.mod.json
+	// depends on both retroapi + stationapi, so Fabric loads the nested mod ONLY when a player also has
+	// StationAPI installed - a single retroapi jar that "just works" with or without StationAPI, no second
+	// download. This nesting flows through to the -babric bundle too: the babricJar reverse-conversion
+	// recurses into the umbrella's nested jars, so the compat is reverse-converted to babric automatically
+	// (hence NO separate retroconvert `bundle` entry for it - that would nest it twice).
+	if (providers.gradleProperty('stationapi').isPresent()) {
+		include project(':stationapi')
+	}
+
+	// NOTE: RetroAPI core has NO StationAPI dependency. The optional StationAPI integration lives entirely
+	// in the separate :stationapi module (the retroapi-stationapi mod), so a fresh clone can build, run the
+	// test mod, and develop core without ever downloading StationAPI. See settings.gradle (-Pstationapi).
+	// starac brings LWJGL 3, which would clash with vanilla
+	// Minecraft's LWJGL 2 API, so keep it off the compile classpath.
+	modRuntimeOnly "com.periut:starac:${project.starac_version}"
+}
+
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3).
+// It must stay on the compile/minecraft classpath so Condor (Ploceus LVT generator)
+// can resolve org.lwjgl.* classes referenced by b1.7.3 - a blanket exclude here
+// strips LWJGL 2 from minecraftCompileLibraries and crashes LVT generation.
+configurations.matching { it.name.toLowerCase().contains('runtime') }.configureEach {
+	exclude group: 'org.lwjgl.lwjgl'
+}
+
+// Don't fail test task when no tests are discovered (these are mod test classes, not unit tests)
+tasks.withType(Test) {
+	failOnNoDiscoveredTests = false
+}
+
+loom {
+	accessWidenerPath = file("src/main/resources/retroapi.accesswidener")
+	mods {
+		"retroapi" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+processResources {
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 21
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+	withSourcesJar()
+}
+
+jar {
+	from('LICENSE') {
+		rename { "${it}_${project.base.archivesName.get()}" }
+	}
+}
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			from components.java
+		}
+	}
+	repositories {
+		mavenLocal()
+	}
+}
+
+tasks.register('buildLibs') {
+	dependsOn ':remapJar'
+	group = 'build'
+	description = 'Build the retroapi distribution JAR'
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Headless vanilla <-> StationAPI world-conversion round-trip test (the self-contained "unit test").
+//
+//   ./gradlew conversionRoundTripTest
+//
+// Pipeline (each step is its own JVM that runs to completion and exits):
+//   1. :test:runPopulateServer       - non-StationAPI server places deterministic modded content
+//                                       (extended blocks w/ metadata, a chest of modded + component
+//                                       items, dropped item entities, a modded mob), self-verifies it
+//                                       in-engine, writes a manifest, saves a McRegion + sidecar world.
+//   2. convCopyWorld                 - copies that world into the StationAPI client's saves.
+//   3. :test:stapi:runRoundtripClient - StationAPI client forward-converts to flattened, asserts content
+//                                       survived on disk, reverse-converts back to McRegion, asserts
+//                                       again, writes a PASS/FAIL result file and exits.
+//   4. convGate                      - fails the build unless the result file says the round-trip passed.
+//
+// NOTE: step 3 launches the GUI client (it hosts StationAPI's client-only conversion storage source),
+// so it needs a display. Modded-dimension content is reported as a known limitation.
+// ---------------------------------------------------------------------------------------------------
+// The round-trip needs the StationAPI client (:test:stapi), so it only exists when StationAPI is enabled
+// (-Pstationapi). Without that flag :test:stapi isn't part of the build and this block is skipped.
+if (providers.gradleProperty('stationapi').isPresent()) {
+	def convWorldSrc = 'test/run/world'
+	def convWorldDst = 'test/stapi/run/saves/convtest'
+
+	tasks.register('convCleanWorlds', Delete) {
+		delete convWorldSrc, convWorldDst
+	}
+
+	tasks.register('convCopyWorld', Copy) {
+		from convWorldSrc
+		into convWorldDst
+		// Drop the populate-stage result lines so the gate reads only this round-trip's verdict.
+		exclude 'retroapi_test_result.txt'
+	}
+
+	tasks.register('convGate') {
+		doLast {
+			def f = file("${convWorldDst}/retroapi_test_result.txt")
+			if (!f.exists()) {
+				throw new GradleException('conversion round-trip produced no result file - the client did not complete.')
+			}
+			def text = f.text
+			logger.lifecycle("\n===== conversion round-trip report =====\n${text}=========================================")
+			if (text.contains('roundtrip: FAIL') || !text.contains('roundtrip: PASS')) {
+				throw new GradleException('conversion round-trip FAILED - see the report above.')
+			}
+			logger.lifecycle('conversion round-trip PASSED (overworld content retained both directions).')
+		}
+	}
+
+	tasks.register('conversionRoundTripTest') {
+		group = 'verification'
+		description = 'Headless vanilla<->StationAPI world conversion round-trip; fails on any modded-data loss.'
+		dependsOn 'convCleanWorlds', ':test:runPopulateServer', 'convCopyWorld', ':test:stapi:runRoundtripClient', 'convGate'
+	}
+
+	gradle.projectsEvaluated {
+		def populate = project(':test').tasks.getByName('runPopulateServer')
+		def roundtrip = project(':test:stapi').tasks.getByName('runRoundtripClient')
+		populate.mustRunAfter(tasks.named('convCleanWorlds'))
+		tasks.named('convCopyWorld').configure { mustRunAfter populate }
+		roundtrip.mustRunAfter(tasks.named('convCopyWorld'))
+		tasks.named('convGate').configure { mustRunAfter roundtrip }
+	}
+}
+
+allprojects {
+	tasks.withType(GenerateModuleMetadata) {
+		enabled = false
+	}
+}

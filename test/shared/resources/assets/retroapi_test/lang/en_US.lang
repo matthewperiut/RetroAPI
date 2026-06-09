@@ -1,0 +1,15 @@
+tile.@.test_block.name=Test Block
+tile.@.color_block.name=Color Block
+tile.@.pipe.name=Pipe
+tile.@.crate.name=Crate
+tile.@.freezer.name=Freezer
+item.@.test_item.name=Test Item
+
+# Achievements (title key = achievement.<name>, description key = achievement.<name>.desc)
+achievement.retroapi_test.test_root=RetroAPI Root
+achievement.retroapi_test.test_root.desc=The first RetroAPI achievement.
+achievement.retroapi_test.test_child=RetroAPI Child
+achievement.retroapi_test.test_child.desc=A child achievement that needs the root first.
+
+# Custom achievement page title (gui.retroapi.achievementPage.<namespace>.<path>)
+gui.retroapi.achievementPage.retroapi_test.test_page=RetroAPI Test

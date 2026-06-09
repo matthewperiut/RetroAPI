@@ -1,0 +1,7 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "retroapi_test:item/layer_base",
+    "layer1": "retroapi_test:item/layer_overlay"
+  }
+}

@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "retroapi_test",
+	"version": "${version}",
+	"name": "RetroAPI Test Mod",
+	"description": "Test mod for RetroAPI",
+	"authors": ["periut"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"init": [
+			"com.periut.retroapi.testmod.TestMod"
+		],
+		"client-init": [
+			"com.periut.retroapi.testmod.SoundTestClient",
+			"com.periut.retroapi.testmod.TestModClient"
+		]
+	},
+	"mixins": [
+		"retroapi_test.mixins.json"
+	],
+	"depends": {
+		"retroapi": "*"
+	}
+}

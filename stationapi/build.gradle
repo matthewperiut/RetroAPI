@@ -1,0 +1,107 @@
+// The optional StationAPI compatibility layer for RetroAPI, built as its own Fabric mod (retroapi-stationapi).
+//
+// This is the ONLY part of the project that references StationAPI. It is excluded from the default build so a
+// fresh clone can compile core, run the test mod, and develop RetroAPI without ever downloading StationAPI;
+// it is included only when the `-Pstationapi` flag (or stationapi=true in gradle.properties) is set - see
+// settings.gradle. RetroAPI core loads this mod's bridge reflectively at runtime when StationAPI is present.
+
+apply plugin: 'java-library'
+apply plugin: 'fabric-loom'
+apply plugin: 'ploceus'
+
+base {
+	archivesName = 'retroapi-stationapi'
+}
+version = rootProject.version
+group = rootProject.maven_group
+
+ploceus {
+	setIntermediaryGeneration(2)
+}
+
+repositories {
+	maven { url = "https://matthewperiut.github.io/repository" }
+	maven { name = 'Glass Releases'; url = "https://maven.glass-launcher.net/releases" }
+	maven { name = 'Glass Snapshots'; url = "https://maven.glass-launcher.net/snapshots" }
+	maven { name = 'Glass Babric'; url = "https://maven.glass-launcher.net/babric" }
+	exclusiveContent {
+		forRepository {
+			maven { name = "Modrinth"; url = "https://api.modrinth.com/maven" }
+		}
+		filter { includeGroup "maven.modrinth" }
+	}
+	maven { name = 'Jitpack'; url = 'https://jitpack.io' } // StationAPI's UnsafeEvents event bus
+	maven { name = 'Ornithe Releases'; url = 'https://maven.ornithemc.net/releases' }
+	mavenCentral()
+	mavenLocal()
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
+	clientExceptions ploceus.raven(rootProject.client_raven_build, 'client')
+	serverExceptions ploceus.raven(rootProject.server_raven_build, 'server')
+	clientSignatures ploceus.sparrow(rootProject.client_sparrow_build, 'client')
+	serverSignatures ploceus.sparrow(rootProject.server_sparrow_build, 'server')
+	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${rootProject.client_nests_build}"
+	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${rootProject.server_nests_build}"
+
+	ploceus.dependOsl(rootProject.osl_version)
+
+	// Build against RetroAPI core (the bridge implements core's StationBridge / ChunkGenBackend / TerrainUv).
+	implementation project(path: ':', configuration: 'namedElements')
+
+	// StationAPI is required at runtime (declared in fabric.mod.json depends) but not bundled - a consumer
+	// wanting compat adds both retroapi-stationapi and StationAPI. Compile-only here.
+	modCompileOnly "net.modificationstation:StationAPI:${rootProject.stapi_version}"
+
+	// The world-conversion bridge reaches StationAPI's DataFixerUpper-backed schema; DFU is JIJ'd inside
+	// StationAPI at runtime, so it is only needed at compile time.
+	compileOnly "com.mojang:datafixerupper:9.1.20"
+
+	// starac brings LWJGL 3, which would clash with vanilla Minecraft's LWJGL 2 API at compile time.
+	modRuntimeOnly "com.periut:starac:${rootProject.starac_version}"
+}
+
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3). It must stay on the
+// compile/minecraft classpath so Condor (Ploceus LVT generator) can resolve org.lwjgl.* classes for b1.7.3.
+configurations.matching { it.name.toLowerCase().contains('runtime') }.configureEach {
+	exclude group: 'org.lwjgl.lwjgl'
+}
+
+loom {
+	// All-vanilla widenings, mirrored from core so this module's mixins compile against the same widened
+	// members. They are idempotent with core's at runtime (both mods declare them).
+	accessWidenerPath = file("src/main/resources/retroapi-stationapi.accesswidener")
+	mods {
+		"retroapi-stationapi" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+processResources {
+	inputs.property 'version', version
+	filesMatching('fabric.mod.json') {
+		expand 'version': version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.encoding = 'UTF-8'
+	it.options.release = 21
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+	withSourcesJar()
+}
+
+jar {
+	from(rootProject.file('LICENSE')) {
+		rename { "${it}_${base.archivesName.get()}" }
+	}
+}

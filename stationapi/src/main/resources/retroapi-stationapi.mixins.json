@@ -1,0 +1,19 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.periut.retroapi.stationapi.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"mixins": [
+		"FlattenedWorldStorageMixin",
+		"CarverWorldMixin",
+		"ItemTooltipBridgeMixin"
+	],
+	"client": [
+		"ModNioResourcePackMixin",
+		"StationSoundBridgeMixin",
+		"ArsenicHeldItemLayerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

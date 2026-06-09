@@ -69,7 +69,22 @@ jobs:
           repository: matthewperiut/matthewperiut.github.io
           token: ${{ secrets.PAGES_TOKEN }}
           path: pages
+      # If this version's maven artifact is already in the pages repo (e.g. a prior run got this far
+      # before failing later, on Modrinth), skip the pages update + commit. update_pages.py stamps a
+      # fresh <lastUpdated> into maven-metadata.xml every run, so without this guard a re-run would
+      # always produce a redundant "actions: update retroapi" commit for an unchanged version.
+      - name: Check if version already published to pages
+        id: pages_state
+        run: |
+          jar="pages/repository/com/periut/retroapi/${{ steps.ver.outputs.version }}/retroapi-${{ steps.ver.outputs.version }}.jar"
+          if [ -f "$jar" ]; then
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::retroapi ${{ steps.ver.outputs.version }} already in the pages maven repo; skipping pages update + commit"
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Update pages (maven repo, manifests, docs, template zips)
+        if: steps.pages_state.outputs.already-published != 'true'
         run: |
           python3 .github/scripts/update_pages.py \
             --pages pages \
@@ -77,6 +92,7 @@ jobs:
             --commit "${{ github.sha }}" \
             --branch "${{ github.event.repository.default_branch }}"
       - name: Commit & push pages
+        if: steps.pages_state.outputs.already-published != 'true'
         working-directory: pages
         run: |
           git config user.name "github-actions[bot]"
@@ -102,6 +118,10 @@ jobs:
           version-type: beta
           loaders: fabric
           game-versions: b1.7.3
+          # b1.7.3 is an old_beta; mc-publish's default game-version-filter (releases | min-major |
+          # min-minor) drops it, leaving an empty list -> "At least one game version should be
+          # specified". `any` keeps beta/alpha versions so b1.7.3 survives.
+          game-version-filter: any
           changelog-file: .github/release-notes.md
           dependencies: |
             osl(required)
@@ -118,4 +138,6 @@ jobs:
           version-type: beta
           loaders: babric
           game-versions: b1.7.3
+          # See the Ornithe step: `any` keeps the old_beta b1.7.3 from being filtered out.
+          game-version-filter: any
           changelog-file: .github/release-notes.md

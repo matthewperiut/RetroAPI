@@ -22,8 +22,10 @@ public class RetroAPIClient implements ClientModInitializer {
 		boolean hasStationAPI = FabricLoader.getInstance().isModLoaded("stationapi");
 
 		// The client's dimension teleport back end. Referenced only here (client entrypoint), so the
-		// dedicated server never loads ClientTeleporter or its client-only class refs.
-		DimensionHelper.setTeleporter(new ClientTeleporter());
+		// dedicated server never loads ClientTeleporter or its client-only class refs. Registered into
+		// the CLIENT slot so that under the integrated server (both entrypoints in one JVM) it does not
+		// clobber the server back end.
+		DimensionHelper.setClientTeleporter(new ClientTeleporter());
 
 		// The client's container-GUI opener (singleplayer direct-open). Referenced only here.
 		com.periut.retroapi.gui.RetroGuis.setClientOpener(new com.periut.retroapi.gui.client.ClientGuiOpener());

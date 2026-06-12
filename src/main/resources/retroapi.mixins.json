@@ -47,7 +47,18 @@
 		"component.PlayerInventoryComponentMixin",
 		"component.SlotUpdateComponentMixin",
 		"component.InventoryComponentMixin",
-		"component.ItemEntitySpawnComponentMixin"
+		"component.ItemEntitySpawnComponentMixin",
+		"dimension.server.MinecraftServerMixin",
+		"dimension.server.PlayerManagerMixin",
+		"dimension.server.ServerPlayerEntityMixin",
+		"network.ChunkSendMixin",
+		"network.ServerWorldSoundMixin",
+		"network.ServerPlayerEntityAccessor",
+		"network.ServerPlayerInteractionManagerMixin",
+		"entity.server.ServerEntityTrackerMixin",
+		"entity.server.TrackedEntityMixin",
+		"gui.ServerPlayerEntitySyncIdAccessor",
+		"voxelshapes.VoxelMoveCheckMixin"
 	],
 	"client": [
 		"client.BlockItemTextureMixin",
@@ -84,19 +95,6 @@
 		"client.render.LayeredItemRenderMixin",
 		"client.render.LayeredHeldItemMixin",
 		"client.PlayerArmorTextureMixin"
-	],
-	"server": [
-		"dimension.server.MinecraftServerMixin",
-		"dimension.server.PlayerManagerMixin",
-		"dimension.server.ServerPlayerEntityMixin",
-		"network.ChunkSendMixin",
-		"network.ServerWorldSoundMixin",
-		"network.ServerPlayerEntityAccessor",
-		"network.ServerPlayerInteractionManagerMixin",
-		"entity.server.ServerEntityTrackerMixin",
-		"entity.server.TrackedEntityMixin",
-		"gui.ServerPlayerEntitySyncIdAccessor",
-		"voxelshapes.VoxelMoveCheckMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

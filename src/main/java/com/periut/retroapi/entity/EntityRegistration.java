@@ -2,6 +2,7 @@ package com.periut.retroapi.entity;
 
 import com.periut.retroapi.entity.client.EntityFactory;
 import com.periut.retroapi.entity.client.MobFactory;
+import com.periut.retroapi.entity.client.SimpleEntityFactory;
 import net.minecraft.entity.Entity;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
 
@@ -29,6 +30,7 @@ public class EntityRegistration {
 	private int sendVelocity = SEND_VELOCITY_UNSET;
 	private boolean living = false;
 	private EntityFactory entityFactory;
+	private SimpleEntityFactory simpleEntityFactory;
 	private MobFactory mobFactory;
 
 	public EntityRegistration(NamespacedIdentifier id, Class<? extends Entity> entityClass) {
@@ -43,6 +45,7 @@ public class EntityRegistration {
 	public int getSendVelocity() { return sendVelocity; }
 	public boolean isLiving() { return living; }
 	public EntityFactory getEntityFactory() { return entityFactory; }
+	public SimpleEntityFactory getSimpleEntityFactory() { return simpleEntityFactory; }
 	public MobFactory getMobFactory() { return mobFactory; }
 
 	/** Tracking parameters; {@code sendVelocity} is one of the SEND_VELOCITY_* constants. */
@@ -53,9 +56,20 @@ public class EntityRegistration {
 		return this;
 	}
 
-	/** Register a non-living entity factory (4-arg world+pos). */
+	/** Register a non-living entity factory (4-arg world+pos), for constructors that take spawn coordinates. */
 	public EntityRegistration factory(EntityFactory factory) {
 		this.entityFactory = factory;
+		return this;
+	}
+
+	/**
+	 * Register a non-living entity factory (1-arg world). The position from the spawn packet is applied
+	 * after construction. This is the {@code extends Entity} counterpart of the living {@code factory(MobFactory)}
+	 * overload, so {@code .factory(MyEntity::new)} works for a plain {@code MyEntity(World)} constructor.
+	 */
+	public EntityRegistration factory(SimpleEntityFactory factory) {
+		this.simpleEntityFactory = factory;
+		this.living = false;
 		return this;
 	}
 

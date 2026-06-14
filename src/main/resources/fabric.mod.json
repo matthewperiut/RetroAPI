@@ -9,6 +9,9 @@
 	"icon": "assets/retroapi/icon.png",
 	"environment": "*",
 	"entrypoints": {
+		"preLaunch": [
+			"com.periut.retroapi.RetroAPIPreLaunch"
+		],
 		"init": [
 			"com.periut.retroapi.RetroAPI"
 		],

@@ -17,6 +17,28 @@ import net.minecraft.item.Item;
  */
 public interface RetroItemAccess {
 
+	/**
+	 * Sentinel id meaning "RetroAPI, allocate a placeholder slot for me." Pass it straight to a
+	 * vanilla {@code Item} (or subclass) constructor in place of a real id; RetroAPI fills in a
+	 * free, reserved slot atomically from <em>inside</em> the constructor, so there is no
+	 * {@link #allocateId()} call to make and no scan-then-construct window to race:
+	 * <pre>
+	 * MyItem item = (MyItem) RetroItemAccess.of(new MyItem(RetroItemAccess.AUTO_ID))
+	 *     .texture(id("my_item"))
+	 *     .register(id("my_item"));
+	 * </pre>
+	 * and from a subclass that adds its own constructor args, forward the sentinel to {@code super}:
+	 * <pre>
+	 * public MyItem(int id) { super(id); ... }   // called as new MyItem(RetroItemAccess.AUTO_ID)
+	 * </pre>
+	 *
+	 * <p>It is a deliberately out-of-range value, <em>not</em> {@code -1}: beta's own {@code BlockItem}
+	 * for block id 255 legitimately constructs {@code Item(-1)}, and every id from {@code -256} to
+	 * {@code -1} is a real block-item slot, so {@code -1} could never be told apart from a genuine id.
+	 * {@link Integer#MIN_VALUE} can't collide with anything real.
+	 */
+	int AUTO_ID = Integer.MIN_VALUE;
+
 	RetroItemAccess maxStackSize(int size);
 
 	RetroItemAccess texture(NamespacedIdentifier textureId);
@@ -76,7 +98,7 @@ public interface RetroItemAccess {
 	 * Create a new Item with an automatically allocated placeholder ID.
 	 */
 	static RetroItemAccess create() {
-		return (RetroItemAccess) new Item(allocateId());
+		return (RetroItemAccess) new Item(AUTO_ID);
 	}
 
 	/**
@@ -89,15 +111,13 @@ public interface RetroItemAccess {
 	/**
 	 * Allocate a placeholder item ID.
 	 * Use when subclassing Item: {@code super(RetroItemAccess.allocateId())}
+	 *
+	 * <p>Prefer {@link #AUTO_ID}, which allocates atomically from inside the constructor. This method
+	 * remains for cases where you need the numeric id in hand; it now reserves the slot it returns
+	 * (see {@link RetroItemIds}) so it can never hand the same slot to two items.
 	 */
 	static int allocateId() {
-		Item[] byId = Item.ITEMS;
-		for (int i = 2000 + 256; i < byId.length; i++) {
-			if (byId[i] == null) {
-				return i - 256;
-			}
-		}
-		throw new RuntimeException("No more placeholder item IDs available");
+		return RetroItemIds.allocate();
 	}
 
 	/** @deprecated Use {@link #allocateId()} */

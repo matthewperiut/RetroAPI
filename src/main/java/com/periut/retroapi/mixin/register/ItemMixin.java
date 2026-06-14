@@ -17,7 +17,9 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import com.periut.retroapi.register.item.RetroItemIds;
 
 @Mixin(Item.class)
 public abstract class ItemMixin implements RetroItemAccess {
@@ -25,6 +27,19 @@ public abstract class ItemMixin implements RetroItemAccess {
 	@Shadow public int maxCount;
 	@Shadow protected boolean handheld;
 	@Shadow public abstract Item setTextureId(int sprite);
+
+	/**
+	 * Resolve the {@link RetroItemAccess#AUTO_ID} sentinel into a real, reserved placeholder slot
+	 * before the constructor consumes it (the original body runs {@code this.id = 256 + id} and
+	 * {@code Item.ITEMS[256 + id] = this} immediately after this point). Allocating here - rather than
+	 * scanning in advance and passing the result in - makes the scan and the store a single atomic
+	 * step, so no other item can ever claim the same slot in between. Any non-sentinel id (including
+	 * the negative ids vanilla {@code BlockItem}s pass) is left untouched.
+	 */
+	@ModifyVariable(method = "<init>(I)V", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+	private static int retroapi$resolveAutoId(int id) {
+		return id == RetroItemAccess.AUTO_ID ? RetroItemIds.allocate() : id;
+	}
 
 	@org.spongepowered.asm.mixin.Unique
 	private com.periut.retroapi.tag.RetroTool retroapi$toolKind = null;

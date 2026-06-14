@@ -45,14 +45,22 @@ public final class EntitySpawnClient {
 		byte[] trackerBytes = sync ? buf.readByteArray() : null;
 
 		EntityRegistration reg = RetroRegistry.getEntityByStringId(handler);
-		if (reg == null || reg.getEntityFactory() == null) {
+		if (reg == null || (reg.getEntityFactory() == null && reg.getSimpleEntityFactory() == null)) {
 			RetroAPI.LOGGER.warn("No entity factory for spawn handler {}", handler);
 			return;
 		}
 		ClientWorld world = (ClientWorld) ctx.minecraft().world;
 		if (world == null) return;
 
-		Entity e = reg.getEntityFactory().create(world, tx / 32.0D, ty / 32.0D, tz / 32.0D);
+		Entity e;
+		if (reg.getEntityFactory() != null) {
+			// Constructor takes the spawn coordinates.
+			e = reg.getEntityFactory().create(world, tx / 32.0D, ty / 32.0D, tz / 32.0D);
+		} else {
+			// World-only constructor: apply the position from the packet after construction.
+			e = reg.getSimpleEntityFactory().create(world);
+			if (e != null) e.setPositionAndAngles(tx / 32.0D, ty / 32.0D, tz / 32.0D, 0.0F, 0.0F);
+		}
 		if (e == null) return;
 		e.trackedPosX = tx;
 		e.trackedPosY = ty;

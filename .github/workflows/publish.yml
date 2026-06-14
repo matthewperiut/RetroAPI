@@ -58,7 +58,6 @@ jobs:
             build/libs/retroapi-${{ steps.ver.outputs.version }}.jar
             build/libs/retroapi-${{ steps.ver.outputs.version }}-babric.jar
           fail_on_unmatched_files: true
-          body_path: .github/release-notes.md
 
       # --- Maven repository / docs / templates on matthewperiut.github.io ---
       # Runs BEFORE Modrinth so a Modrinth duplicate-version rejection on a re-run can't block the
@@ -116,13 +115,14 @@ jobs:
           name: RetroAPI ${{ steps.ver.outputs.version }} (Ornithe)
           version: ${{ steps.ver.outputs.version }}
           version-type: beta
+          # Use the text written in the GitHub release as the Modrinth version changelog.
+          changelog: ${{ github.event.release.body }}
           loaders: ornithe
           game-versions: b1.7.3
           # b1.7.3 is an old_beta; mc-publish's default game-version-filter (releases | min-major |
           # min-minor) drops it, leaving an empty list -> "At least one game version should be
           # specified". `any` keeps beta/alpha versions so b1.7.3 survives.
           game-version-filter: any
-          changelog-file: .github/release-notes.md
           dependencies: |
             osl(required)
 
@@ -136,8 +136,9 @@ jobs:
           name: RetroAPI ${{ steps.ver.outputs.version }} (Babric)
           version: ${{ steps.ver.outputs.version }}+babric
           version-type: beta
+          # Use the text written in the GitHub release as the Modrinth version changelog.
+          changelog: ${{ github.event.release.body }}
           loaders: babric
           game-versions: b1.7.3
           # See the Ornithe step: `any` keeps the old_beta b1.7.3 from being filtered out.
           game-version-filter: any
-          changelog-file: .github/release-notes.md

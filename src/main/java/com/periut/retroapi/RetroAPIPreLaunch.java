@@ -1,7 +1,7 @@
 package com.periut.retroapi;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
-import net.minecraft.block.Block;
 
 /**
  * Breaks the order-sensitive vanilla static-init cycle before <em>any</em> mod's {@code init} runs.
@@ -25,12 +25,37 @@ import net.minecraft.block.Block;
  * was non-deterministic. {@code preLaunch} runs strictly before every {@code init} entrypoint, so forcing
  * {@code Block.<clinit>} here makes the safe order deterministic for RetroAPI and every mod built on it,
  * no matter the init order.
+ *
+ * <p><strong>StationAPI gate.</strong> When StationAPI is present this forcing is deliberately skipped.
+ * StationAPI's {@code station-flattening} module mixes into {@code Stats.<clinit>} (which {@code Block.<clinit>}
+ * triggers) and there does {@code BlockRegistry.getId(blockId).orElseThrow()} for every block - so it
+ * requires StationAPI's {@code BlockRegistry} to already be populated. That registry is filled during
+ * StationAPI's own initialization, which runs <em>after</em> the {@code preLaunch} stage. Forcing
+ * {@code Block.<clinit>} here therefore reaches the flattening mixin before any block is registered and
+ * crashes with {@code NoSuchElementException: No value present}. Under StationAPI the Block/Item/Stats
+ * init order is StationAPI's responsibility anyway (RetroAPI delegates all ID management to it), and the
+ * vanilla cycle this entrypoint guards against does not arise on StationAPI's registration path - so the
+ * safe action is to do nothing here and let {@link RetroAPI#init()} touch {@code Block} later, at a point
+ * StationAPI's registry is ready (this matches the working pre-{@code preLaunch} 0.2.0 behaviour).
  */
 public class RetroAPIPreLaunch implements PreLaunchEntrypoint {
 	@Override
 	public void onPreLaunch() {
+		if (FabricLoader.getInstance().isModLoaded("stationapi")) {
+			// Do NOT touch Block here: that would run Stats.<clinit> -> StationAPI's flattening mixin
+			// (BlockRegistry.getId(...).orElseThrow()) before StationAPI has registered any block. Defer
+			// to StationAPI's ordering; RetroAPI.init() forces Block later, once the registry is ready.
+			RetroAPI.LOGGER.info("RetroAPI preLaunch: StationAPI present - deferring Block-first static init to StationAPI");
+			return;
+		}
 		// Referencing a non-constant Block static forces Block.<clinit> to run to completion now, with
-		// Item still untouched - so the cycle is entered from Block, the vanilla-safe direction.
-		RetroAPI.LOGGER.info("RetroAPI preLaunch: forcing Block-first static init ({} block slots)", Block.BLOCKS.length);
+		// Item still untouched - so the cycle is entered from Block, the vanilla-safe direction. Loaded
+		// reflectively so this class does not reference Block until we know StationAPI is absent.
+		forceBlockFirstStaticInit();
+	}
+
+	private static void forceBlockFirstStaticInit() {
+		RetroAPI.LOGGER.info("RetroAPI preLaunch: forcing Block-first static init ({} block slots)",
+			net.minecraft.block.Block.BLOCKS.length);
 	}
 }

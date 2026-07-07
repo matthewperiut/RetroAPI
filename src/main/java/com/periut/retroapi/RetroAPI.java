@@ -42,6 +42,10 @@ public class RetroAPI implements ModInitializer {
 		LOGGER.info("RetroAPI initializing ({} block slots)", Block.BLOCKS.length);
 
 		if (!hasStationAPI) {
+			// NOTE: the beta-accurate default vanilla mineable/needs_<tier>_tool membership is registered
+			// LAZILY on first tag query (RetroTags.ensureVanillaDefaults), not here, so it can't lose a
+			// race with a consumer mod that queries tags from its own init before RetroAPI's runs.
+
 			// Load mod lang files BEFORE any registration callbacks fire: vanilla Achievement
 			// translates its name/description EAGERLY in its constructor (I18n.getTranslation),
 			// so any achievement constructed before the lang is in TranslationStorage freezes the

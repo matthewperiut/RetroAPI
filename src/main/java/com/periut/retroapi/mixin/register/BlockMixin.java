@@ -42,6 +42,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Unique private Class<?> retroapi$effectiveTool = null;
 	@Unique private java.util.List<com.periut.retroapi.state.RetroProperty<?>> retroapi$pendingStates = null;
 	@Unique private java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> retroapi$pendingDefault = null;
+	@Unique private boolean retroapi$autoFacing = false;
 
 	// --- Block property wrappers ---
 
@@ -107,6 +108,28 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	public RetroBlockAccess defaultState(java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> transformer) {
 		this.retroapi$pendingDefault = transformer;
 		return this;
+	}
+
+	@Override
+	public RetroBlockAccess facing() {
+		this.retroapi$autoFacing = true;
+		if (this.retroapi$pendingStates == null) {
+			this.retroapi$pendingStates = new java.util.ArrayList<>();
+		}
+		if (!this.retroapi$pendingStates.contains(com.periut.retroapi.state.RetroFacing.PROPERTY)) {
+			this.retroapi$pendingStates.add(com.periut.retroapi.state.RetroFacing.PROPERTY);
+		}
+		// Aim the inventory icon's default south (front on a visible iso face), unless the caller set one.
+		if (this.retroapi$pendingDefault == null) {
+			this.retroapi$pendingDefault = s -> s.with(
+				com.periut.retroapi.state.RetroFacing.PROPERTY, com.periut.retroapi.state.RetroFacing.SOUTH);
+		}
+		return this;
+	}
+
+	@Override
+	public boolean isAutoFacing() {
+		return this.retroapi$autoFacing;
 	}
 
 	@Override
@@ -255,6 +278,24 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	private void retroapi$getRenderType(CallbackInfoReturnable<Integer> cir) {
 		if (this.retroapi$renderType != -1) {
 			cir.setReturnValue(this.retroapi$renderType);
+		}
+	}
+
+	/**
+	 * Furnace-like facing for {@code .facing()} blocks: write the placer-facing direction into state on
+	 * placement, so the block orients itself with no per-block {@code onPlaced}. Targets the same
+	 * {@code onPlaced(World,x,y,z,LivingEntity)} overload the freezer overrides by hand.
+	 */
+	@Inject(method = "onPlaced(Lnet/minecraft/world/World;IIILnet/minecraft/entity/LivingEntity;)V",
+		at = @At("TAIL"), require = 0)
+	private void retroapi$autoFace(net.minecraft.world.World world, int x, int y, int z,
+			net.minecraft.entity.LivingEntity placer, CallbackInfo ci) {
+		if (this.retroapi$autoFacing) {
+			Block self = (Block) (Object) this;
+			com.periut.retroapi.state.RetroStates.set(world, x, y, z,
+				com.periut.retroapi.state.RetroStates.getDefault(self).with(
+					com.periut.retroapi.state.RetroFacing.PROPERTY,
+					com.periut.retroapi.state.RetroFacing.fromYaw(placer.yaw)));
 		}
 	}
 

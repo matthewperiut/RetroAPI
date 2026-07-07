@@ -26,6 +26,13 @@
 	"mixins": [
 		"retroapi.mixins.json"
 	],
+	"custom": {
+		"//": "Interface injection: consumers see Block/Item already implementing the RetroAPI access interfaces, so `block.strength(...)` / `item.tool(...)` work WITHOUT casting to (RetroBlockAccess)/(RetroItemAccess). The mixins supply the implementations at runtime; this only teaches the compiler. Keys are calamus-gen2 intermediary names (class_17=Block, class_124=Item), matching how StationAPI declares its own injected interfaces at this version.",
+		"loom:injected_interfaces": {
+			"net/minecraft/class_17": ["com/periut/retroapi/register/block/RetroBlockAccess"],
+			"net/minecraft/class_124": ["com/periut/retroapi/register/item/RetroItemAccess"]
+		}
+	},
 	"depends": {
 		"fabricloader": ">=0.17.3",
 		"minecraft": "1.0.0-beta.7.3",

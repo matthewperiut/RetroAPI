@@ -1,0 +1,8 @@
+{
+  "parent": "block/orientable",
+  "textures": {
+    "front": "retroapi_test:block/tagged_ore",
+    "side": "retroapi_test:block/test_block",
+    "top": "retroapi_test:block/color_block_top"
+  }
+}

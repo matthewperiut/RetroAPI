@@ -51,6 +51,27 @@ public final class ItemModelLoader {
 		return OVERLAYS.get(texture);
 	}
 
+	/**
+	 * Code path for a layered item with NO model JSON: {@code base} is layer 0, each of {@code overlays}
+	 * stacks on top, composited onto one atlas slot at build time (exactly like a {@code item/generated}
+	 * model with {@code layer0}/{@code layer1}...). Base and overlays may each be a modded texture
+	 * ({@code ns:name} → {@code textures/item/name.png}) or a vanilla one ({@code minecraft:apple}). This
+	 * is what {@code RetroItemAccess.layers(...)} calls, so a mod can stack sprites without shipping JSON.
+	 */
+	public static RetroTexture applyLayers(Item item, NamespacedIdentifier base, List<NamespacedIdentifier> overlays) {
+		List<String> layerValues = new ArrayList<>();
+		layerValues.add(base.namespace() + ":" + base.identifier());
+		for (NamespacedIdentifier o : overlays) {
+			layerValues.add(o.namespace() + ":" + o.identifier());
+		}
+		return buildLayers(item, base, layerValues);
+	}
+
+	/** Adds one overlay on top of an existing base item texture (backs {@code RetroItemAccess.overlay(...)}). */
+	public static void addOverlay(RetroTexture base, NamespacedIdentifier overlay) {
+		OVERLAYS.computeIfAbsent(base, k -> new ArrayList<>()).add(overlay);
+	}
+
 	/** The vanilla atlas slot a derived item should copy as its base, or null. */
 	public static Integer vanillaBaseSlot(RetroTexture texture) {
 		return BASE_FROM_VANILLA.get(texture);
@@ -76,8 +97,13 @@ public final class ItemModelLoader {
 	 * vanilla base (so the real vanilla item is never touched).
 	 */
 	private static boolean finalizeLayers(Item item, NamespacedIdentifier id, List<String> layerValues) {
+		return buildLayers(item, id, layerValues) != null;
+	}
+
+	/** As {@link #finalizeLayers}, but returns the base RetroTexture (or null if there were no layers). */
+	private static RetroTexture buildLayers(Item item, NamespacedIdentifier id, List<String> layerValues) {
 		if (layerValues.isEmpty()) {
-			return false;
+			return null;
 		}
 		String baseValue = layerValues.get(0);
 		List<NamespacedIdentifier> overlays = new ArrayList<>();
@@ -98,7 +124,7 @@ public final class ItemModelLoader {
 		}
 		item.setTextureId(base.id);
 		RetroTextures.trackItem(item, base);
-		return true;
+		return base;
 	}
 
 	/** Applies the item's model JSON if one exists. Returns true when it set the sprite. */

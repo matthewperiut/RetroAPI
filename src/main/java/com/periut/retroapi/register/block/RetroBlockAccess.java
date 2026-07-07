@@ -78,14 +78,33 @@ public interface RetroBlockAccess {
 	RetroBlockAccess defaultState(java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> transformer);
 
 	/**
+	 * Makes this block turn to face the placer, the furnace/chest behavior, with no {@code onPlaced} code
+	 * of your own. It declares the built-in {@link com.periut.retroapi.state.RetroFacing#PROPERTY} state
+	 * (adding it to any {@link #states} you also set) and, on placement, writes
+	 * {@code RetroFacing.fromYaw(placer.yaw)} into state. The default state is aimed south so the inventory
+	 * icon shows its front on a visible face (override with {@link #defaultState} if you like).
+	 *
+	 * <p>Supply the look with a blockstate JSON that y-rotates one {@code orientable}-style model per
+	 * {@code facing=} value (the freezer pattern); a {@code BlockWithEntity} still needs its
+	 * {@code getRenderType()} override to honor the model, exactly as documented.</p>
+	 */
+	RetroBlockAccess facing();
+
+	/** True when {@link #facing()} was called: the block auto-orients toward the placer. */
+	boolean isAutoFacing();
+
+	/**
 	 * Declares which tool kinds mine this block effectively, exactly like modern
 	 * Minecraft's {@code mineable/<tool>} tags (this call is sugar for
 	 * {@code RetroTags.addToTag(RetroTool.X.mineableTag(), block)}). Unions with any
 	 * {@code data/{ns}/tags/block/mineable/<tool>.json} files; replaces nothing.
 	 *
-	 * <p>A block in any mineable tag gains modern semantics: matching tools mine it at
-	 * tool speed, and it only drops when a matching tool is held (unless
-	 * {@link #alwaysDrops()} is set).</p>
+	 * <p>Modern, DECOUPLED semantics: a mineable tag grants <b>speed</b> for matching tools. Whether the
+	 * block needs a tool to <b>drop</b> is separate, coming from its material (beta's stone/metal rule,
+	 * {@code Material.isHandHarvestable()}) or a {@code needs_<tier>_tool} tag. So a stone/metal-material
+	 * block in {@code mineable/pickaxe} drops only with a pickaxe (of sufficient tier), while a
+	 * hand-breakable block in {@code mineable/axe} still drops by hand and just mines faster with an axe.
+	 * {@link #alwaysDrops()} forces it to always drop.</p>
 	 */
 	RetroBlockAccess mineable(com.periut.retroapi.tag.RetroTool... tools);
 
@@ -168,6 +187,30 @@ public interface RetroBlockAccess {
 	 */
 	static RetroBlockAccess of(Block block) {
 		return (RetroBlockAccess) block;
+	}
+
+	/**
+	 * Wrap a Block subclass by its <em>constructor</em>, so you never hand-write the id boilerplate:
+	 * <pre>
+	 * RetroBlockAccess.of(CounterBlock::new)   // CounterBlock(int id)
+	 *     .sounds(Block.STONE_SOUND_GROUP)
+	 *     .register(id("counter"));
+	 * </pre>
+	 * RetroAPI allocates a free placeholder id and passes it to the constructor. Use this when your block
+	 * class takes only the id; if it also needs a {@link Material}, use {@link #of(java.util.function.BiFunction)}.
+	 */
+	static RetroBlockAccess of(java.util.function.IntFunction<? extends Block> factory) {
+		return (RetroBlockAccess) factory.apply(allocateId());
+	}
+
+	/**
+	 * Wrap a Block subclass whose constructor takes {@code (int id, Material material)}:
+	 * <pre>
+	 * RetroBlockAccess.of(MyBlock::new, Material.STONE).register(id("my_block"));
+	 * </pre>
+	 */
+	static RetroBlockAccess of(java.util.function.BiFunction<Integer, Material, ? extends Block> factory, Material material) {
+		return (RetroBlockAccess) factory.apply(allocateId(), material);
 	}
 
 	/**

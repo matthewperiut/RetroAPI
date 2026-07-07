@@ -23,11 +23,13 @@ import java.util.stream.Stream;
  * Scans every fabric mod for block tag data files and parses them into raw entry lists,
  * which {@link RetroTags} resolves to Block sets on first query.
  *
- * <p>Scanned layouts inside each mod, for every namespace directory under {@code data/}:</p>
+ * <p>Scanned layouts inside each mod, for every namespace directory under {@code data/}, for both
+ * blocks and items:</p>
  * <ul>
- *   <li>{@code data/{ns}/tags/block/**.json} (modern, 1.21+)</li>
- *   <li>{@code data/{ns}/tags/blocks/**.json} (modern, pre-1.21 plural)</li>
- *   <li>{@code data/{ns}/stationapi/tags/blocks/**.json} (StationAPI layout)</li>
+ *   <li>{@code data/{ns}/tags/block(s)/**.json} and {@code tags/item(s)/**.json} (modern; singular
+ *       is 1.21+, plural is pre-1.21)</li>
+ *   <li>{@code data/{ns}/stationapi/tags/blocks/**.json} and {@code stationapi/tags/items/**.json}
+ *       (StationAPI's layout, so a StationAPI mod's tag files load unchanged)</li>
  * </ul>
  *
  * <p>File schema is the modern one exactly: {@code values} (block ids, {@code #tag} refs,
@@ -54,8 +56,17 @@ final class RetroTagLoader {
 
 	private RetroTagLoader() {}
 
-	/** path (e.g. "mineable/pickaxe") to raw entries, in load order. */
-	static Map<String, List<Entry>> loadAll() {
+	/** Block-tag path (e.g. "mineable/pickaxe") to raw entries, in load order. */
+	static Map<String, List<Entry>> loadBlockTags() {
+		return load("block", "blocks");
+	}
+
+	/** Item-tag path (e.g. "tools/pickaxes") to raw entries, in load order. */
+	static Map<String, List<Entry>> loadItemTags() {
+		return load("item", "items");
+	}
+
+	private static Map<String, List<Entry>> load(String singular, String plural) {
 		Map<String, List<Entry>> tags = new LinkedHashMap<>();
 		int files = 0;
 		for (ModContainer mod : FabricLoader.getInstance().getAllMods()) {
@@ -69,9 +80,9 @@ final class RetroTagLoader {
 						if (!Files.isDirectory(ns)) {
 							continue;
 						}
-						files += scanTagRoot(ns.resolve("tags").resolve("block"), tags);
-						files += scanTagRoot(ns.resolve("tags").resolve("blocks"), tags);
-						files += scanTagRoot(ns.resolve("stationapi").resolve("tags").resolve("blocks"), tags);
+						files += scanTagRoot(ns.resolve("tags").resolve(singular), tags);
+						files += scanTagRoot(ns.resolve("tags").resolve(plural), tags);
+						files += scanTagRoot(ns.resolve("stationapi").resolve("tags").resolve(plural), tags);
 					}
 				} catch (IOException e) {
 					RetroAPI.LOGGER.error("Failed to scan data/ of mod {}", mod.getMetadata().getId(), e);
@@ -79,7 +90,7 @@ final class RetroTagLoader {
 			}
 		}
 		if (files > 0) {
-			RetroAPI.LOGGER.info("Loaded {} block tag file(s) into {} tag(s)", files, tags.size());
+			RetroAPI.LOGGER.info("Loaded {} {} tag file(s) into {} tag(s)", files, singular, tags.size());
 		}
 		return tags;
 	}

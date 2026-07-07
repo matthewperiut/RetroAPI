@@ -74,23 +74,30 @@ public class LangLoader {
 	 * Uses the identifier path formatted as a title (e.g. "test_block" -> "Test Block").
 	 */
 	public static void injectDefaults(Properties translations) {
-		int count = 0;
+		java.util.List<String> autoNamed = new java.util.ArrayList<>();
 		for (BlockRegistration reg : RetroRegistry.getBlocks()) {
 			String key = reg.getBlock().getTranslationKey() + ".name";
 			if (!translations.containsKey(key)) {
-				translations.setProperty(key, formatName(reg.getId().identifier()));
-				count++;
+				String name = formatName(reg.getId().identifier());
+				translations.setProperty(key, name);
+				autoNamed.add(reg.getId() + " -> \"" + name + "\"");
 			}
 		}
 		for (ItemRegistration reg : RetroRegistry.getItems()) {
 			String key = reg.getItem().getTranslationKey() + ".name";
 			if (!translations.containsKey(key)) {
-				translations.setProperty(key, formatName(reg.getId().identifier()));
-				count++;
+				String name = formatName(reg.getId().identifier());
+				translations.setProperty(key, name);
+				autoNamed.add(reg.getId() + " -> \"" + name + "\"");
 			}
 		}
-		if (count > 0) {
-			LOGGER.info("Injected {} default translations for unnamed blocks/items", count);
+		if (!autoNamed.isEmpty()) {
+			// Name them, not just count them: a reminder of exactly which content is riding an
+			// AUTO-GENERATED display name (no lang entry). Add a lang line to silence any of these.
+			int shown = Math.min(autoNamed.size(), 20);
+			LOGGER.info("Using AUTO-GENERATED names for {} unnamed block(s)/item(s) (add a lang entry to override): {}{}",
+				autoNamed.size(), String.join(", ", autoNamed.subList(0, shown)),
+				autoNamed.size() > shown ? ", ... (+" + (autoNamed.size() - shown) + " more)" : "");
 		}
 	}
 

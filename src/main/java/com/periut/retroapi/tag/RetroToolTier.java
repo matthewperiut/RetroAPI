@@ -1,6 +1,7 @@
 package com.periut.retroapi.tag;
 
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.ToolItem;
 import net.minecraft.item.ToolMaterial;
 
@@ -33,6 +34,17 @@ public enum RetroToolTier {
 		this.tagName = tagName;
 	}
 
+	/**
+	 * Computes a tool's tier from the actual stack, for tools whose tier is not fixed: e.g. a
+	 * multi-tool that levels up with use, or one whose tier rides its damage/NBT. Declare one with
+	 * {@code RetroItemAccess.tier(stack -> ...)}; it is consulted per-harvest, so the answer can change
+	 * at runtime. Return any {@link RetroToolTier}. This is the "dynamically picking the tier" hook.
+	 */
+	@FunctionalInterface
+	public interface Dynamic {
+		RetroToolTier tierFor(ItemStack stack);
+	}
+
 	/** Numeric mining level, comparable to {@link ToolMaterial#getMiningLevel()}. */
 	public int getLevel() {
 		return level;
@@ -49,15 +61,18 @@ public enum RetroToolTier {
 	}
 
 	/**
-	 * The tier of an item: an explicit {@code RetroItemAccess.tier(...)} declaration wins,
-	 * vanilla tool items infer from their material's mining level, everything else is WOOD
-	 * (matching modern, where a bare hand or a stick is a wood-tier "tool").
+	 * The tier of an item, with no stack context: a dynamic tier declaration is ignored here (it needs
+	 * a stack), an explicit {@code RetroItemAccess.tier(RetroToolTier)} declaration wins, vanilla tool
+	 * items infer from their material's mining level, everything else is WOOD (matching modern, where a
+	 * bare hand or a stick is a wood-tier "tool"). Prefer {@link #of(ItemStack)} in harvest code.
 	 */
 	public static RetroToolTier of(Item item) {
 		if (item == null) {
 			return WOOD;
 		}
-		RetroToolTier declared = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolTier();
+		com.periut.retroapi.register.item.RetroItemAccess access =
+			(com.periut.retroapi.register.item.RetroItemAccess) item;
+		RetroToolTier declared = access.getToolTier();
 		if (declared != null) {
 			return declared;
 		}
@@ -66,6 +81,29 @@ public enum RetroToolTier {
 				.retroapi$getToolMaterial().getMiningLevel());
 		}
 		return WOOD;
+	}
+
+	/**
+	 * The tier of the tool in this stack. A {@code RetroItemAccess.tier(stack -> ...)} dynamic
+	 * declaration wins (letting the tier change at runtime), then a static {@code .tier(...)}, then a
+	 * vanilla {@code ToolItem}'s material level, else WOOD. This is the overload the harvest hook uses.
+	 */
+	public static RetroToolTier of(ItemStack stack) {
+		if (stack == null) {
+			return WOOD;
+		}
+		Item item = stack.getItem();
+		if (item == null) {
+			return WOOD;
+		}
+		Dynamic dynamic = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolTierDynamic();
+		if (dynamic != null) {
+			RetroToolTier tier = dynamic.tierFor(stack);
+			if (tier != null) {
+				return tier;
+			}
+		}
+		return of(item);
 	}
 
 	/** The tier for a numeric mining level, clamped into the known range. */

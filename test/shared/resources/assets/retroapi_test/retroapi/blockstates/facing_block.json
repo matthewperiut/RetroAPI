@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "retroapi_test:block/facing_block" },
+    "facing=south": { "model": "retroapi_test:block/facing_block", "y": 180 },
+    "facing=west":  { "model": "retroapi_test:block/facing_block", "y": 270 },
+    "facing=east":  { "model": "retroapi_test:block/facing_block", "y": 90 }
+  }
+}

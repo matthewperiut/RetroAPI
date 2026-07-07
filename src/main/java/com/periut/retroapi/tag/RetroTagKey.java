@@ -27,6 +27,16 @@ public final class RetroTagKey {
 		return new RetroTagKey("block", normalize(path));
 	}
 
+	/** An item tag, e.g. {@code item("tools/pickaxes")} or {@code item("custom/magic")}. */
+	public static RetroTagKey item(String path) {
+		return new RetroTagKey("item", normalize(path));
+	}
+
+	/** True for item tags (as opposed to block tags). */
+	public boolean isItem() {
+		return "item".equals(category);
+	}
+
 	/** Strips a leading {@code #} and any {@code namespace:} prefix; tags resolve by path. */
 	static String normalize(String path) {
 		if (path.startsWith("#")) {

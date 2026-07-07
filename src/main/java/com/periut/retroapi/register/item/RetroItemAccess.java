@@ -44,14 +44,32 @@ public interface RetroItemAccess {
 	RetroItemAccess texture(NamespacedIdentifier textureId);
 
 	/**
-	 * Declares this item's tool kind for the {@code mineable/<tool>} tag system, for custom
-	 * tool items that don't subclass the vanilla tool classes (those are inferred by
-	 * instanceof and need no call). See {@code RetroBlockAccess.mineable(...)}.
+	 * Layered sprite with NO model JSON: {@code base} is the bottom layer, each of {@code overlays} stacks
+	 * on top, all flattened onto one atlas slot. Base and overlays may be modded ({@code mymod:sparkle} →
+	 * {@code textures/item/sparkle.png}) or vanilla ({@code minecraft:apple}), so e.g. a "candied apple" is
+	 * {@code .layers(id("minecraft","apple"), id("mymod","sugar_sparkle"))} with no {@code items/} or
+	 * {@code models/item/} JSON at all. A model JSON, if present, still overrides this at registration.
 	 */
-	RetroItemAccess tool(com.periut.retroapi.tag.RetroTool tool);
+	RetroItemAccess layers(NamespacedIdentifier base, NamespacedIdentifier... overlays);
 
-	/** The declared tool kind, or null. Prefer {@code RetroTool.of(item)} which also infers vanilla classes. */
-	com.periut.retroapi.tag.RetroTool getToolKind();
+	/**
+	 * Stacks one more sprite on top of this item's current texture (set by {@link #texture} or
+	 * {@link #layers}). Chain several for multiple layers: {@code .texture(base).overlay(a).overlay(b)}.
+	 * Must follow a {@code .texture(...)}/{@code .layers(...)} call that established the base.
+	 */
+	RetroItemAccess overlay(NamespacedIdentifier overlayTextureId);
+
+	/**
+	 * Declares this item's tool kind(s) for the {@code mineable/<tool>} tag system, for custom tool
+	 * items that don't subclass the vanilla tool classes (those are inferred by instanceof and need no
+	 * call). Pass more than one to make a multi-tool, e.g. {@code .tool(RetroTool.PICKAXE, RetroTool.AXE)}
+	 * for a paxel that mines everything in both tags. Each call REPLACES the previously declared kinds.
+	 * See {@code RetroBlockAccess.mineable(...)}.
+	 */
+	RetroItemAccess tool(com.periut.retroapi.tag.RetroTool... tools);
+
+	/** The declared tool kinds (empty if none). Prefer {@code RetroTool.kindsOf(item)}, which also infers vanilla classes. */
+	java.util.Set<com.periut.retroapi.tag.RetroTool> getToolKinds();
 
 	/**
 	 * Declares this item's tool TIER for the {@code needs_<tier>_tool} tag system, for custom
@@ -61,8 +79,19 @@ public interface RetroItemAccess {
 	 */
 	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier tier);
 
-	/** The declared tool tier, or null. Prefer {@code RetroToolTier.of(item)} which also infers ToolItems. */
+	/**
+	 * Declares a DYNAMIC tool tier, computed from the actual {@link net.minecraft.item.ItemStack} at
+	 * harvest time, so the tier can change at runtime (a tool that levels up, or whose tier rides its
+	 * damage/NBT). Wins over a static {@link #tier(com.periut.retroapi.tag.RetroToolTier)}. Example:
+	 * {@code .tier(stack -> stack.getDamage() < 100 ? RetroToolTier.DIAMOND : RetroToolTier.IRON)}.
+	 */
+	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier);
+
+	/** The declared static tool tier, or null. Prefer {@code RetroToolTier.of(stack)} which also infers ToolItems and honors the dynamic tier. */
 	com.periut.retroapi.tag.RetroToolTier getToolTier();
+
+	/** The declared dynamic tool-tier supplier, or null. */
+	com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic();
 
 	/**
 	 * Marks this item as held like a tool: the in-hand render angles it through the fist
@@ -106,6 +135,20 @@ public interface RetroItemAccess {
 	 */
 	static RetroItemAccess of(Item item) {
 		return (RetroItemAccess) item;
+	}
+
+	/**
+	 * Wrap an Item subclass by its <em>constructor</em>, so you never hand-write the id boilerplate:
+	 * <pre>
+	 * RetroItemAccess.of(WandItem::new)   // WandItem(int id) { super(id); ... }
+	 *     .texture(id("wand"))
+	 *     .register(id("wand"));
+	 * </pre>
+	 * RetroAPI passes {@link #AUTO_ID}, which the Item constructor resolves to a free, reserved slot
+	 * atomically (see {@link #AUTO_ID}). Your constructor just forwards its id to {@code super(id)}.
+	 */
+	static RetroItemAccess of(java.util.function.IntFunction<? extends Item> factory) {
+		return (RetroItemAccess) factory.apply(AUTO_ID);
 	}
 
 	/**

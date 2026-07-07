@@ -18,7 +18,9 @@ public enum RetroTool {
 	AXE("axe"),
 	SHOVEL("shovel"),
 	HOE("hoe"),
-	SWORD("sword");
+	SWORD("sword"),
+	/** Matches StationAPI's {@code mineable/shears}; declared-only (beta has no ShearsItem tool class). */
+	SHEARS("shears");
 
 	private final String tagName;
 
@@ -39,16 +41,39 @@ public enum RetroTool {
 	/**
 	 * Infers the tool kind of an item from the vanilla tool classes, or from a
 	 * {@code RetroItemAccess.tool(...)} declaration (checked first, so custom tool
-	 * items that subclass plain Item still participate). Returns null for non-tools.
+	 * items that subclass plain Item still participate). For a multi-kind item (e.g. a
+	 * pickaxe+axe) this returns the first declared kind; {@link #kindsOf(Item)} returns all.
+	 * Returns null for non-tools.
 	 */
 	public static RetroTool of(Item item) {
 		if (item == null) {
 			return null;
 		}
-		RetroTool declared = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolKind();
-		if (declared != null) {
+		java.util.Set<RetroTool> declared = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolKinds();
+		if (declared != null && !declared.isEmpty()) {
+			return declared.iterator().next();
+		}
+		return vanillaKind(item);
+	}
+
+	/**
+	 * Every tool kind this item counts as: all {@code RetroItemAccess.tool(...)} declarations if any,
+	 * otherwise the single kind inferred from its vanilla tool class. Never null; empty for non-tools.
+	 * This is what lets one item be, say, both a pickaxe and an axe (a "paxel").
+	 */
+	public static java.util.Set<RetroTool> kindsOf(Item item) {
+		if (item == null) {
+			return java.util.Collections.emptySet();
+		}
+		java.util.Set<RetroTool> declared = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolKinds();
+		if (declared != null && !declared.isEmpty()) {
 			return declared;
 		}
+		RetroTool vanilla = vanillaKind(item);
+		return vanilla != null ? java.util.Collections.singleton(vanilla) : java.util.Collections.emptySet();
+	}
+
+	private static RetroTool vanillaKind(Item item) {
 		if (item instanceof PickaxeItem) return PICKAXE;
 		if (item instanceof AxeItem) return AXE;
 		if (item instanceof ShovelItem) return SHOVEL;

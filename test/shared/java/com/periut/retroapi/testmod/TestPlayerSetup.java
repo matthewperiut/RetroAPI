@@ -68,6 +68,23 @@ public final class TestPlayerSetup {
 			safeAddItem(inventory, new ItemStack(TestMod.DEF_ITEM, 16));
 		}
 
+		// --- 0.2.3 new-feature test kit ---
+		if (TestMod.PAXEL != null) {
+			safeAddItem(inventory, new ItemStack(TestMod.PAXEL, 1));          // pickaxe + axe, iron tier
+			safeAddItem(inventory, new ItemStack(TestMod.DYNAMIC_TOOL, 1));   // diamond tier while undamaged
+			safeAddItem(inventory, new ItemStack(TestMod.CODE_LAYERED, 16));  // layered sprite, no model JSON
+			safeAddItem(inventory, new ItemStack(TestMod.FACTORY_BLOCK, 16)); // built via of(Ctor::new)
+			safeAddItem(inventory, new ItemStack(TestMod.FACING_BLOCK, 16));  // .facing() rotation
+		}
+		// Vanilla ores to prove custom tools now harvest VANILLA blocks (the 0.2.3 headline fix).
+		// PAXEL is iron-tier: mines iron/gold/diamond ore, but NOT obsidian (needs diamond).
+		// DYNAMIC_TOOL is diamond-tier while undamaged: it mines the obsidian too.
+		safeAddItem(inventory, new ItemStack(Block.IRON_ORE, 16));
+		safeAddItem(inventory, new ItemStack(Block.GOLD_ORE, 16));
+		safeAddItem(inventory, new ItemStack(Block.DIAMOND_ORE, 16));
+		safeAddItem(inventory, new ItemStack(Block.OBSIDIAN, 16));
+		safeAddItem(inventory, new ItemStack(Block.LOG, 16));
+
 		// Server-side self-checks (logged so headless runs verify the asset platform):
 		// tag resolution incl. a vanilla name, and a >15 state index round-trip through
 		// setBlockMeta + xmeta (the lamp has 20 states; index 17 = lit=true, age=7).

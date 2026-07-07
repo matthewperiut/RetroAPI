@@ -55,6 +55,13 @@ public class TestMod implements ModInitializer {
 	public static Item LAYER_ITEM;
 	public static Item DEF_ITEM;
 
+	// New-feature exercises (multi-tool, dynamic tier, code layers, facing, factory-of, item tags).
+	public static Item PAXEL;
+	public static Item DYNAMIC_TOOL;
+	public static Item CODE_LAYERED;
+	public static Block FACTORY_BLOCK;
+	public static Block FACING_BLOCK;
+
 	// A data component for the headless round-trip self-check.
 	public static com.periut.retroapi.component.RetroComponentType<Integer> TEST_COUNT;
 	// A RECORD (compound) and a LIST component, to prove richer data types round-trip.
@@ -196,6 +203,57 @@ public class TestMod implements ModInitializer {
 			.maxStackSize(64)
 			.register(id("def_item"));
 
+		// ---------------------------------------------- new-feature exercises --
+
+		// Multi-kind tool (a paxel): mines everything in mineable/pickaxe AND mineable/axe, at iron tier.
+		PAXEL = (Item) RetroItemAccess.create()
+			.maxStackSize(1)
+			.tool(com.periut.retroapi.tag.RetroTool.PICKAXE, com.periut.retroapi.tag.RetroTool.AXE)
+			.tier(com.periut.retroapi.tag.RetroToolTier.IRON)
+			.texture(id("test_item"))
+			.register(id("paxel"));
+
+		// Dynamic tier: the tier is read off the stack each harvest (undamaged = diamond, worn = iron).
+		DYNAMIC_TOOL = (Item) RetroItemAccess.create()
+			.maxStackSize(1)
+			.tool(com.periut.retroapi.tag.RetroTool.PICKAXE)
+			.tier(stack -> stack.getDamage() == 0
+				? com.periut.retroapi.tag.RetroToolTier.DIAMOND
+				: com.periut.retroapi.tag.RetroToolTier.IRON)
+			.texture(id("test_item"))
+			.register(id("dynamic_tool"));
+
+		// Layered item with NO model JSON: base sprite + one overlay, flattened at atlas build.
+		CODE_LAYERED = RetroItemAccess.create()
+			.maxStackSize(64)
+			.layers(id("layer_base"), id("layer_overlay"))
+			.register(id("code_layered"));
+
+		// Factory-of: wrap a Block subclass by its constructor, no id boilerplate (Kyd's of(Ctor::new)).
+		FACTORY_BLOCK = RetroBlockAccess.of(TestLampBlock::new)
+			.sounds(Block.STONE_SOUND_GROUP)
+			.strength(0.5f)
+			.alwaysDrops()
+			.alwaysEffectiveTool()
+			.states(TestLampBlock.LIT, TestLampBlock.AGE)
+			.sprite(Block.COBBLESTONE.getTexture(0))
+			.register(id("factory_block"));
+
+		// Facing: furnace-like rotation with no onPlaced of our own. The blockstate JSON
+		// (retroapi/blockstates/facing_block.json) y-rotates an orientable model per facing;
+		// the front is the distinct tagged_ore texture so you can SEE it turn to face you.
+		FACING_BLOCK = RetroBlockAccess.create(Material.STONE)
+			.sounds(Block.STONE_SOUND_GROUP)
+			.strength(1.5f)
+			.facing()
+			.register(id("facing_block"));
+
+		// Arbitrary runtime item tags: tag two items, then query.
+		com.periut.retroapi.tag.RetroTagKey gems = com.periut.retroapi.tag.RetroTagKey.item("retroapi_test/gems");
+		com.periut.retroapi.tag.RetroTags.addToTag(gems, TEST_ITEM, PAXEL);
+
+		retroapi$smokeCheck(gems);
+
 		TEST_COUNT = com.periut.retroapi.component.RetroComponents.register(
 			id("test_count"), 0, com.periut.retroapi.component.RetroComponentType.INT);
 		// compound(): writes a multi-field value into its own sub-compound (a record).
@@ -210,6 +268,40 @@ public class TestMod implements ModInitializer {
 		TestAchievements.register();
 
 		LOGGER.info("Registered test_block, color_block, pipe, test_item, + " + BLOCK_COUNT + " numbered blocks, + " + ITEM_COUNT + " numbered items");
+	}
+
+	/** Logs PASS/FAIL for the new-feature exercises so headless runs verify them. */
+	private static void retroapi$smokeCheck(com.periut.retroapi.tag.RetroTagKey gems) {
+		java.util.Set<com.periut.retroapi.tag.RetroTool> paxelKinds = com.periut.retroapi.tag.RetroTool.kindsOf(PAXEL);
+		boolean multi = paxelKinds.contains(com.periut.retroapi.tag.RetroTool.PICKAXE)
+			&& paxelKinds.contains(com.periut.retroapi.tag.RetroTool.AXE);
+		LOGGER.info("[new-features] multi-tool paxel kinds={} {}", paxelKinds, multi ? "PASS" : "FAIL");
+
+		com.periut.retroapi.tag.RetroToolTier fresh =
+			com.periut.retroapi.tag.RetroToolTier.of(new ItemStack(DYNAMIC_TOOL));
+		boolean dyn = fresh == com.periut.retroapi.tag.RetroToolTier.DIAMOND;
+		LOGGER.info("[new-features] dynamic tier (undamaged)={} {}", fresh, dyn ? "PASS" : "FAIL");
+
+		boolean itemTagged = com.periut.retroapi.tag.RetroTags.isIn(TEST_ITEM, gems)
+			&& com.periut.retroapi.tag.RetroTags.isIn(PAXEL, gems)
+			&& !com.periut.retroapi.tag.RetroTags.isIn(DYNAMIC_TOOL, gems);
+		LOGGER.info("[new-features] runtime item tag membership {}", itemTagged ? "PASS" : "FAIL");
+
+		boolean facing = FACING_BLOCK != null
+			&& ((com.periut.retroapi.register.block.RetroBlockAccess) FACING_BLOCK).isAutoFacing();
+		LOGGER.info("[new-features] .facing() auto-orient flag {}", facing ? "PASS" : "FAIL");
+
+		// Vanilla-block coverage only applies without StationAPI (which owns vanilla harvesting itself).
+		if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("stationapi")) {
+			boolean stone = com.periut.retroapi.tag.RetroTags.isIn(
+				Block.STONE, com.periut.retroapi.tag.RetroTool.PICKAXE.mineableTag());
+			boolean goldTier = com.periut.retroapi.tag.RetroTags.requiredTier(Block.GOLD_ORE)
+				== com.periut.retroapi.tag.RetroToolTier.IRON;
+			boolean ironTier = com.periut.retroapi.tag.RetroTags.requiredTier(Block.IRON_ORE)
+				== com.periut.retroapi.tag.RetroToolTier.STONE;
+			LOGGER.info("[new-features] vanilla defaults: stone=mineable/pickaxe={} goldOre=needs_iron={} ironOre=needs_stone={} {}",
+				stone, goldTier, ironTier, (stone && goldTier && ironTier) ? "PASS" : "FAIL");
+		}
 	}
 
 	private static void registerRecipes() {

@@ -42,7 +42,7 @@ public abstract class ItemMixin implements RetroItemAccess {
 	}
 
 	@org.spongepowered.asm.mixin.Unique
-	private com.periut.retroapi.tag.RetroTool retroapi$toolKind = null;
+	private java.util.Set<com.periut.retroapi.tag.RetroTool> retroapi$toolKinds = java.util.Collections.emptySet();
 
 	@Override
 	public RetroItemAccess maxStackSize(int size) {
@@ -51,18 +51,22 @@ public abstract class ItemMixin implements RetroItemAccess {
 	}
 
 	@Override
-	public RetroItemAccess tool(com.periut.retroapi.tag.RetroTool tool) {
-		this.retroapi$toolKind = tool;
+	public RetroItemAccess tool(com.periut.retroapi.tag.RetroTool... tools) {
+		this.retroapi$toolKinds = tools.length == 0
+			? java.util.Collections.emptySet()
+			: new java.util.LinkedHashSet<>(java.util.Arrays.asList(tools));
 		return this;
 	}
 
 	@Override
-	public com.periut.retroapi.tag.RetroTool getToolKind() {
-		return this.retroapi$toolKind;
+	public java.util.Set<com.periut.retroapi.tag.RetroTool> getToolKinds() {
+		return this.retroapi$toolKinds;
 	}
 
 	@org.spongepowered.asm.mixin.Unique
 	private com.periut.retroapi.tag.RetroToolTier retroapi$toolTier = null;
+	@org.spongepowered.asm.mixin.Unique
+	private com.periut.retroapi.tag.RetroToolTier.Dynamic retroapi$toolTierDynamic = null;
 
 	@Override
 	public RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier tier) {
@@ -71,8 +75,19 @@ public abstract class ItemMixin implements RetroItemAccess {
 	}
 
 	@Override
+	public RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier) {
+		this.retroapi$toolTierDynamic = tier;
+		return this;
+	}
+
+	@Override
 	public com.periut.retroapi.tag.RetroToolTier getToolTier() {
 		return this.retroapi$toolTier;
+	}
+
+	@Override
+	public com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic() {
+		return this.retroapi$toolTierDynamic;
 	}
 
 	@Override
@@ -98,12 +113,36 @@ public abstract class ItemMixin implements RetroItemAccess {
 		}
 	}
 
+	@org.spongepowered.asm.mixin.Unique
+	private RetroTexture retroapi$baseTexture = null;
+
 	@Override
 	public RetroItemAccess texture(NamespacedIdentifier textureId) {
 		Item self = (Item) (Object) this;
 		RetroTexture tex = RetroTextures.addItemTexture(textureId);
 		self.setTextureId(tex.id);
 		RetroTextures.trackItem(self, tex);
+		this.retroapi$baseTexture = tex;
+		return this;
+	}
+
+	@Override
+	public RetroItemAccess layers(NamespacedIdentifier base, NamespacedIdentifier... overlays) {
+		Item self = (Item) (Object) this;
+		// Remember the base slot so a later .overlay(...) stacks onto the same one.
+		this.retroapi$baseTexture = com.periut.retroapi.client.model.ItemModelLoader.applyLayers(
+			self, base, java.util.Arrays.asList(overlays));
+		return this;
+	}
+
+	@Override
+	public RetroItemAccess overlay(NamespacedIdentifier overlayTextureId) {
+		if (this.retroapi$baseTexture == null) {
+			com.periut.retroapi.RetroAPI.LOGGER.warn(
+				"overlay({}) called with no base texture; call .texture(...) or .layers(...) first", overlayTextureId);
+			return this;
+		}
+		com.periut.retroapi.client.model.ItemModelLoader.addOverlay(this.retroapi$baseTexture, overlayTextureId);
 		return this;
 	}
 

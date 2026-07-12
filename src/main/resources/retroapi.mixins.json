@@ -16,6 +16,7 @@
 		"register.FireBlockAccessor",
 		"register.StatsExpandMixin",
 		"register.BlockMixin",
+		"register.BlockDropStateMixin",
 		"register.ToolItemAccessor",
 		"register.BlockEntityAccessor",
 		"register.ItemMixin",

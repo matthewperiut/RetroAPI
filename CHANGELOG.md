@@ -1,5 +1,16 @@
 # RetroAPI changelog
 
+## 0.2.4 — State-aware drops
+
+### Block states
+- **Blocks with more than 16 states now emit metadata-preserving drops.** `Block.dropStacks` handed the
+  vanilla nibble (bits 0-3) to `getDroppedItemId`/`getDroppedItemMeta`, so a block whose flattened state
+  index spills into the chunk sidecar could not recover its full state at drop time. A new
+  `register.BlockDropStateMixin` swaps the nibble for `RetroStates.get(...).getIndex()` whenever the block
+  has an explicit state definition wider than the nibble; decode it in your hook with
+  `RetroStates.fromIndex(this, meta)`. Vanilla blocks, implicit-meta blocks, and `<= 16`-state blocks are
+  untouched.
+
 ## 0.2.3 — Sharper tools & tags
 
 All items below are exercised by the test mod's headless self-checks (`runPopulateServer`),

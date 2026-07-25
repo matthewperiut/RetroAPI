@@ -18,7 +18,7 @@ import java.util.Map;
  * </ul>
  *
  * <p>The client-side tooltip mixin calls {@link #linesFor} for the hovered stack and draws
- * the lines under the name. Lines are plain strings; prefix with section signs for colour.</p>
+ * the lines under the name. Lines are plain strings; prefix with section signs for color.</p>
  */
 public final class RetroTooltips {
 

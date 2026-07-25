@@ -5,7 +5,7 @@ package com.periut.retroapi.register.block;
  *
  * <p>The renderer draws a layered block once per layer. For each extra pass it stashes that layer's tint
  * here and forces the sprite through the block renderer's texture override, so the ordinary block draw
- * path renders the overlay - no custom renderer, no model JSON. The block's colour hook reads
+ * path renders the overlay - no custom renderer, no model JSON. The block's color hook reads
  * {@link #forcedTint} back, which is why this lives in a common package: {@code Block.getColorMultiplier}
  * is a common method, and a client-only class referenced from it would be a landmine on a dedicated server.
  *
@@ -22,7 +22,7 @@ public final class RetroBlockLayerDraw {
 
 	private RetroBlockLayerDraw() {}
 
-	/** True when a tint from an overlay pass should win over the block's own colour. */
+	/** True when a tint from an overlay pass should win over the block's own color. */
 	public static boolean hasForcedTint() {
 		return forcedTint >= 0;
 	}

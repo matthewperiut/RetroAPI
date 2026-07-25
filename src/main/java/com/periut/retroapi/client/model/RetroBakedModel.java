@@ -174,7 +174,7 @@ public final class RetroBakedModel {
 		// trick is that the base bake derives UVs from the ELEMENT bounds, so the "back"
 		// faces (north, east) count their horizontal axis DOWN from the element's far
 		// edge. Block-relative coords (0-16) only match that when the element is centred;
-		// on an off-centre piece like a wall segment (z 0-8) the +x face came out shifted
+		// on an off-center piece like a wall segment (z 0-8) the +x face came out shifted
 		// by 8. So for those two faces we project u against the quad's OWN extent
 		// (min+max-pos), which reproduces the element-relative result on any geometry.
 		float[] uv = new float[2];

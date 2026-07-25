@@ -12,7 +12,7 @@ import java.net.URL;
  *
  * <p>Client-only. The three channels map to vanilla's {@code SoundManager} per-channel
  * {@code SoundEntry} holders. Registration is only possible after the {@code SoundManager} has been
- * initialised (i.e. once the game's sound system has loaded); calling before then is a no-op and
+ * initialized (i.e. once the game's sound system has loaded); calling before then is a no-op and
  * returns {@code null}.</p>
  */
 public final class RetroSounds {

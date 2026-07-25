@@ -283,7 +283,7 @@ public class BlockRenderContext {
 		}
 	}
 
-	/** Draws faces even where a neighbouring block would normally hide them (vanilla's "render all faces"). */
+	/** Draws faces even where a neighboring block would normally hide them (vanilla's "render all faces"). */
 	public void renderAllFaces(boolean all) {
 		((RetroBlockRendererAccess) blockRenderer).retroapi$setSkipFaceCulling(all);
 	}

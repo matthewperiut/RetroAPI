@@ -5,7 +5,7 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 
 /**
- * Duck interface injected into BlockRenderer for per-vertex colour support and the texture controls
+ * Duck interface injected into BlockRenderer for per-vertex color support and the texture controls
  * {@link BlockRenderContext} exposes (sprite override, mirroring, per-face rotation, face culling).
  */
 @Environment(EnvType.CLIENT)
@@ -22,6 +22,6 @@ public interface RetroBlockRendererAccess {
 	/** Rotates one face's texture in 90° steps; face indices are 0 bottom … 5 east. */
 	void retroapi$setFaceRotation(int face, int quarterTurns);
 
-	/** Draws faces that a neighbour would normally hide. */
+	/** Draws faces that a neighbor would normally hide. */
 	void retroapi$setSkipFaceCulling(boolean skip);
 }

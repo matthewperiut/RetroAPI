@@ -509,12 +509,12 @@ public abstract class BlockMixin implements RetroBlockAccess {
 
 	/**
 	 * Code-declared tinting for blocks with no model JSON: vanilla multiplies a standard block's vertex
-	 * colours by this, which is exactly the hook {@code .tint(...)} needs. The inventory form goes through
+	 * colors by this, which is exactly the hook {@code .tint(...)} needs. The inventory form goes through
 	 * {@code getColor(meta)} below.
 	 */
 	@Inject(method = "getColorMultiplier", at = @At("HEAD"), cancellable = true, require = 0)
 	private void retroapi$tintInWorld(BlockView world, int x, int y, int z, CallbackInfoReturnable<Integer> cir) {
-		// An overlay pass paints in ITS colour, not the block's (that is what makes a tinted glyph over an
+		// An overlay pass paints in ITS color, not the block's (that is what makes a tinted glyph over an
 		// untinted backdrop - or vanilla's green grass edge over plain dirt - a single block).
 		if (com.periut.retroapi.register.block.RetroBlockLayerDraw.hasForcedTint()) {
 			cir.setReturnValue(com.periut.retroapi.register.block.RetroBlockLayerDraw.forcedTint);

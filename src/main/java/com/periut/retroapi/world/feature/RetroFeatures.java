@@ -105,7 +105,7 @@ public final class RetroFeatures {
 	}
 
 	/**
-	 * Generation-safe block placement: sets id + metadata without notifying neighbours, so nothing
+	 * Generation-safe block placement: sets id + metadata without notifying neighbors, so nothing
 	 * cascades into re-generating the chunk you are still inside. Use this from features instead of
 	 * {@code world.setBlock}.
 	 */

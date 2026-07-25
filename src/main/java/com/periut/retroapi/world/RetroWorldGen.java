@@ -22,7 +22,7 @@ import net.minecraft.world.chunk.Chunk;
  * }</pre>
  *
  * <p>During {@code ChunkSource.getChunk} the chunk isn't registered with the world yet, so neither entry point
- * fires {@code Block.onPlaced} (which could touch neighbours and recursively re-generate this chunk).
+ * fires {@code Block.onPlaced} (which could touch neighbors and recursively re-generate this chunk).
  *
  * <p>The storage model is chosen ONCE at class load into a {@code static final} {@link ChunkGenBackend} (the
  * JIT devirtualizes + inlines it), so the per-chunk generation calls carry no StationAPI branch - mirroring

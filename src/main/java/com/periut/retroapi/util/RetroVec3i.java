@@ -8,7 +8,7 @@ import net.minecraft.world.World;
  * An immutable integer vector - the block position type b1.7.3 never had.
  *
  * <p>Beta passes positions around as three loose {@code int}s, which is why mod code fills up with
- * {@code world.setBlock(x + dx, y + dy, z + dz, ...)} and hand-written neighbour offsets. This is the
+ * {@code world.setBlock(x + dx, y + dy, z + dz, ...)} and hand-written neighbor offsets. This is the
  * modern {@code Vec3i}/{@code BlockPos} shape: values are never mutated, every operation returns a new
  * vector, and the world helpers let a position read or write itself.
  *

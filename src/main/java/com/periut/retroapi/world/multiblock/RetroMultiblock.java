@@ -16,7 +16,7 @@ import java.util.Map;
  * A multiblock pattern: what shape a structure has, drawn as ASCII layers, and how to test whether it is
  * standing in the world.
  *
- * <p>Beta gives you nothing here, so multiblocks end up as pages of hand-written neighbour checks that
+ * <p>Beta gives you nothing here, so multiblocks end up as pages of hand-written neighbor checks that
  * are wrong in at least one rotation. Declare the shape once instead:
  *
  * <pre>

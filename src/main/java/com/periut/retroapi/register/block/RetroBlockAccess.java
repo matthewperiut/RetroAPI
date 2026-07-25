@@ -175,13 +175,13 @@ public interface RetroBlockAccess {
 	/**
 	 * Makes this block indestructible in survival, the bedrock rule: infinite hardness and blast
 	 * resistance. Vanilla's {@code setUnbreakable()} is protected, so this used to force a Block subclass
-	 * for something with no behaviour in it at all.
+	 * for something with no behavior in it at all.
 	 */
 	RetroBlockAccess unbreakable();
 
 	/**
-	 * Tints this block's rendering by a colour computed per position, with NO model JSON and no custom
-	 * renderer - grass/leaves biome colouring for your own block, or a state-driven colour (a "wordle"
+	 * Tints this block's rendering by a color computed per position, with NO model JSON and no custom
+	 * renderer - grass/leaves biome coloring for your own block, or a state-driven color (a "wordle"
 	 * letter that turns green or yellow):
 	 * <pre>
 	 * .tint((state, world, x, y, z, tintIndex) -&gt; state.get(MARK) == Mark.HIT ? 0x6AAA64 : 0xC9B458)
@@ -210,7 +210,7 @@ public interface RetroBlockAccess {
 
 	/**
 	 * {@link #overlay(NamespacedIdentifier)} whose sprite and tint are chosen per position, for overlays
-	 * that depend on state or neighbours. Return {@code null} from the provider to skip the layer at that
+	 * that depend on state or neighbors. Return {@code null} from the provider to skip the layer at that
 	 * position.
 	 */
 	RetroBlockAccess overlay(com.periut.retroapi.register.block.RetroBlockLayer.Provider provider);

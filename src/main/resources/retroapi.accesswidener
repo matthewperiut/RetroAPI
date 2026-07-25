@@ -85,7 +85,7 @@ transitive-mutable field net/minecraft/world/biome/Biome hasSnow Z
 transitive-accessible method net/minecraft/block/Block setUnbreakable ()Lnet/minecraft/block/Block;
 
 # Particle internals, so RetroSpriteParticle (and mod particle classes) can set up a particle without
-# reimplementing Particle: sprite slot, size, colour, age and fall speed.
+# reimplementing Particle: sprite slot, size, color, age and fall speed.
 transitive-accessible field net/minecraft/client/particle/Particle textureId I
 transitive-mutable field net/minecraft/client/particle/Particle textureId I
 transitive-accessible field net/minecraft/client/particle/Particle scale F

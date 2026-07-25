@@ -36,7 +36,7 @@ import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
  * init order is StationAPI's responsibility anyway (RetroAPI delegates all ID management to it), and the
  * vanilla cycle this entrypoint guards against does not arise on StationAPI's registration path - so the
  * safe action is to do nothing here and let {@link RetroAPI#init()} touch {@code Block} later, at a point
- * StationAPI's registry is ready (this matches the working pre-{@code preLaunch} 0.2.0 behaviour).
+ * StationAPI's registry is ready (this matches the working pre-{@code preLaunch} 0.2.0 behavior).
  */
 public class RetroAPIPreLaunch implements PreLaunchEntrypoint {
 	@Override

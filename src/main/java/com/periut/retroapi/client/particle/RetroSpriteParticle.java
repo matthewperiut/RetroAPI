@@ -86,7 +86,7 @@ public class RetroSpriteParticle extends Particle {
 		return this;
 	}
 
-	/** {@code 0xRRGGBB} colour multiply. */
+	/** {@code 0xRRGGBB} color multiply. */
 	public RetroSpriteParticle tint(int rgb) {
 		this.red = ((rgb >> 16) & 0xFF) / 255.0F;
 		this.green = ((rgb >> 8) & 0xFF) / 255.0F;
@@ -102,7 +102,7 @@ public class RetroSpriteParticle extends Particle {
 
 	private boolean shrinking;
 
-	// --- behaviour --------------------------------------------------------------------------------
+	// --- behavior --------------------------------------------------------------------------------
 
 	@Override
 	public void tick() {

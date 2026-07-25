@@ -17,7 +17,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * Routes namespaced particle names to the RetroAPI particle registry.
  *
  * <p>Vanilla resolves a particle name through a hardcoded {@code if} chain here and silently does nothing
- * for anything it does not recognise - which is why b1.7.3 had no way to add a particle. A name with a
+ * for anything it does not recognize - which is why b1.7.3 had no way to add a particle. A name with a
  * namespace ({@code mymod:spark}) is looked up in {@link RetroParticleRegistry} first and, when found,
  * built and handed to the particle manager; everything else falls through to vanilla untouched.
  */

@@ -10,16 +10,16 @@ import net.minecraft.world.BlockView;
  * <p>This is the grass-side-overlay technique generalised. Vanilla draws grass' green edge as a second
  * pass over the same cube; RetroAPI lets any block declare as many such passes as it likes, from code,
  * with no model JSON and no custom renderer. Because each pass carries its own tint, a "letter on a
- * coloured backdrop" block is one base sprite plus one glyph sprite - not one baked sprite per
- * (colour, letter) combination.
+ * colored backdrop" block is one base sprite plus one glyph sprite - not one baked sprite per
+ * (color, letter) combination.
  */
 public final class RetroBlockLayer {
 
-	/** Tint value meaning "draw at full brightness, no colour multiply". */
+	/** Tint value meaning "draw at full brightness, no color multiply". */
 	public static final int NO_TINT = 0xFFFFFF;
 
 	/**
-	 * Chooses a layer per position, for overlays that depend on the block's state or its neighbours.
+	 * Chooses a layer per position, for overlays that depend on the block's state or its neighbors.
 	 * Return null to draw nothing there. The world is null when the block is drawn as an inventory item.
 	 */
 	@FunctionalInterface

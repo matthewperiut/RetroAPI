@@ -7,14 +7,14 @@ import net.ornithemc.osl.core.api.events.Event;
  * Fired once per block entity, the first time it ticks in a world - i.e. after its NBT has been read AND
  * after it has been attached to a world, which is the pass beta simply does not have.
  *
- * <p>{@code readNbt} runs while the chunk is still being deserialised: the block entity has no world yet,
- * its neighbours may not exist, and touching the world from there either NPEs or reads a half-built chunk.
- * The usual workaround was a hand-rolled "did I initialise yet?" boolean in every block entity. This is
+ * <p>{@code readNbt} runs while the chunk is still being deserialized: the block entity has no world yet,
+ * its neighbors may not exist, and touching the world from there either NPEs or reads a half-built chunk.
+ * The usual workaround was a hand-rolled "did I initialize yet?" boolean in every block entity. This is
  * that boolean, once, for everyone:
  *
  * <pre>
  * BlockEntityLoadedCallback.EVENT.register(be -&gt; {
- *     if (be instanceof MultiblockCore core) core.rebuildStructure();   // safe: world + neighbours exist
+ *     if (be instanceof MultiblockCore core) core.rebuildStructure();   // safe: world + neighbors exist
  * });
  * </pre>
  *

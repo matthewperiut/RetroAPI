@@ -4,7 +4,7 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.world.biome.Biome;
 
 /**
- * Fluent builder for a modded {@link Biome} (tint colours, weather flags, per-biome spawn weights),
+ * Fluent builder for a modded {@link Biome} (tint colors, weather flags, per-biome spawn weights),
  * used inside a {@link com.periut.retroapi.biome.event.BiomeRegistrationCallback} listener:
  *
  * <pre>{@code
@@ -32,7 +32,7 @@ public final class BiomeBuilder {
 		return new BiomeBuilder(name);
 	}
 
-	/** Sets both the grass tint and the foliage (leaves) tint to the same colour. */
+	/** Sets both the grass tint and the foliage (leaves) tint to the same color. */
 	public BiomeBuilder grassAndLeavesColor(int color) {
 		this.biome.grassColor = color;
 		this.biome.foliageColor = color;

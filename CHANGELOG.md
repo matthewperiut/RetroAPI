@@ -68,7 +68,7 @@ logged as `[new-features] ... PASS`.
   `.textures(bottom, top, north, south, west, east)` — the furnace/log look with no model JSON, no
   blockstate file and no `getTexture` override. `.sided(...)` follows the facing state (4- or 6-way).
 - **`.facingAll()`** — six-way facing (`RetroDirection.PROPERTY`), the dispenser/piston rule.
-- **`.tint(provider)`** — per-position colour for plain code-textured blocks, not just model faces with
+- **`.tint(provider)`** — per-position color for plain code-textured blocks, not just model faces with
   a `tintindex`; drives the inventory form too.
 - **`.overlay(...)`** — extra render passes over the same block, each with its own tint (vanilla's
   grass-edge trick, generalised). Static, tinted, or chosen per position by a provider.
@@ -92,7 +92,7 @@ logged as `[new-features] ... PASS`.
   predicate), match it at a position in one facing or `matchAnyRotation`, read back every matched
   position (optionally by pattern character), and `fill(...)` to form it.
 - **`BlockEntityLoadedCallback`** — fires once per block entity on its first tick, i.e. after NBT is read
-  AND the world exists; replaces the hand-rolled "have I initialised yet?" boolean.
+  AND the world exists; replaces the hand-rolled "have I initialized yet?" boolean.
 
 ### Logging
 - **RetroAPI is quiet now.** Registration, id assignment (one line *per item*), tag/lang/sound loading,

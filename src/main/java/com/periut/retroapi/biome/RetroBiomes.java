@@ -15,7 +15,7 @@ import java.util.List;
  *
  * <p>The guiding rule is <b>additive, never destructive</b>. Beta has a single global
  * set of biome objects ({@code Biome.PLAINS}, {@code Biome.FOREST}, ...) shared by every
- * dimension and every mod, so clobbering a spawn list or a colour is how mods break each
+ * dimension and every mod, so clobbering a spawn list or a color is how mods break each
  * other. Every method here ADDS to a list (and {@link #addSpawn} de-dupes by class first,
  * so registering the same mob twice does not stack), leaving every other mod's entries in
  * place. Reach for {@link #setSpawn}/{@link #clearSpawns} only when you genuinely mean to

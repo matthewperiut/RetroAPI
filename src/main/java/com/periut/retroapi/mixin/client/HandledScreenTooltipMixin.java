@@ -23,14 +23,14 @@ import java.util.List;
 /**
  * Turns beta's single-line item-name tooltip into a multi-line one, the clean way: it
  * wraps the game's OWN tooltip draw calls and expands them, rather than drawing a second
- * box on top. That matters because the previous over-draw approach left two artefacts the
+ * box on top. That matters because the previous over-draw approach left two artifacts the
  * user hit, a translucent vanilla box showing through behind the bigger one, and leaked
- * GL state (lighting/colour) into the world behind the GUI, tinting the sky.
+ * GL state (lighting/color) into the world behind the GUI, tinting the sky.
  *
  * Here, vanilla draws its tooltip background with one {@code fillGradient} (the 2nd in
  * render) and the name with one {@code drawWithShadow}. We wrap both: the box is drawn
  * taller to fit the extra lines, and after the name we draw the extra lines with the same
- * call, same colours, same position, same GL state. Nothing else changes.
+ * call, same colors, same position, same GL state. Nothing else changes.
  */
 @Mixin(HandledScreen.class)
 public abstract class HandledScreenTooltipMixin extends Screen {

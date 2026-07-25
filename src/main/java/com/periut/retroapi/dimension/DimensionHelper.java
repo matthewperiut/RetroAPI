@@ -27,7 +27,7 @@ import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
  *
  * <p>Note that under the integrated server the actual transition is <b>server-driven</b> (the vanilla
  * client portal path is gated behind {@code !world.isRemote}, which is false for an integrated/networked
- * client), so in practice only {@code serverTeleporter} fires there. The split's value is defence in
+ * client), so in practice only {@code serverTeleporter} fires there. The split's value is defense in
  * depth - it guarantees the client entrypoint can never overwrite the server back end, and
  * {@code selectTeleporter} additionally refuses to route a real server player through the client back end
  * if the server slot is somehow unset. See {@link #selectTeleporter} for the full per-side routing.

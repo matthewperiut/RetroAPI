@@ -80,6 +80,21 @@ public abstract class ItemMixin implements RetroItemAccess {
 		return this;
 	}
 
+	@org.spongepowered.asm.mixin.Unique
+	private com.periut.retroapi.tag.RetroToolTier.Contextual retroapi$toolTierContextual = null;
+	@org.spongepowered.asm.mixin.Unique
+	private float retroapi$miningSpeed = 0.0F;
+	@org.spongepowered.asm.mixin.Unique
+	private int retroapi$attackDamage = -1;
+	@org.spongepowered.asm.mixin.Unique
+	private boolean retroapi$damageOnMine = true;
+
+	@Override
+	public RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier) {
+		this.retroapi$toolTierContextual = tier;
+		return this;
+	}
+
 	@Override
 	public com.periut.retroapi.tag.RetroToolTier getToolTier() {
 		return this.retroapi$toolTier;
@@ -88,6 +103,114 @@ public abstract class ItemMixin implements RetroItemAccess {
 	@Override
 	public com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic() {
 		return this.retroapi$toolTierDynamic;
+	}
+
+	@Override
+	public com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual() {
+		return this.retroapi$toolTierContextual;
+	}
+
+	@Override
+	public RetroItemAccess miningSpeed(float speed) {
+		this.retroapi$miningSpeed = speed;
+		return this;
+	}
+
+	@Override
+	public float getMiningSpeed() {
+		return this.retroapi$miningSpeed;
+	}
+
+	@Override
+	public RetroItemAccess attackDamage(int damage) {
+		this.retroapi$attackDamage = damage;
+		return this;
+	}
+
+	@Override
+	public int getAttackDamage() {
+		return this.retroapi$attackDamage;
+	}
+
+	@Override
+	public RetroItemAccess durability(int uses) {
+		((Item) (Object) this).setMaxDamage(uses);
+		return this;
+	}
+
+	@Override
+	public RetroItemAccess damageOnMine(boolean enabled) {
+		this.retroapi$damageOnMine = enabled;
+		return this;
+	}
+
+	/**
+	 * Teaches VANILLA that a declared tool is the right tool for a block. Beta answers "is this item
+	 * effective here?" from hardcoded block lists inside each tool item, which no modded item is in and
+	 * no modded block is in either - the reason a custom drill could not harvest a modded (or even a
+	 * vanilla) stone block. Answer it from the {@code mineable/<tool>} tags plus the tool's tier instead,
+	 * so every vanilla path that asks - drops, breaking speed, the "correct tool" check - agrees.
+	 */
+	@Inject(method = "isSuitableFor", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$isSuitableFor(net.minecraft.block.Block block, CallbackInfoReturnable<Boolean> cir) {
+		if (this.retroapi$toolKinds.isEmpty() || block == null) {
+			return;
+		}
+		java.util.Set<com.periut.retroapi.tag.RetroTool> mineable =
+			com.periut.retroapi.tag.RetroTags.mineableTools(block);
+		if (mineable.isEmpty() || java.util.Collections.disjoint(this.retroapi$toolKinds, mineable)) {
+			return; // not our kind of block: let vanilla answer
+		}
+		com.periut.retroapi.tag.RetroToolTier required = com.periut.retroapi.tag.RetroTags.requiredTier(block);
+		com.periut.retroapi.tag.RetroToolTier held = this.retroapi$toolTier != null
+			? this.retroapi$toolTier : com.periut.retroapi.tag.RetroToolTier.WOOD;
+		if (held.isAtLeast(required)) {
+			cir.setReturnValue(true);
+		}
+	}
+
+	/** The declared mining speed, for tools built from parameters instead of a {@code ToolMaterial}. */
+	@Inject(method = "getMiningSpeedMultiplier", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$miningSpeed(ItemStack stack, net.minecraft.block.Block block,
+			CallbackInfoReturnable<Float> cir) {
+		if (this.retroapi$miningSpeed <= 0.0F || this.retroapi$toolKinds.isEmpty() || block == null) {
+			return;
+		}
+		java.util.Set<com.periut.retroapi.tag.RetroTool> mineable =
+			com.periut.retroapi.tag.RetroTags.mineableTools(block);
+		if (!mineable.isEmpty() && !java.util.Collections.disjoint(this.retroapi$toolKinds, mineable)) {
+			cir.setReturnValue(this.retroapi$miningSpeed);
+		}
+	}
+
+	/** The declared attack damage, for tools built from parameters instead of a {@code ToolMaterial}. */
+	@Inject(method = "getAttackDamage", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$attackDamage(net.minecraft.entity.Entity target, CallbackInfoReturnable<Integer> cir) {
+		if (this.retroapi$attackDamage >= 0) {
+			cir.setReturnValue(this.retroapi$attackDamage);
+		}
+	}
+
+	/**
+	 * Wears a declared tool down as it mines, the way a vanilla {@code ToolItem} does - otherwise a
+	 * parameter-built tool with {@code .durability(...)} would be indestructible in practice.
+	 */
+	@Inject(method = "postMine", at = @At("HEAD"), require = 0)
+	private void retroapi$damageOnMine(ItemStack stack, int blockId, int x, int y, int z,
+			net.minecraft.entity.LivingEntity miner, CallbackInfoReturnable<Boolean> cir) {
+		if (!this.retroapi$damageOnMine || this.retroapi$toolKinds.isEmpty()) {
+			return;
+		}
+		Item self = (Item) (Object) this;
+		if (self.getMaxDamage() <= 0) {
+			return;
+		}
+		net.minecraft.block.Block block = blockId > 0 && blockId < net.minecraft.block.Block.BLOCKS.length
+			? net.minecraft.block.Block.BLOCKS[blockId] : null;
+		// Vanilla only wears a tool on blocks that actually take effort (hardness > 0).
+		if (block != null && block.getHardness() > 0.0F) {
+			stack.damage(1, miner);
+		}
 	}
 
 	@Override

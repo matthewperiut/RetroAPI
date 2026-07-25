@@ -8,10 +8,10 @@
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
-		"init": [
+		"retroapi": [
 			"com.periut.retroapi.testmod.TestMod"
 		],
-		"client-init": [
+		"retroapi-client": [
 			"com.periut.retroapi.testmod.SoundTestClient",
 			"com.periut.retroapi.testmod.TestModClient"
 		]

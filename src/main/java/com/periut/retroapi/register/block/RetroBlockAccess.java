@@ -90,8 +90,53 @@ public interface RetroBlockAccess {
 	 */
 	RetroBlockAccess facing();
 
-	/** True when {@link #facing()} was called: the block auto-orients toward the placer. */
+	/**
+	 * Six-way facing: the same deal as {@link #facing()}, but the block can also point straight up or down
+	 * (the dispenser/piston rule - look steeply up or down as you place it). Declares the built-in
+	 * {@link com.periut.retroapi.util.RetroDirection#PROPERTY}, also named {@code "facing"}, whose values
+	 * serialize as {@code down/up/north/south/west/east}.
+	 *
+	 * <p>Pairs with {@link #sided}: when the facing is vertical the front texture goes on the top (or
+	 * bottom) face and the ring of four gets the side texture.
+	 */
+	RetroBlockAccess facingAll();
+
+	/** True when {@link #facing()} or {@link #facingAll()} was called: the block auto-orients toward the placer. */
 	boolean isAutoFacing();
+
+	/**
+	 * Per-face textures in code - the furnace look with no model JSON, no blockstate file and no
+	 * {@code getTexture} override:
+	 * <pre>
+	 * RetroBlockAccess.create(Material.STONE)
+	 *     .facing()                                                  // or .facingAll()
+	 *     .sided(id("machine_top"), id("machine_side"), id("machine_front"))
+	 *     .register(id("machine"));
+	 * </pre>
+	 * The front follows the block's {@code facing} state, so all four (or six) orientations come from one
+	 * declaration. Without a facing property the front sits on north. The bottom reuses {@code top}; use
+	 * {@link #sided(NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier)}
+	 * to give it its own.
+	 */
+	RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front);
+
+	/** {@link #sided(NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier)} with an explicit bottom texture. */
+	RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front,
+		NamespacedIdentifier bottom);
+
+	/**
+	 * A log-style column: one texture on both end caps, another around the sides. Sugar for
+	 * {@code .sided(top, side, side, top)} on a block that does not turn.
+	 */
+	RetroBlockAccess column(NamespacedIdentifier top, NamespacedIdentifier side);
+
+	/**
+	 * One texture nailed to each world face, in vanilla face order: bottom, top, north, south, west, east.
+	 * Unlike {@link #sided} these do not follow a facing state. Pass {@code null} for a face to leave it
+	 * on the block's main {@link #texture} sprite.
+	 */
+	RetroBlockAccess textures(NamespacedIdentifier bottom, NamespacedIdentifier top, NamespacedIdentifier north,
+		NamespacedIdentifier south, NamespacedIdentifier west, NamespacedIdentifier east);
 
 	/**
 	 * Declares which tool kinds mine this block effectively, exactly like modern
@@ -107,6 +152,78 @@ public interface RetroBlockAccess {
 	 * {@link #alwaysDrops()} forces it to always drop.</p>
 	 */
 	RetroBlockAccess mineable(com.periut.retroapi.tag.RetroTool... tools);
+
+	/**
+	 * Declares the tool TIER needed to harvest this block, the code form of a
+	 * {@code data/{ns}/tags/block/needs_<tier>_tool.json} file: {@code .needsTool(RetroToolTier.IRON)} means
+	 * "drops only for an iron-or-better tool of a matching {@link #mineable} kind". Sugar for
+	 * {@code RetroTags.addToTag(tier.needsTag(), block)}, so it composes with data files rather than
+	 * replacing them. {@code WOOD} is a no-op (everything mines wood tier).
+	 */
+	RetroBlockAccess needsTool(com.periut.retroapi.tag.RetroToolTier tier);
+
+	/**
+	 * Adds this block to arbitrary tags at registration, so a tag no longer needs a separate
+	 * {@code RetroTags.addToTag(...)} line after the builder chain:
+	 * <pre>
+	 * .tag(RetroTagKey.block("ore_dictionary/stone"), MyTags.MACHINE_BASE)
+	 * </pre>
+	 * Unions with any data-file membership.
+	 */
+	RetroBlockAccess tag(com.periut.retroapi.tag.RetroTagKey... tags);
+
+	/**
+	 * Makes this block indestructible in survival, the bedrock rule: infinite hardness and blast
+	 * resistance. Vanilla's {@code setUnbreakable()} is protected, so this used to force a Block subclass
+	 * for something with no behaviour in it at all.
+	 */
+	RetroBlockAccess unbreakable();
+
+	/**
+	 * Tints this block's rendering by a colour computed per position, with NO model JSON and no custom
+	 * renderer - grass/leaves biome colouring for your own block, or a state-driven colour (a "wordle"
+	 * letter that turns green or yellow):
+	 * <pre>
+	 * .tint((state, world, x, y, z, tintIndex) -&gt; state.get(MARK) == Mark.HIT ? 0x6AAA64 : 0xC9B458)
+	 * .tint(RetroBlockColors.GRASS)     // the vanilla biome grass colormap
+	 * </pre>
+	 * The provider is consulted at render time for the world form and with a null world for the inventory
+	 * form, so one lambda covers both. For a JSON model, the same provider drives faces with
+	 * {@code tintindex} - this call just makes it work on plain code-textured blocks too.
+	 */
+	RetroBlockAccess tint(com.periut.retroapi.client.render.RetroBlockColors.Provider provider);
+
+	/**
+	 * Draws another sprite on top of this block's faces, with no model JSON and no custom renderer - the
+	 * grass-side-overlay trick, available to any block. Chain it for several layers:
+	 * <pre>
+	 * .texture(id("letter_backdrop")).overlay(id("letter_q"))
+	 * </pre>
+	 * Each overlay is drawn as an extra render pass over the same geometry, so it can be tinted
+	 * independently of the base ({@link #overlay(NamespacedIdentifier, int)}) and can change per state
+	 * without needing one flattened sprite per combination.
+	 */
+	RetroBlockAccess overlay(NamespacedIdentifier textureId);
+
+	/** {@link #overlay(NamespacedIdentifier)} with a fixed {@code 0xRRGGBB} tint for that layer only. */
+	RetroBlockAccess overlay(NamespacedIdentifier textureId, int tint);
+
+	/**
+	 * {@link #overlay(NamespacedIdentifier)} whose sprite and tint are chosen per position, for overlays
+	 * that depend on state or neighbours. Return {@code null} from the provider to skip the layer at that
+	 * position.
+	 */
+	RetroBlockAccess overlay(com.periut.retroapi.register.block.RetroBlockLayer.Provider provider);
+
+	/** The overlay layers as drawn with no world context (the inventory/hand form). Never null. */
+	java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers();
+
+	/** The overlay layers for one position, with each provider consulted. Never null. */
+	java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers(
+		com.periut.retroapi.state.RetroBlockState state, net.minecraft.world.BlockView world, int x, int y, int z);
+
+	/** True when {@link #overlay} was called at least once (a cheap pre-check for the renderer). */
+	boolean hasOverlayLayers();
 
 	/**
 	 * Check if this block always drops items regardless of tool.

@@ -52,6 +52,21 @@ public final class RetroBlockState {
 		return definition.properties;
 	}
 
+	/** This state's property with the given name, or null if it has none. */
+	public RetroProperty<?> getProperty(String name) {
+		return definition.byName(name);
+	}
+
+	/**
+	 * The value of a property looked up by NAME, or null if this state has no such property. Useful for
+	 * generic code (renderers, the built-in facing textures) that must work with whatever a block declared
+	 * without holding the property object; prefer {@link #get(RetroProperty)} when you have it.
+	 */
+	public Object getByName(String name) {
+		RetroProperty<?> property = definition.byName(name);
+		return property == null ? null : values[definition.slotOf(property)];
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();

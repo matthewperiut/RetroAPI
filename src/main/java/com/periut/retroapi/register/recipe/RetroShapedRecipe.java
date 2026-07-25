@@ -27,6 +27,14 @@ public final class RetroShapedRecipe implements CraftingRecipe {
 		this.output = output;
 	}
 
+	/**
+	 * The raw ingredient cells (nulls = empty). Exposed for {@link com.periut.retroapi.registry.IdRemap},
+	 * which repoints modded ingredients when a world assigns different ids than registration used.
+	 */
+	public ItemStack[] getGrid() {
+		return this.grid;
+	}
+
 	@Override
 	public boolean matches(CraftingInventory inv) {
 		for (int x = 0; x <= 3 - this.width; ++x) {

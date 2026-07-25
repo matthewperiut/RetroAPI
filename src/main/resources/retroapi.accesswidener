@@ -79,3 +79,30 @@ transitive-accessible field net/minecraft/world/biome/Biome hasRain Z
 transitive-mutable field net/minecraft/world/biome/Biome hasRain Z
 transitive-accessible field net/minecraft/world/biome/Biome hasSnow Z
 transitive-mutable field net/minecraft/world/biome/Biome hasSnow Z
+
+# Block.setUnbreakable(): exposed through RetroBlockAccess.unbreakable() so an indestructible block
+# needs no subclass just to reach a protected setter.
+transitive-accessible method net/minecraft/block/Block setUnbreakable ()Lnet/minecraft/block/Block;
+
+# Particle internals, so RetroSpriteParticle (and mod particle classes) can set up a particle without
+# reimplementing Particle: sprite slot, size, colour, age and fall speed.
+transitive-accessible field net/minecraft/client/particle/Particle textureId I
+transitive-mutable field net/minecraft/client/particle/Particle textureId I
+transitive-accessible field net/minecraft/client/particle/Particle scale F
+transitive-mutable field net/minecraft/client/particle/Particle scale F
+transitive-accessible field net/minecraft/client/particle/Particle red F
+transitive-mutable field net/minecraft/client/particle/Particle red F
+transitive-accessible field net/minecraft/client/particle/Particle green F
+transitive-mutable field net/minecraft/client/particle/Particle green F
+transitive-accessible field net/minecraft/client/particle/Particle blue F
+transitive-mutable field net/minecraft/client/particle/Particle blue F
+transitive-accessible field net/minecraft/client/particle/Particle particleAge I
+transitive-mutable field net/minecraft/client/particle/Particle particleAge I
+transitive-accessible field net/minecraft/client/particle/Particle maxParticleAge I
+transitive-mutable field net/minecraft/client/particle/Particle maxParticleAge I
+transitive-accessible field net/minecraft/client/particle/Particle gravityStrength F
+transitive-mutable field net/minecraft/client/particle/Particle gravityStrength F
+transitive-accessible field net/minecraft/client/particle/Particle xOffset D
+transitive-accessible field net/minecraft/client/particle/Particle yOffset D
+transitive-accessible field net/minecraft/client/particle/Particle zOffset D
+transitive-accessible method net/minecraft/client/particle/Particle getGroup ()I

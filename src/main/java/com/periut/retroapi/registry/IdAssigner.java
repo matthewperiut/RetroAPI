@@ -29,11 +29,17 @@ public class IdAssigner {
 		// Purge stale entries for blocks/items no longer registered
 		idMap.purgeStaleEntries(RetroRegistry.getBlocks(), RetroRegistry.getItems());
 
-		assignBlockIds(idMap);
-		assignItemIds(idMap);
+		// Every id this pass moves is collected, then applied to everything still holding the OLD number
+		// (recipes, smelting, fuels, achievement icons, mod-cached stacks). Collect first, apply once:
+		// two content entries can swap slots, and a per-move fixup would then undo itself.
+		IdRemap remap = new IdRemap();
+		assignBlockIds(idMap, remap);
+		assignItemIds(idMap, remap);
 		assignDimensionIds(idMap);
 
 		idMap.save(idMapFile);
+
+		remap.apply();
 	}
 
 	public static void saveCurrentIds(File worldDir) {
@@ -53,7 +59,7 @@ public class IdAssigner {
 		assignDimensionIds(idMap);
 
 		idMap.save(idMapFile);
-		LOGGER.info("Saved current ID map for {} blocks, {} items and {} dimensions",
+		LOGGER.debug("Saved current ID map for {} blocks, {} items and {} dimensions",
 			RetroRegistry.getBlocks().size(), RetroRegistry.getItems().size(), RetroDimensionRegistry.getAll().size());
 	}
 
@@ -95,7 +101,7 @@ public class IdAssigner {
 		return id;
 	}
 
-	private static void assignBlockIds(IdMap idMap) {
+	private static void assignBlockIds(IdMap idMap, IdRemap remap) {
 		Block[] byId = Block.BLOCKS;
 		Set<Integer> usedIds = new HashSet<>();
 
@@ -137,11 +143,12 @@ public class IdAssigner {
 
 			if (currentId != targetId) {
 				remapBlock(reg, currentId, targetId);
+				remap.record(currentId, targetId);
 			}
 		}
 	}
 
-	private static void assignItemIds(IdMap idMap) {
+	private static void assignItemIds(IdMap idMap, IdRemap remap) {
 		Item[] byId = Item.ITEMS;
 		Set<Integer> usedIds = new HashSet<>();
 
@@ -181,9 +188,10 @@ public class IdAssigner {
 
 			if (currentId != targetId) {
 				remapItem(item, currentId, targetId);
+				remap.record(currentId, targetId);
 			}
 
-			LOGGER.info("Assigned item {} -> ID {}", reg.getId(), targetId);
+			LOGGER.debug("Assigned item {} -> ID {}", reg.getId(), targetId);
 		}
 	}
 
@@ -225,7 +233,7 @@ public class IdAssigner {
 		Block.BLOCKS_RANDOM_TICK = Arrays.copyOf(Block.BLOCKS_RANDOM_TICK, newSize);
 		Block.BLOCKS_LIGHT_LUMINANCE = Arrays.copyOf(Block.BLOCKS_LIGHT_LUMINANCE, newSize);
 		Block.BLOCKS_IGNORE_META_UPDATE = Arrays.copyOf(Block.BLOCKS_IGNORE_META_UPDATE, newSize);
-		LOGGER.info("Grew block arrays to size {}", newSize);
+		LOGGER.debug("Grew block arrays to size {}", newSize);
 	}
 
 	private static void remapBlock(BlockRegistration reg, int oldId, int newId) {
@@ -305,6 +313,9 @@ public class IdAssigner {
 	}
 
 	public static void applyFromNetwork(PacketBuffer buffer) {
+		// Same story as assignIds: the server's table can move our content, and every ItemStack built at
+		// registration time still holds this client's provisional ids. Collect, then repair in one pass.
+		IdRemap remap = new IdRemap();
 		int blockCount = buffer.readVarInt();
 		for (int i = 0; i < blockCount; i++) {
 			String identifier = buffer.readString();
@@ -327,7 +338,8 @@ public class IdAssigner {
 			growBlockArraysIfNeeded(numericId);
 			if (currentId != numericId) {
 				remapBlock(reg, currentId, numericId);
-				LOGGER.info("Synced block {} -> ID {} (was {})", identifier, numericId, currentId);
+				remap.record(currentId, numericId);
+				LOGGER.debug("Synced block {} -> ID {} (was {})", identifier, numericId, currentId);
 			}
 		}
 
@@ -352,9 +364,12 @@ public class IdAssigner {
 			int currentId = item.id;
 			if (currentId != numericId) {
 				remapItem(item, currentId, numericId);
-				LOGGER.info("Synced item {} -> ID {} (was {})", identifier, numericId, currentId);
+				remap.record(currentId, numericId);
+				LOGGER.debug("Synced item {} -> ID {} (was {})", identifier, numericId, currentId);
 			}
 		}
+
+		remap.apply();
 	}
 }
 

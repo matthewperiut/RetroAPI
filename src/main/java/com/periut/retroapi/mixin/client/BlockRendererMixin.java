@@ -35,6 +35,14 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 	@Shadow private float fourthVertexRed;
 	@Shadow private float fourthVertexGreen;
 	@Shadow private float fourthVertexBlue;
+	@Shadow public boolean flipTextureHorizontally;
+	@Shadow public boolean skipFaceCulling;
+	@Shadow public int bottomFaceRotation;
+	@Shadow public int topFaceRotation;
+	@Shadow public int northFaceRotation;
+	@Shadow public int southFaceRotation;
+	@Shadow public int westFaceRotation;
+	@Shadow public int eastFaceRotation;
 
 	@Override
 	public void retroapi$setupSmoothFace(float v1, float v2, float v3, float v4, float shade) {
@@ -48,6 +56,34 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 	@Override
 	public void retroapi$cleanupSmoothFace() {
 		this.useAo = false;
+	}
+
+	@Override
+	public void retroapi$setTextureOverride(int sprite) {
+		this.textureOverride = sprite;
+	}
+
+	@Override
+	public void retroapi$setFlipTexture(boolean flipped) {
+		this.flipTextureHorizontally = flipped;
+	}
+
+	@Override
+	public void retroapi$setFaceRotation(int face, int quarterTurns) {
+		int rotation = quarterTurns & 3;
+		switch (face) {
+			case 0: this.bottomFaceRotation = rotation; break;
+			case 1: this.topFaceRotation = rotation; break;
+			case 2: this.northFaceRotation = rotation; break;
+			case 3: this.southFaceRotation = rotation; break;
+			case 4: this.westFaceRotation = rotation; break;
+			default: this.eastFaceRotation = rotation; break;
+		}
+	}
+
+	@Override
+	public void retroapi$setSkipFaceCulling(boolean skip) {
+		this.skipFaceCulling = skip;
 	}
 
 	// --- Custom render type handling ---
@@ -123,6 +159,85 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 	private static void retroapi$customIsItem3d(int type, CallbackInfoReturnable<Boolean> cir) {
 		if (RenderType.isCustom(type)) {
 			cir.setReturnValue(true);
+		}
+	}
+
+	// --- Layered blocks: RetroBlockAccess.overlay(...) --------------------------------------------
+
+	@Shadow public int textureOverride;
+
+	/**
+	 * Draws a layered block's overlay passes after its own faces, the way vanilla paints grass' green
+	 * edge over plain dirt - except any block can declare any number of them from code. Each pass forces
+	 * its sprite through the renderer's texture override and its tint through
+	 * {@link com.periut.retroapi.register.block.RetroBlockLayerDraw}, so the ordinary block draw path does
+	 * the work and no custom renderer is involved.
+	 */
+	@Inject(method = "render(Lnet/minecraft/block/Block;III)Z", at = @At("RETURN"), require = 0)
+	private void retroapi$renderOverlayLayers(Block block, int x, int y, int z, CallbackInfoReturnable<Boolean> cir) {
+		if (com.periut.retroapi.register.block.RetroBlockLayerDraw.drawing) {
+			return; // we are inside an overlay pass ourselves
+		}
+		if (!Boolean.TRUE.equals(cir.getReturnValue())) {
+			return; // nothing was drawn (fully occluded): nothing to overlay
+		}
+		com.periut.retroapi.register.block.RetroBlockAccess access =
+			(com.periut.retroapi.register.block.RetroBlockAccess) block;
+		if (!access.hasOverlayLayers()) {
+			return;
+		}
+		java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> layers = access.getOverlayLayers(
+			com.periut.retroapi.state.RetroStates.get(this.blockView, x, y, z), this.blockView, x, y, z);
+		if (layers.isEmpty()) {
+			return;
+		}
+		BlockRenderManager self = (BlockRenderManager) (Object) this;
+		int saved = this.textureOverride;
+		try {
+			for (com.periut.retroapi.register.block.RetroBlockLayer layer : layers) {
+				int sprite = layer.spriteId();
+				if (sprite < 0) continue;
+				this.textureOverride = sprite;
+				com.periut.retroapi.register.block.RetroBlockLayerDraw.begin(layer);
+				self.render(block, x, y, z);
+				com.periut.retroapi.register.block.RetroBlockLayerDraw.end();
+			}
+		} finally {
+			com.periut.retroapi.register.block.RetroBlockLayerDraw.end();
+			this.textureOverride = saved;
+		}
+	}
+
+	/** The same overlay passes for the inventory/hand form, so a layered block looks right as an item. */
+	@Inject(method = "render(Lnet/minecraft/block/Block;IF)V", at = @At("RETURN"), require = 0)
+	private void retroapi$renderOverlayLayersAsItem(Block block, int metadata, float brightness, CallbackInfo ci) {
+		if (com.periut.retroapi.register.block.RetroBlockLayerDraw.drawing) {
+			return;
+		}
+		com.periut.retroapi.register.block.RetroBlockAccess access =
+			(com.periut.retroapi.register.block.RetroBlockAccess) block;
+		if (!access.hasOverlayLayers()) {
+			return;
+		}
+		java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> layers = access.getOverlayLayers(
+			com.periut.retroapi.state.RetroStates.fromIndex(block, metadata), null, 0, 0, 0);
+		if (layers.isEmpty()) {
+			return;
+		}
+		BlockRenderManager self = (BlockRenderManager) (Object) this;
+		int saved = this.textureOverride;
+		try {
+			for (com.periut.retroapi.register.block.RetroBlockLayer layer : layers) {
+				int sprite = layer.spriteId();
+				if (sprite < 0) continue;
+				this.textureOverride = sprite;
+				com.periut.retroapi.register.block.RetroBlockLayerDraw.begin(layer);
+				self.render(block, metadata, brightness);
+				com.periut.retroapi.register.block.RetroBlockLayerDraw.end();
+			}
+		} finally {
+			com.periut.retroapi.register.block.RetroBlockLayerDraw.end();
+			this.textureOverride = saved;
 		}
 	}
 }

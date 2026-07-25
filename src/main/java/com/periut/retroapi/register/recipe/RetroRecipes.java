@@ -236,6 +236,21 @@ public final class RetroRecipes {
 		return FUEL_MAP.containsKey(itemId);
 	}
 
+	/**
+	 * Repoints fuel entries at their post-remap item ids. Called by
+	 * {@link com.periut.retroapi.registry.IdRemap#apply()}; a fuel registered at init would otherwise
+	 * keep burning whatever ends up in the old id's slot (usually nothing).
+	 */
+	public static void remapFuelIds(com.periut.retroapi.registry.IdRemap remap) {
+		if (FUEL_MAP.isEmpty()) return;
+		Map<Integer, Integer> rebuilt = new HashMap<>();
+		for (Map.Entry<Integer, Integer> entry : FUEL_MAP.entrySet()) {
+			rebuilt.put(remap.map(entry.getKey()), entry.getValue());
+		}
+		FUEL_MAP.clear();
+		FUEL_MAP.putAll(rebuilt);
+	}
+
 	/** Probe instance used only to consult the furnace's (possibly mixin-extended) fuel table. */
 	private static FurnaceBlockEntity fuelProbe;
 

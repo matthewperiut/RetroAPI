@@ -18,11 +18,11 @@ import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.ornithemc.osl.entrypoints.api.ModInitializer;
+import com.periut.retroapi.entrypoint.RetroModInitializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class TestMod implements ModInitializer {
+public class TestMod implements RetroModInitializer {
 	public static final Logger LOGGER = LogManager.getLogger("RetroAPI Test");
 
 	public static final NamespacedIdentifier PIPE_RENDER_TYPE = RenderType.register(
@@ -61,6 +61,16 @@ public class TestMod implements ModInitializer {
 	public static Item CODE_LAYERED;
 	public static Block FACTORY_BLOCK;
 	public static Block FACING_BLOCK;
+	/** 0.3.0: a stone-material block with NO mineable tag, to prove the material-inferred defaults. */
+	public static Block UNTAGGED_STONE_BLOCK;
+	/** 0.3.0: six-way facing + code-declared per-face textures. */
+	public static Block SIX_WAY_BLOCK;
+	/** 0.3.0: a tool built from parameters instead of a (non-extensible) ToolMaterial. */
+	public static Item STAT_TOOL;
+	/** 0.3.0: a tier that depends on the block being mined. */
+	public static Item CONTEXT_TOOL;
+	/** 0.3.0: an ASCII-declared multiblock pattern. */
+	public static com.periut.retroapi.world.multiblock.RetroMultiblock TEST_MULTIBLOCK;
 
 	// A data component for the headless round-trip self-check.
 	public static com.periut.retroapi.component.RetroComponentType<Integer> TEST_COUNT;
@@ -73,7 +83,7 @@ public class TestMod implements ModInitializer {
 	}
 
 	@Override
-	public void init() {
+	public void initRetro() {
 		LOGGER.info("RetroAPI Test Mod initializing");
 
 		TEST_BLOCK = RetroBlockAccess.create(Material.STONE)
@@ -248,6 +258,62 @@ public class TestMod implements ModInitializer {
 			.facing()
 			.register(id("facing_block"));
 
+		// 0.3.0: NO .mineable(...) call at all. Its stone material must still make it a
+		// pickaxe block, which is what stops "my tool can't break my block".
+		UNTAGGED_STONE_BLOCK = RetroBlockAccess.create(Material.STONE)
+			.sounds(Block.STONE_SOUND_GROUP)
+			.strength(1.5f)
+			.sprite(Block.COBBLESTONE.getTexture(0))
+			.register(id("untagged_stone"));
+
+		// 0.3.0: six-way facing (up/down too) + per-face textures declared in code, no model JSON.
+		// .states(...) after .facing*() must NOT drop the facing property - that ordering bug is
+		// exactly what this registration shape reproduces.
+		SIX_WAY_BLOCK = RetroBlockAccess.create(Material.STONE)
+			.sounds(Block.STONE_SOUND_GROUP)
+			.strength(1.5f)
+			.facingAll()
+			.states(TestLampBlock.LIT)
+			.sided(id("layer_base"), id("layer_overlay"), id("tagged_ore"))
+			.tag(com.periut.retroapi.tag.RetroTagKey.block("retroapi_test/machines"))
+			.register(id("six_way"));
+
+		// 0.3.0: a tool with no ToolMaterial - every parameter given directly.
+		STAT_TOOL = (Item) RetroItemAccess.create()
+			.maxStackSize(1)
+			.tool(com.periut.retroapi.tag.RetroTool.PICKAXE)
+			.tier(com.periut.retroapi.tag.RetroToolTier.IRON)
+			.miningSpeed(9.0F)
+			.attackDamage(4)
+			.durability(750)
+			.handheld()
+			.texture(id("test_item"))
+			.register(id("stat_tool"));
+
+		// 0.3.0: a tier that sees the block: diamond on stone, wood on everything else.
+		CONTEXT_TOOL = (Item) RetroItemAccess.create()
+			.maxStackSize(1)
+			.tool(com.periut.retroapi.tag.RetroTool.PICKAXE)
+			.tier((stack, block) -> block != null && block.material == Material.STONE
+				? com.periut.retroapi.tag.RetroToolTier.DIAMOND
+				: com.periut.retroapi.tag.RetroToolTier.WOOD)
+			.texture(id("test_item"))
+			.register(id("context_tool"));
+
+		// 0.3.0: an ore feature, registered instead of mixin-ing the chunk generator.
+		com.periut.retroapi.world.feature.RetroFeatures
+			.ore(UNTAGGED_STONE_BLOCK).size(4).count(2).heightRange(8, 40).rarity(2).register();
+
+		// 0.3.0: a multiblock pattern, declared as ASCII layers.
+		TEST_MULTIBLOCK = com.periut.retroapi.world.multiblock.RetroMultiblock.builder()
+			.layer("SSS",
+			       "SCS",
+			       "SSS")
+			.where('S', Block.STONE)
+			.where('C', UNTAGGED_STONE_BLOCK)
+			.anchor('C')
+			.build();
+
 		// Arbitrary runtime item tags: tag two items, then query.
 		com.periut.retroapi.tag.RetroTagKey gems = com.periut.retroapi.tag.RetroTagKey.item("retroapi_test/gems");
 		com.periut.retroapi.tag.RetroTags.addToTag(gems, TEST_ITEM, PAXEL);
@@ -302,6 +368,92 @@ public class TestMod implements ModInitializer {
 			LOGGER.info("[new-features] vanilla defaults: stone=mineable/pickaxe={} goldOre=needs_iron={} ironOre=needs_stone={} {}",
 				stone, goldTier, ironTier, (stone && goldTier && ironTier) ? "PASS" : "FAIL");
 		}
+
+		retroapi$smokeCheck030();
+	}
+
+	/** 0.3.0 features: directions, positions, char states, multiblocks, features, tool stats. */
+	private static void retroapi$smokeCheck030() {
+		// --- RetroDirection / RetroFacing helpers -------------------------------------------------
+		com.periut.retroapi.util.RetroDirection north = com.periut.retroapi.util.RetroDirection.NORTH;
+		boolean dirs = north.opposite() == com.periut.retroapi.util.RetroDirection.SOUTH
+			&& north.rotateRight() == com.periut.retroapi.util.RetroDirection.EAST
+			&& north.rotateLeft() == com.periut.retroapi.util.RetroDirection.WEST
+			&& north.face() == 2
+			&& com.periut.retroapi.util.RetroDirection.fromFace(1) == com.periut.retroapi.util.RetroDirection.UP
+			&& com.periut.retroapi.util.RetroDirection.nearest(0.0, -2.0, 0.5)
+				== com.periut.retroapi.util.RetroDirection.DOWN
+			&& com.periut.retroapi.state.RetroFacing.EAST.rotateLeft() == com.periut.retroapi.state.RetroFacing.NORTH
+			&& com.periut.retroapi.state.RetroFacing.EAST.toDirection().offsetX == 1;
+		LOGGER.info("[new-features] direction helpers {}", dirs ? "PASS" : "FAIL");
+
+		// --- RetroVec3i ---------------------------------------------------------------------------
+		com.periut.retroapi.util.RetroVec3i base = com.periut.retroapi.util.RetroVec3i.of(10, 64, -5);
+		com.periut.retroapi.util.RetroVec3i moved = base.offset(com.periut.retroapi.util.RetroDirection.EAST, 3).up(2);
+		boolean vec = moved.equals(com.periut.retroapi.util.RetroVec3i.of(13, 66, -5))
+			&& base.add(1, 1, 1).subtract(1, 1, 1).equals(base)
+			&& base.multiply(2).equals(com.periut.retroapi.util.RetroVec3i.of(20, 128, -10))
+			&& base.manhattanDistance(moved) == 5
+			&& base.isWithin(moved, 3)
+			// north (0,0,-1) rotated to face EAST becomes (+1,0,0): the multiblock rotation rule
+			&& com.periut.retroapi.util.RetroVec3i.NORTH.rotateTo(com.periut.retroapi.state.RetroFacing.EAST)
+				.equals(com.periut.retroapi.util.RetroVec3i.EAST);
+		LOGGER.info("[new-features] RetroVec3i math {}", vec ? "PASS" : "FAIL");
+
+		// --- RetroCharProperty --------------------------------------------------------------------
+		com.periut.retroapi.state.RetroCharProperty letters =
+			com.periut.retroapi.state.RetroCharProperty.letters("letter");
+		boolean chars = letters.values().size() == 26
+			&& letters.ordinalOf('c') == 2
+			&& letters.valueName('q').equals("q")
+			&& letters.parse("q") == Character.valueOf('q')
+			&& letters.parse("7") == null;
+		LOGGER.info("[new-features] RetroCharProperty {}", chars ? "PASS" : "FAIL");
+
+		// --- material-inferred mineable defaults (the "modded tool can't break modded block" fix) --
+		if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("stationapi")) {
+			java.util.Set<com.periut.retroapi.tag.RetroTool> untaggedStone =
+				com.periut.retroapi.tag.RetroTags.mineableTools(UNTAGGED_STONE_BLOCK);
+			boolean defaults = untaggedStone.contains(com.periut.retroapi.tag.RetroTool.PICKAXE)
+				&& com.periut.retroapi.tag.RetroTags.defaultMineableTools(Block.LEAVES)
+					.contains(com.periut.retroapi.tag.RetroTool.SHEARS)
+				&& UNTAGGED_STONE_BLOCK.material != null;
+			LOGGER.info("[new-features] material mineable defaults (untagged stone={}) {}",
+				untaggedStone, defaults ? "PASS" : "FAIL");
+
+			// A declared plain-Item tool must satisfy VANILLA's own effectiveness question.
+			boolean suitable = STAT_TOOL.isSuitableFor(UNTAGGED_STONE_BLOCK);
+			LOGGER.info("[new-features] declared tool isSuitableFor(modded stone)={} {}",
+				suitable, suitable ? "PASS" : "FAIL");
+		}
+
+		// --- tools built from parameters instead of a ToolMaterial --------------------------------
+		com.periut.retroapi.register.item.RetroItemAccess statAccess =
+			(com.periut.retroapi.register.item.RetroItemAccess) STAT_TOOL;
+		boolean stats = statAccess.getMiningSpeed() == 9.0F
+			&& statAccess.getAttackDamage() == 4
+			&& STAT_TOOL.getMaxDamage() == 750
+			&& STAT_TOOL.getMiningSpeedMultiplier(new ItemStack(STAT_TOOL), Block.STONE) == 9.0F;
+		LOGGER.info("[new-features] material-free tool stats {}", stats ? "PASS" : "FAIL");
+
+		// --- block-aware (contextual) tier ---------------------------------------------------------
+		com.periut.retroapi.tag.RetroToolTier onStone =
+			com.periut.retroapi.tag.RetroToolTier.of(new ItemStack(CONTEXT_TOOL), Block.STONE);
+		com.periut.retroapi.tag.RetroToolTier onWood =
+			com.periut.retroapi.tag.RetroToolTier.of(new ItemStack(CONTEXT_TOOL), Block.PLANKS);
+		boolean contextual = onStone == com.periut.retroapi.tag.RetroToolTier.DIAMOND
+			&& onWood == com.periut.retroapi.tag.RetroToolTier.WOOD;
+		LOGGER.info("[new-features] contextual tier stone={} wood={} {}",
+			onStone, onWood, contextual ? "PASS" : "FAIL");
+
+		// --- world features registered (not generated here; generation is exercised in-world) ------
+		boolean features = !com.periut.retroapi.world.feature.RetroFeatures.getAll().isEmpty();
+		LOGGER.info("[new-features] world feature registry size={} {}",
+			com.periut.retroapi.world.feature.RetroFeatures.getAll().size(), features ? "PASS" : "FAIL");
+
+		// --- multiblock pattern shape --------------------------------------------------------------
+		boolean multiblock = TEST_MULTIBLOCK != null;
+		LOGGER.info("[new-features] multiblock pattern built {}", multiblock ? "PASS" : "FAIL");
 	}
 
 	private static void registerRecipes() {

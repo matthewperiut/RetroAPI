@@ -32,6 +32,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Shadow protected abstract Block setResistance(float resistance);
 	@Shadow protected abstract Block setLuminance(float light);
 	@Shadow protected abstract Block setOpacity(int opacity);
+	@Shadow protected abstract Block setUnbreakable();
 
 	@Unique private int retroapi$renderType = -1;
 	@Unique private boolean retroapi$solidRenderSet = false;
@@ -43,6 +44,10 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Unique private java.util.List<com.periut.retroapi.state.RetroProperty<?>> retroapi$pendingStates = null;
 	@Unique private java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> retroapi$pendingDefault = null;
 	@Unique private boolean retroapi$autoFacing = false;
+	@Unique private boolean retroapi$autoFacingVertical = false;
+	@Unique private com.periut.retroapi.register.block.RetroFaceTextures retroapi$faceTextures = null;
+	@Unique private com.periut.retroapi.client.render.RetroBlockColors.Provider retroapi$tint = null;
+	@Unique private java.util.List<com.periut.retroapi.register.block.RetroBlockLayer.Provider> retroapi$layers = null;
 
 	// --- Block property wrappers ---
 
@@ -101,7 +106,28 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Override
 	public RetroBlockAccess states(com.periut.retroapi.state.RetroProperty<?>... properties) {
 		this.retroapi$pendingStates = new java.util.ArrayList<>(java.util.Arrays.asList(properties));
+		// A facing declared by .facing()/.facingAll() survives a later .states(...) call: the two are
+		// independent declarations, and losing the facing property here (silently, depending on the order
+		// the two were chained) meant the block still oriented itself but had nowhere to store it.
+		retroapi$addFacingProperty();
 		return this;
+	}
+
+	/** Adds the facing property for the declared facing mode, if any, without duplicating it. */
+	@Unique
+	private void retroapi$addFacingProperty() {
+		if (!this.retroapi$autoFacing) {
+			return;
+		}
+		com.periut.retroapi.state.RetroProperty<?> property = this.retroapi$autoFacingVertical
+			? com.periut.retroapi.util.RetroDirection.PROPERTY
+			: com.periut.retroapi.state.RetroFacing.PROPERTY;
+		if (this.retroapi$pendingStates == null) {
+			this.retroapi$pendingStates = new java.util.ArrayList<>();
+		}
+		if (!this.retroapi$pendingStates.contains(property)) {
+			this.retroapi$pendingStates.add(property);
+		}
 	}
 
 	@Override
@@ -113,16 +139,24 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Override
 	public RetroBlockAccess facing() {
 		this.retroapi$autoFacing = true;
-		if (this.retroapi$pendingStates == null) {
-			this.retroapi$pendingStates = new java.util.ArrayList<>();
-		}
-		if (!this.retroapi$pendingStates.contains(com.periut.retroapi.state.RetroFacing.PROPERTY)) {
-			this.retroapi$pendingStates.add(com.periut.retroapi.state.RetroFacing.PROPERTY);
-		}
+		this.retroapi$autoFacingVertical = false;
+		retroapi$addFacingProperty();
 		// Aim the inventory icon's default south (front on a visible iso face), unless the caller set one.
 		if (this.retroapi$pendingDefault == null) {
 			this.retroapi$pendingDefault = s -> s.with(
 				com.periut.retroapi.state.RetroFacing.PROPERTY, com.periut.retroapi.state.RetroFacing.SOUTH);
+		}
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess facingAll() {
+		this.retroapi$autoFacing = true;
+		this.retroapi$autoFacingVertical = true;
+		retroapi$addFacingProperty();
+		if (this.retroapi$pendingDefault == null) {
+			this.retroapi$pendingDefault = s -> s.with(
+				com.periut.retroapi.util.RetroDirection.PROPERTY, com.periut.retroapi.util.RetroDirection.SOUTH);
 		}
 		return this;
 	}
@@ -196,6 +230,136 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		this.textureId = tex.id;
 		RetroTextures.trackBlock((Block) (Object) this, tex);
 		return this;
+	}
+
+	@Override
+	public RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front) {
+		return sided(top, side, front, null);
+	}
+
+	@Override
+	public RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front,
+			NamespacedIdentifier bottom) {
+		this.retroapi$faceTextures = com.periut.retroapi.register.block.RetroFaceTextures.oriented(
+			retroapi$face(top), retroapi$face(side), retroapi$face(front), retroapi$face(bottom));
+		retroapi$applyPrimarySprite();
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess column(NamespacedIdentifier top, NamespacedIdentifier side) {
+		return sided(top, side, side, top);
+	}
+
+	@Override
+	public RetroBlockAccess textures(NamespacedIdentifier bottom, NamespacedIdentifier top,
+			NamespacedIdentifier north, NamespacedIdentifier south,
+			NamespacedIdentifier west, NamespacedIdentifier east) {
+		this.retroapi$faceTextures = com.periut.retroapi.register.block.RetroFaceTextures.absolute(
+			new RetroTexture[]{
+				retroapi$face(bottom), retroapi$face(top), retroapi$face(north),
+				retroapi$face(south), retroapi$face(west), retroapi$face(east)
+			});
+		retroapi$applyPrimarySprite();
+		return this;
+	}
+
+	/** Registers one face texture (null-safe), reusing nothing: each identifier gets its own atlas slot. */
+	@Unique
+	private RetroTexture retroapi$face(NamespacedIdentifier id) {
+		return id == null ? null : RetroTextures.addBlockTexture(id);
+	}
+
+	/**
+	 * Points the block's own sprite (particles, and any render path that ignores per-face textures) at the
+	 * face set's primary texture, unless {@code .texture(...)} already chose one.
+	 */
+	@Unique
+	private void retroapi$applyPrimarySprite() {
+		RetroTexture primary = this.retroapi$faceTextures.primary();
+		if (primary != null) {
+			this.textureId = primary.id;
+			RetroTextures.trackBlock((Block) (Object) this, primary);
+		}
+	}
+
+	@Override
+	public RetroBlockAccess needsTool(com.periut.retroapi.tag.RetroToolTier tier) {
+		com.periut.retroapi.tag.RetroTagKey tag = tier == null ? null : tier.needsTag();
+		if (tag != null) {
+			com.periut.retroapi.tag.RetroTags.addToTag(tag, (Block) (Object) this);
+		}
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess tag(com.periut.retroapi.tag.RetroTagKey... tags) {
+		for (com.periut.retroapi.tag.RetroTagKey tag : tags) {
+			com.periut.retroapi.tag.RetroTags.addToTag(tag, (Block) (Object) this);
+		}
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess unbreakable() {
+		this.setUnbreakable();
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess tint(com.periut.retroapi.client.render.RetroBlockColors.Provider provider) {
+		this.retroapi$tint = provider;
+		com.periut.retroapi.client.render.RetroBlockColors.register((Block) (Object) this, provider);
+		return this;
+	}
+
+	@Override
+	public RetroBlockAccess overlay(NamespacedIdentifier textureId) {
+		return overlay(textureId, com.periut.retroapi.register.block.RetroBlockLayer.NO_TINT);
+	}
+
+	@Override
+	public RetroBlockAccess overlay(NamespacedIdentifier textureId, int tint) {
+		com.periut.retroapi.register.block.RetroBlockLayer layer =
+			com.periut.retroapi.register.block.RetroBlockLayer.of(RetroTextures.addBlockTexture(textureId), tint);
+		return overlay((state, world, x, y, z) -> layer);
+	}
+
+	@Override
+	public RetroBlockAccess overlay(com.periut.retroapi.register.block.RetroBlockLayer.Provider provider) {
+		if (this.retroapi$layers == null) {
+			this.retroapi$layers = new java.util.ArrayList<>(2);
+		}
+		this.retroapi$layers.add(provider);
+		return this;
+	}
+
+	@Override
+	public java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers() {
+		return getOverlayLayers(
+			com.periut.retroapi.state.RetroStates.getDefault((Block) (Object) this), null, 0, 0, 0);
+	}
+
+	@Override
+	public java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers(
+			com.periut.retroapi.state.RetroBlockState state, BlockView world, int x, int y, int z) {
+		if (this.retroapi$layers == null) {
+			return java.util.Collections.emptyList();
+		}
+		java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> resolved =
+			new java.util.ArrayList<>(this.retroapi$layers.size());
+		for (com.periut.retroapi.register.block.RetroBlockLayer.Provider provider : this.retroapi$layers) {
+			com.periut.retroapi.register.block.RetroBlockLayer layer = provider.layerFor(state, world, x, y, z);
+			if (layer != null) {
+				resolved.add(layer);
+			}
+		}
+		return resolved;
+	}
+
+	@Override
+	public boolean hasOverlayLayers() {
+		return this.retroapi$layers != null && !this.retroapi$layers.isEmpty();
 	}
 
 	@Override
@@ -290,13 +454,90 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		at = @At("TAIL"), require = 0)
 	private void retroapi$autoFace(net.minecraft.world.World world, int x, int y, int z,
 			net.minecraft.entity.LivingEntity placer, CallbackInfo ci) {
-		if (this.retroapi$autoFacing) {
-			Block self = (Block) (Object) this;
-			com.periut.retroapi.state.RetroStates.set(world, x, y, z,
-				com.periut.retroapi.state.RetroStates.getDefault(self).with(
-					com.periut.retroapi.state.RetroFacing.PROPERTY,
-					com.periut.retroapi.state.RetroFacing.fromYaw(placer.yaw)));
+		if (!this.retroapi$autoFacing) {
+			return;
 		}
+		Block self = (Block) (Object) this;
+		// Preserve whatever else placement already wrote into state (a block entity's own onPlaced, a
+		// subclass): read the current state and change only the facing.
+		com.periut.retroapi.state.RetroBlockState current =
+			com.periut.retroapi.state.RetroStates.get(world, x, y, z);
+		if (current == null || current.getBlock() != self) {
+			current = com.periut.retroapi.state.RetroStates.getDefault(self);
+		}
+		if (this.retroapi$autoFacingVertical) {
+			com.periut.retroapi.state.RetroStates.set(world, x, y, z, current.with(
+				com.periut.retroapi.util.RetroDirection.PROPERTY,
+				com.periut.retroapi.util.RetroDirection.fromPlacer(placer)));
+		} else {
+			com.periut.retroapi.state.RetroStates.set(world, x, y, z, current.with(
+				com.periut.retroapi.state.RetroFacing.PROPERTY,
+				com.periut.retroapi.state.RetroFacing.fromYaw(placer.yaw)));
+		}
+	}
+
+	/**
+	 * Per-face textures in the world: reads the FULL flattened state (including the sidecar bits, which
+	 * the metadata nibble alone would lose) so a {@code .sided(...)} block shows its front on the face it
+	 * actually points at.
+	 */
+	@Inject(method = "getTextureId", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$facedTextureInWorld(BlockView world, int x, int y, int z, int side,
+			CallbackInfoReturnable<Integer> cir) {
+		if (this.retroapi$faceTextures == null) {
+			return;
+		}
+		int sprite = this.retroapi$faceTextures.spriteFor(side,
+			com.periut.retroapi.state.RetroStates.get(world, x, y, z));
+		if (sprite >= 0) {
+			cir.setReturnValue(sprite);
+		}
+	}
+
+	/** Per-face textures for the inventory/hand form (and any caller that only has metadata). */
+	@Inject(method = "getTexture(II)I", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$facedTexture(int side, int meta, CallbackInfoReturnable<Integer> cir) {
+		if (this.retroapi$faceTextures == null) {
+			return;
+		}
+		int sprite = this.retroapi$faceTextures.spriteFor(side,
+			com.periut.retroapi.state.RetroStates.fromIndex((Block) (Object) this, meta));
+		if (sprite >= 0) {
+			cir.setReturnValue(sprite);
+		}
+	}
+
+	/**
+	 * Code-declared tinting for blocks with no model JSON: vanilla multiplies a standard block's vertex
+	 * colours by this, which is exactly the hook {@code .tint(...)} needs. The inventory form goes through
+	 * {@code getColor(meta)} below.
+	 */
+	@Inject(method = "getColorMultiplier", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$tintInWorld(BlockView world, int x, int y, int z, CallbackInfoReturnable<Integer> cir) {
+		// An overlay pass paints in ITS colour, not the block's (that is what makes a tinted glyph over an
+		// untinted backdrop - or vanilla's green grass edge over plain dirt - a single block).
+		if (com.periut.retroapi.register.block.RetroBlockLayerDraw.hasForcedTint()) {
+			cir.setReturnValue(com.periut.retroapi.register.block.RetroBlockLayerDraw.forcedTint);
+			return;
+		}
+		if (this.retroapi$tint == null) {
+			return;
+		}
+		cir.setReturnValue(this.retroapi$tint.getColor(
+			com.periut.retroapi.state.RetroStates.get(world, x, y, z), world, x, y, z, 0));
+	}
+
+	@Inject(method = "getColor", at = @At("HEAD"), cancellable = true, require = 0)
+	private void retroapi$tintInInventory(int meta, CallbackInfoReturnable<Integer> cir) {
+		if (com.periut.retroapi.register.block.RetroBlockLayerDraw.hasForcedTint()) {
+			cir.setReturnValue(com.periut.retroapi.register.block.RetroBlockLayerDraw.forcedTint);
+			return;
+		}
+		if (this.retroapi$tint == null) {
+			return;
+		}
+		cir.setReturnValue(this.retroapi$tint.getColor(
+			com.periut.retroapi.state.RetroStates.fromIndex((Block) (Object) this, meta), null, 0, 0, 0, 0));
 	}
 
 	@Inject(method = "getRenderLayer", at = @At("HEAD"), cancellable = true, require = 0)

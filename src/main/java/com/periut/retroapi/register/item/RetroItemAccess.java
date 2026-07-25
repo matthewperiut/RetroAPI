@@ -87,11 +87,65 @@ public interface RetroItemAccess {
 	 */
 	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier);
 
+	/**
+	 * Declares a tier that also sees WHAT is being mined, so one tool can be worth different levels on
+	 * different blocks - "diamond-tier on stone, stone-tier on wood", a drill whose bit only bites certain
+	 * ores, a tool that is weaker inside a dimension. Wins over both the dynamic and the static tier.
+	 * <pre>
+	 * .tier((stack, block) -&gt; block.material == Material.STONE ? RetroToolTier.DIAMOND : RetroToolTier.WOOD)
+	 * </pre>
+	 */
+	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier);
+
 	/** The declared static tool tier, or null. Prefer {@code RetroToolTier.of(stack)} which also infers ToolItems and honors the dynamic tier. */
 	com.periut.retroapi.tag.RetroToolTier getToolTier();
 
 	/** The declared dynamic tool-tier supplier, or null. */
 	com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic();
+
+	/** The declared block-aware tool-tier supplier, or null. */
+	com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual();
+
+	/**
+	 * How fast this item mines the blocks its {@link #tool} kinds cover - the {@code miningSpeed} of a
+	 * {@code ToolMaterial}, without needing one. (Vanilla's {@code ToolMaterial} is an enum, so a mod
+	 * cannot add a material at all; these per-parameter setters are the way around that.)
+	 *
+	 * <p>Reference points: wood 2, stone 4, iron 6, diamond 8, gold 12. Unset, a declared tool mines at
+	 * its {@link #tier} speed.
+	 */
+	RetroItemAccess miningSpeed(float speed);
+
+	/** The declared mining speed, or {@code 0} when none was set. */
+	float getMiningSpeed();
+
+	/**
+	 * How much damage this item deals in hand - the {@code attackDamage} of a {@code ToolMaterial},
+	 * without needing one. Vanilla references: sword 4-7, pickaxe 2-5, bare hand 1.
+	 */
+	RetroItemAccess attackDamage(int damage);
+
+	/** The declared attack damage, or {@code -1} when none was set. */
+	int getAttackDamage();
+
+	/**
+	 * How many uses this item survives, i.e. its durability. Sugar for vanilla's {@code setMaxDamage},
+	 * completing the "a tool is a set of numbers, not a material" set:
+	 * <pre>
+	 * RetroItemAccess.create()
+	 *     .tool(RetroTool.PICKAXE).tier(RetroToolTier.IRON)
+	 *     .miningSpeed(8.0F).attackDamage(4).durability(750)
+	 *     .handheld().texture(id("drill")).register(id("drill"));
+	 * </pre>
+	 */
+	RetroItemAccess durability(int uses);
+
+	/**
+	 * Makes this item lose a point of durability each time it breaks a block hard enough to matter,
+	 * exactly like a vanilla tool. On by default for items that declare both a {@link #tool} kind and a
+	 * {@link #durability}; call with {@code false} to opt out (a creative-style tool that never wears).
+	 */
+	RetroItemAccess damageOnMine(boolean enabled);
 
 	/**
 	 * Marks this item as held like a tool: the in-hand render angles it through the fist

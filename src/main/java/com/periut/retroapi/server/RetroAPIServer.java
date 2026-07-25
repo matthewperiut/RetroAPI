@@ -31,7 +31,7 @@ public class RetroAPIServer implements ServerModInitializer {
 
 		if (!hasStationAPI) {
 			ServerConnectionEvents.PLAY_READY.register((server, player) -> {
-				RetroAPI.LOGGER.info("Sending ID sync packet to player");
+				RetroAPI.LOGGER.debug("Sending ID sync packet to player");
 
 				ServerPlayNetworking.send(player, RetroAPINetworking.ID_SYNC_CHANNEL, buffer -> {
 					buffer.writeVarInt(RetroRegistry.getBlocks().size());
@@ -67,5 +67,9 @@ public class RetroAPIServer implements ServerModInitializer {
 		// under StationAPI too (orthogonal coexistence).
 		ServerConnectionEvents.PLAY_READY.register((server, player) ->
 			EntitySpawnCodec.flushPending(player));
+
+		// The `retroapi-server` entrypoint: mods' dedicated-server-only setup, after the server
+		// platform above is in place. Never runs in singleplayer (b1.7.3 has no integrated server).
+		com.periut.retroapi.entrypoint.RetroEntrypoints.invokeServer();
 	}
 }

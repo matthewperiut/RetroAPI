@@ -46,7 +46,7 @@ public class RetroAPIClient implements ClientModInitializer {
 				// synchronously on the network thread before any subsequent packets
 				// (inventory, chunk data) are deserialized, otherwise Item.BY_ID / Block.BY_ID
 				// lookups will NPE for server-assigned IDs that haven't been remapped yet.
-				RetroAPI.LOGGER.info("Received ID sync packet from server");
+				RetroAPI.LOGGER.debug("Received ID sync packet from server");
 				IdAssigner.applyFromNetwork(buffer);
 			});
 
@@ -62,7 +62,7 @@ public class RetroAPIClient implements ClientModInitializer {
 					DimensionRegistration reg = RetroDimensionRegistry.getByIdentifier(
 						NamespacedIdentifiers.from(parts[0], parts[1]));
 					if (reg != null && reg.getSerialId() != serialId) {
-						RetroAPI.LOGGER.info("Synced dimension {} -> serial id {} (was {})", idStr, serialId, reg.getSerialId());
+						RetroAPI.LOGGER.debug("Synced dimension {} -> serial id {} (was {})", idStr, serialId, reg.getSerialId());
 						reg.setSerialId(serialId);
 					}
 				}
@@ -85,6 +85,23 @@ public class RetroAPIClient implements ClientModInitializer {
 				net.minecraft.entity.player.PlayerEntity player = ctx.minecraft().player;
 				ctx.minecraft().setScreen(handler.screenFactory().create(player, handler.inventoryFactory().create()));
 				player.currentScreenHandler.syncId = syncId;
+			}
+		});
+
+		// Bridged particles: the server has no particle packet in b1.7.3, so RetroAPI forwards
+		// world.addParticle calls over OSL and replays them in the local world here.
+		ClientPlayNetworking.registerListener(RetroAPINetworking.PARTICLE_CHANNEL, (ctx, buffer) -> {
+			String name = buffer.readString();
+			double x = buffer.readDouble();
+			double y = buffer.readDouble();
+			double z = buffer.readDouble();
+			double vx = buffer.readDouble();
+			double vy = buffer.readDouble();
+			double vz = buffer.readDouble();
+			ctx.ensureOnMainThread();
+			net.minecraft.world.World world = ctx.minecraft().world;
+			if (world != null) {
+				world.addParticle(name, x, y, z, vx, vy, vz);
 			}
 		});
 
@@ -129,6 +146,10 @@ public class RetroAPIClient implements ClientModInitializer {
 				}
 			}
 		});
+
+		// The `retroapi-client` entrypoint: mods' renderers, screens, particle factories and block
+		// colors, run once the client platform above is in place. Last, so everything it may touch exists.
+		com.periut.retroapi.entrypoint.RetroEntrypoints.invokeClient();
 	}
 }
 

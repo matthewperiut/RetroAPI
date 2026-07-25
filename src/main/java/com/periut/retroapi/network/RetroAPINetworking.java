@@ -41,4 +41,11 @@ public class RetroAPINetworking {
 	// sound id + position + volume/pitch to players in hearing range; the client plays it locally.
 	public static final NamespacedIdentifier PLAY_SOUND_CHANNEL =
 		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "play_sound"), true, false);
+
+	// World particle bridge (server -> client): the same story as sounds. b1.7.3 has no particle packet
+	// and vanilla's ServerWorldEventListener.addParticle is empty, so a world.addParticle on a dedicated
+	// server reaches nobody. The bridge sends name + position + velocity to players in range; the client
+	// replays it through its own world, which routes registered names to RetroAPI particle factories.
+	public static final NamespacedIdentifier PARTICLE_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "particle"), true, false);
 }

@@ -27,8 +27,11 @@
 		"retroapi.mixins.json"
 	],
 	"custom": {
-		"//": "Interface injection: consumers see Block/Item already implementing the RetroAPI access interfaces, so `block.strength(...)` / `item.tool(...)` work WITHOUT casting to (RetroBlockAccess)/(RetroItemAccess). The mixins supply the implementations at runtime; this only teaches the compiler. Keys are calamus-gen2 intermediary names (class_17=Block, class_124=Item), matching how StationAPI declares its own injected interfaces at this version.",
+		"//": "Interface injection: consumers see Block/Item already implementing the RetroAPI access interfaces, so `block.strength(...)` / `item.tool(...)` work WITHOUT casting to (RetroBlockAccess)/(RetroItemAccess). The mixins supply the implementations at runtime; this only teaches the compiler.",
+		"//2": "Loom matches these keys against the INTERMEDIARY names of the consumer's toolchain, and the two toolchains RetroAPI ships for do not share a namespace: Ornithe uses calamus gen2 (net/minecraft/unmapped/C_81592558 = Block, C_98888256 = Item) while babric uses the older class_N names (class_17 = Block, class_124 = Item). Only the gen1 pair was listed here, so on the Ornithe build - the one the maven/docs point at - nothing was ever injected and consumers had to cast. Both namespaces are listed now; a key that does not resolve in the active namespace is ignored, so this is safe in either.",
 		"loom:injected_interfaces": {
+			"net/minecraft/unmapped/C_81592558": ["com/periut/retroapi/register/block/RetroBlockAccess"],
+			"net/minecraft/unmapped/C_98888256": ["com/periut/retroapi/register/item/RetroItemAccess"],
 			"net/minecraft/class_17": ["com/periut/retroapi/register/block/RetroBlockAccess"],
 			"net/minecraft/class_124": ["com/periut/retroapi/register/item/RetroItemAccess"]
 		}

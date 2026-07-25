@@ -25,6 +25,14 @@ public final class RetroShapelessRecipe implements CraftingRecipe {
 		this.matchedIngredients = new BitSet(ingredients.length);
 	}
 
+	/**
+	 * The raw ingredients. Exposed for {@link com.periut.retroapi.registry.IdRemap}, which repoints
+	 * modded ingredients when a world assigns different ids than registration used.
+	 */
+	public ItemStack[] getIngredients() {
+		return this.ingredients;
+	}
+
 	@Override
 	public boolean matches(CraftingInventory inv) {
 		this.matchedIngredients.clear();

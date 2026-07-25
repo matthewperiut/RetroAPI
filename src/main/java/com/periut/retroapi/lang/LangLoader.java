@@ -95,7 +95,7 @@ public class LangLoader {
 			// Name them, not just count them: a reminder of exactly which content is riding an
 			// AUTO-GENERATED display name (no lang entry). Add a lang line to silence any of these.
 			int shown = Math.min(autoNamed.size(), 20);
-			LOGGER.info("Using AUTO-GENERATED names for {} unnamed block(s)/item(s) (add a lang entry to override): {}{}",
+			LOGGER.debug("Using AUTO-GENERATED names for {} unnamed block(s)/item(s) (add a lang entry to override): {}{}",
 				autoNamed.size(), String.join(", ", autoNamed.subList(0, shown)),
 				autoNamed.size() > shown ? ", ... (+" + (autoNamed.size() - shown) + " more)" : "");
 		}
@@ -134,7 +134,7 @@ public class LangLoader {
 				count++;
 			}
 		}
-		LOGGER.info("Loaded {} translations from mod {}", count, modId);
+		LOGGER.debug("Loaded {} translations from mod {}", count, modId);
 	}
 
 	/**

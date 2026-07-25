@@ -4,7 +4,7 @@ import com.periut.retroapi.entity.client.RetroEntityRenderers;
 import com.periut.retroapi.testmod.conv.Scenario;
 import net.minecraft.client.render.entity.LivingEntityRenderer;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
-import net.ornithemc.osl.entrypoints.api.client.ClientModInitializer;
+import com.periut.retroapi.entrypoint.RetroClientModInitializer;
 
 /**
  * Client init for the test mod's entity renderers. Registered flat (Fabric-API style) before the
@@ -13,9 +13,9 @@ import net.ornithemc.osl.entrypoints.api.client.ClientModInitializer;
  * ({@code LivingEntity.class -> new LivingEntityRenderer(new BipedEntityModel(), 0.5F)}) and pulls
  * its texture from the entity's {@code texture} field ({@code /mob/zombie.png}).
  */
-public class TestModClient implements ClientModInitializer {
+public class TestModClient implements RetroClientModInitializer {
 	@Override
-	public void initClient() {
+	public void initRetroClient() {
 		RetroEntityRenderers.register(ZeveEntity.class, new LivingEntityRenderer(new BipedEntityModel(), 0.5F));
 
 		// Headless conversion round-trip (StationAPI client only): once the client is ready, at the title

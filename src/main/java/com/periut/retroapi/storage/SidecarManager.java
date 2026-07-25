@@ -27,7 +27,7 @@ public class SidecarManager {
 	public static void setWorldDir(File dir) {
 		flush();
 		worldDir = dir;
-		LOGGER.info("SidecarManager initialized for world: {}", dir);
+		LOGGER.debug("SidecarManager initialized for world: {}", dir);
 	}
 
 	public static File getWorldDir() {

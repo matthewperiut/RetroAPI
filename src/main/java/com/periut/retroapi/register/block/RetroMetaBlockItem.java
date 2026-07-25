@@ -24,7 +24,10 @@ public class RetroMetaBlockItem extends BlockItem {
 
 	@Override
 	public int getPlacementMetadata(int damage) {
-		return damage;
+		// Only the low nibble fits in vanilla metadata. For a block with more than 16 states the rest of
+		// the index is written back by BlockItemStateMixin right after placement, from this same damage
+		// value - so wide states survive the break/place round trip instead of being truncated here.
+		return damage & 15;
 	}
 
 	@Override

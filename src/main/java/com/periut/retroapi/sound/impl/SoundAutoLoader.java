@@ -69,7 +69,7 @@ public final class SoundAutoLoader {
 			total += scan(modId, "streaming", streamingChannel);
 			total += scan(modId, "music", musicChannel);
 		}
-		LOGGER.info("Autoloaded {} sound(s) from {} mod(s)", total,
+		LOGGER.debug("Autoloaded {} sound(s) from {} mod(s)", total,
 			FabricLoader.getInstance().getAllMods().size());
 	}
 

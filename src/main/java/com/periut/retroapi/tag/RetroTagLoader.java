@@ -90,7 +90,7 @@ final class RetroTagLoader {
 			}
 		}
 		if (files > 0) {
-			RetroAPI.LOGGER.info("Loaded {} {} tag file(s) into {} tag(s)", files, singular, tags.size());
+			RetroAPI.LOGGER.debug("Loaded {} {} tag file(s) into {} tag(s)", files, singular, tags.size());
 		}
 		return tags;
 	}

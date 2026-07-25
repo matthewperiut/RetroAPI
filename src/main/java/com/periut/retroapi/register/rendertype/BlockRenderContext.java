@@ -242,6 +242,137 @@ public class BlockRenderContext {
 		}
 	}
 
+	// === Texture control: sprite override, flip, rotation, sub-rectangles =========================
+	// These are the primitives a connected-texture / trim / decal renderer needs. Without them the only
+	// way to draw "part of a sprite, mirrored" was to shrink the block's bounding box per corner and
+	// keep a second, pre-flipped copy of every texture in the atlas.
+
+	/**
+	 * Forces every face drawn from here on to use one sprite, whatever the block says. Pair with
+	 * {@link #clearSpriteOverride()} (or pass -1) - it is renderer state, not per-call.
+	 */
+	public void spriteOverride(int sprite) {
+		((RetroBlockRendererAccess) blockRenderer).retroapi$setTextureOverride(sprite);
+	}
+
+	/** Drops a {@link #spriteOverride(int)} and goes back to the block's own textures. */
+	public void clearSpriteOverride() {
+		((RetroBlockRendererAccess) blockRenderer).retroapi$setTextureOverride(-1);
+	}
+
+	/**
+	 * Mirrors the texture horizontally on the faces drawn from here on - the missing half of a connected
+	 * texture set, without shipping a mirrored copy of every sprite. Remember to switch it back off.
+	 */
+	public void flipTexture(boolean flipped) {
+		((RetroBlockRendererAccess) blockRenderer).retroapi$setFlipTexture(flipped);
+	}
+
+	/**
+	 * Rotates a face's texture in 90° steps (0-3), the way vanilla varies grass and sand. Face indices are
+	 * the usual 0 bottom, 1 top, 2 north, 3 south, 4 west, 5 east.
+	 */
+	public void faceRotation(int face, int quarterTurns) {
+		((RetroBlockRendererAccess) blockRenderer).retroapi$setFaceRotation(face, quarterTurns);
+	}
+
+	/** Clears every per-face rotation set by {@link #faceRotation}. */
+	public void clearFaceRotations() {
+		for (int face = 0; face < 6; face++) {
+			faceRotation(face, 0);
+		}
+	}
+
+	/** Draws faces even where a neighbouring block would normally hide them (vanilla's "render all faces"). */
+	public void renderAllFaces(boolean all) {
+		((RetroBlockRendererAccess) blockRenderer).retroapi$setSkipFaceCulling(all);
+	}
+
+	/**
+	 * Draws one face with an explicit sub-rectangle of a sprite, in 0-16 pixel coordinates, optionally
+	 * mirrored - full UV control with no tessellator boilerplate and no bounding-box tricks.
+	 *
+	 * <pre>
+	 * // top-left quarter of the sprite, on the north face
+	 * ctx.renderFaceUv(2, sprite, 0, 0, 8, 8, false);
+	 * </pre>
+	 *
+	 * Coordinates are the block's current bounding box, so shrinking the box still works if you want it;
+	 * the lighting is the flat per-face shade (call {@link #renderLitFace} for the vanilla-lit variant).
+	 */
+	public void renderFaceUv(int face, int sprite, double u0, double v0, double u1, double v1, boolean flipU) {
+		double su0 = com.periut.retroapi.client.model.RetroAtlas.terrainU(sprite, flipU ? u1 : u0);
+		double su1 = com.periut.retroapi.client.model.RetroAtlas.terrainU(sprite, flipU ? u0 : u1);
+		double sv0 = com.periut.retroapi.client.model.RetroAtlas.terrainV(sprite, v0);
+		double sv1 = com.periut.retroapi.client.model.RetroAtlas.terrainV(sprite, v1);
+
+		double minX = x + block.minX, maxX = x + block.maxX;
+		double minY = y + block.minY, maxY = y + block.maxY;
+		double minZ = z + block.minZ, maxZ = z + block.maxZ;
+
+		Tessellator t = Tessellator.INSTANCE;
+		float shade = FACE_SHADES[face];
+		int[] n = FACE_NORMALS[face];
+		float brightness = block.getLuminance(world, x + n[0], y + n[1], z + n[2]);
+		t.color(shade * brightness, shade * brightness, shade * brightness);
+
+		switch (face) {
+			case 0: // bottom (-Y)
+				t.vertex(minX, minY, maxZ, su0, sv1);
+				t.vertex(minX, minY, minZ, su0, sv0);
+				t.vertex(maxX, minY, minZ, su1, sv0);
+				t.vertex(maxX, minY, maxZ, su1, sv1);
+				break;
+			case 1: // top (+Y)
+				t.vertex(maxX, maxY, maxZ, su1, sv1);
+				t.vertex(maxX, maxY, minZ, su1, sv0);
+				t.vertex(minX, maxY, minZ, su0, sv0);
+				t.vertex(minX, maxY, maxZ, su0, sv1);
+				break;
+			case 2: // north (-Z)
+				t.vertex(minX, maxY, minZ, su1, sv0);
+				t.vertex(maxX, maxY, minZ, su0, sv0);
+				t.vertex(maxX, minY, minZ, su0, sv1);
+				t.vertex(minX, minY, minZ, su1, sv1);
+				break;
+			case 3: // south (+Z)
+				t.vertex(minX, maxY, maxZ, su0, sv0);
+				t.vertex(minX, minY, maxZ, su0, sv1);
+				t.vertex(maxX, minY, maxZ, su1, sv1);
+				t.vertex(maxX, maxY, maxZ, su1, sv0);
+				break;
+			case 4: // west (-X)
+				t.vertex(minX, maxY, maxZ, su1, sv0);
+				t.vertex(minX, maxY, minZ, su0, sv0);
+				t.vertex(minX, minY, minZ, su0, sv1);
+				t.vertex(minX, minY, maxZ, su1, sv1);
+				break;
+			default: // east (+X)
+				t.vertex(maxX, minY, maxZ, su1, sv1);
+				t.vertex(maxX, minY, minZ, su0, sv1);
+				t.vertex(maxX, maxY, minZ, su0, sv0);
+				t.vertex(maxX, maxY, maxZ, su1, sv0);
+				break;
+		}
+	}
+
+	/** {@link #renderFaceUv} without mirroring. */
+	public void renderFaceUv(int face, int sprite, double u0, double v0, double u1, double v1) {
+		renderFaceUv(face, sprite, u0, v0, u1, v1, false);
+	}
+
+	/**
+	 * Draws one QUARTER of a sprite on a face - the corner-by-corner pass a connected-texture block
+	 * makes, expressed directly instead of by resizing the block six times per corner.
+	 *
+	 * @param corner 0 top-left, 1 top-right, 2 bottom-left, 3 bottom-right
+	 */
+	public void renderFaceCorner(int face, int sprite, int corner, boolean flipU) {
+		double u0 = (corner & 1) == 0 ? 0.0 : 8.0;
+		double v0 = corner < 2 ? 0.0 : 8.0;
+		renderFaceUv(face, sprite, u0, v0, u0 + 8.0, v0 + 8.0, flipU);
+	}
+
 	public void renderBottomFace(int sprite) { blockRenderer.renderBottomFace(block, x, y, z, sprite); }
 	public void renderTopFace(int sprite) { blockRenderer.renderTopFace(block, x, y, z, sprite); }
 	public void renderNorthFace(int sprite) { blockRenderer.renderEastFace(block, x, y, z, sprite); }

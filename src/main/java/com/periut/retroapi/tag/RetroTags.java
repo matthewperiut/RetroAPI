@@ -10,6 +10,7 @@ import net.minecraft.item.Item;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifiers;
 
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -201,8 +202,66 @@ public final class RetroTags {
 			mineableCache = cache;
 		}
 		Set<RetroTool> tools = mineableCache.get(block);
-		return tools != null ? tools : Collections.emptySet();
+		if (tools != null) {
+			return tools;
+		}
+		return defaultMineableTools(block);
 	}
+
+	/**
+	 * What a block is mineable with when nothing declared it - inferred from its material, the way modern
+	 * Minecraft's own tags are laid out (stone/metal -&gt; pickaxe, wood -&gt; axe, soil/sand -&gt; shovel,
+	 * leaves -&gt; shears + hoe + sword, wool -&gt; shears).
+	 *
+	 * <p>This closes the trap behind "my tool can't break my block". Beta decides whether a tool is
+	 * effective from hardcoded block LISTS inside each vanilla tool item - lists a modded block obviously
+	 * is not in - so a modded stone-material block dropped nothing for ANY tool, vanilla or modded, until
+	 * its author found {@code .mineable(...)}. Inferring the obvious default makes a block behave like the
+	 * vanilla blocks it is made of, while an explicit {@code .mineable(...)} or a data tag still wins.
+	 */
+	public static Set<RetroTool> defaultMineableTools(Block block) {
+		if (block == null) {
+			return Collections.emptySet();
+		}
+		net.minecraft.block.material.Material material = block.material;
+		if (material == null) {
+			return Collections.emptySet();
+		}
+		if (material == net.minecraft.block.material.Material.STONE
+			|| material == net.minecraft.block.material.Material.METAL
+			|| material == net.minecraft.block.material.Material.ICE
+			|| material == net.minecraft.block.material.Material.PISTON) {
+			return DEFAULT_PICKAXE;
+		}
+		if (material == net.minecraft.block.material.Material.WOOD
+			|| material == net.minecraft.block.material.Material.PUMPKIN) {
+			return DEFAULT_AXE;
+		}
+		if (material == net.minecraft.block.material.Material.SOIL
+			|| material == net.minecraft.block.material.Material.SAND
+			|| material == net.minecraft.block.material.Material.CLAY
+			|| material == net.minecraft.block.material.Material.SOLID_ORGANIC
+			|| material == net.minecraft.block.material.Material.SNOW_BLOCK
+			|| material == net.minecraft.block.material.Material.SNOW_LAYER) {
+			return DEFAULT_SHOVEL;
+		}
+		if (material == net.minecraft.block.material.Material.LEAVES) {
+			return DEFAULT_LEAVES;
+		}
+		if (material == net.minecraft.block.material.Material.WOOL
+			|| material == net.minecraft.block.material.Material.COBWEB) {
+			return DEFAULT_SHEARS;
+		}
+		return Collections.emptySet();
+	}
+
+	private static final Set<RetroTool> DEFAULT_PICKAXE = Collections.unmodifiableSet(EnumSet.of(RetroTool.PICKAXE));
+	private static final Set<RetroTool> DEFAULT_AXE = Collections.unmodifiableSet(EnumSet.of(RetroTool.AXE));
+	private static final Set<RetroTool> DEFAULT_SHOVEL = Collections.unmodifiableSet(EnumSet.of(RetroTool.SHOVEL));
+	private static final Set<RetroTool> DEFAULT_SHEARS = Collections.unmodifiableSet(EnumSet.of(RetroTool.SHEARS));
+	/** Leaves: shears cut them cleanly, and a sword or hoe hacks through them faster than a hand. */
+	private static final Set<RetroTool> DEFAULT_LEAVES = Collections.unmodifiableSet(
+		EnumSet.of(RetroTool.SHEARS, RetroTool.SWORD, RetroTool.HOE));
 
 	/**
 	 * The tool tier a block demands ({@code needs_stone_tool} and friends), or WOOD when it

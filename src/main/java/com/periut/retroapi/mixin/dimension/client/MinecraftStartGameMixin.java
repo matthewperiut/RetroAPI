@@ -57,7 +57,7 @@ public abstract class MinecraftStartGameMixin {
 			return;
 		}
 
-		RetroAPI.LOGGER.info("Restoring player into modded dimension {} (serial id {})", reg.getId(), dim);
+		RetroAPI.LOGGER.debug("Restoring player into modded dimension {} (serial id {})", reg.getId(), dim);
 		retroapi$hop(dim, "Loading " + reg.getId().identifier());
 	}
 
@@ -75,7 +75,7 @@ public abstract class MinecraftStartGameMixin {
 		if (RetroDimensionRegistry.isVanillaId(dim) || RetroDimensionRegistry.getBySerialId(dim) == null) {
 			return;
 		}
-		RetroAPI.LOGGER.info("Leaving modded dimension (serial id {}) -> overworld", dim);
+		RetroAPI.LOGGER.debug("Leaving modded dimension (serial id {}) -> overworld", dim);
 		retroapi$hop(0, "Leaving dimension");
 		ci.cancel();
 	}

@@ -45,6 +45,18 @@ public enum RetroToolTier {
 		RetroToolTier tierFor(ItemStack stack);
 	}
 
+	/**
+	 * A tier that also sees WHAT is being mined - the missing half of {@link Dynamic}, which only got the
+	 * stack and so could not express "diamond-tier on stone, wood-tier on everything else", a drill bit
+	 * that only bites certain ores, or a tool that is weaker in the nether. Declared with
+	 * {@code RetroItemAccess.tier((stack, block) -> ...)} and consulted per harvest, ahead of the
+	 * stack-only and static forms.
+	 */
+	@FunctionalInterface
+	public interface Contextual {
+		RetroToolTier tierFor(ItemStack stack, net.minecraft.block.Block block);
+	}
+
 	/** Numeric mining level, comparable to {@link ToolMaterial#getMiningLevel()}. */
 	public int getLevel() {
 		return level;
@@ -104,6 +116,30 @@ public enum RetroToolTier {
 			}
 		}
 		return of(item);
+	}
+
+	/**
+	 * The tier of the tool in this stack <em>for a specific block</em>. A
+	 * {@code RetroItemAccess.tier((stack, block) -> ...)} declaration wins, then the stack-only dynamic
+	 * form, then a static tier, then a vanilla {@code ToolItem}'s material. This is the overload the
+	 * harvest hook uses, so a tool's level can depend on what it is pointed at.
+	 */
+	public static RetroToolTier of(ItemStack stack, net.minecraft.block.Block block) {
+		if (stack == null) {
+			return WOOD;
+		}
+		Item item = stack.getItem();
+		if (item == null) {
+			return WOOD;
+		}
+		Contextual contextual = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolTierContextual();
+		if (contextual != null) {
+			RetroToolTier tier = contextual.tierFor(stack, block);
+			if (tier != null) {
+				return tier;
+			}
+		}
+		return of(stack);
 	}
 
 	/** The tier for a numeric mining level, clamped into the known range. */

@@ -9,6 +9,7 @@ import com.periut.retroapi.register.recipe.RetroRecipes;
 import com.periut.retroapi.register.recipe.event.RecipeRegistrationCallback;
 import com.periut.retroapi.achievement.event.AchievementRegistrationCallback;
 import com.periut.retroapi.compat.StationBridges;
+import com.periut.retroapi.entrypoint.RetroEntrypoints;
 import com.periut.retroapi.lang.LangLoader;
 import com.periut.retroapi.registry.RetroRegistry;
 import net.fabricmc.loader.api.FabricLoader;
@@ -26,7 +27,6 @@ public class RetroAPI implements ModInitializer {
 
 	@Override
 	public void init() {
-		LOGGER.info("RetroAPI initializing");
 		boolean hasStationAPI = FabricLoader.getInstance().isModLoaded("stationapi");
 
 		// Make Block the entry point of vanilla's order-sensitive Block<->Item<->Stats<->CraftingRecipeManager
@@ -39,7 +39,7 @@ public class RetroAPI implements ModInitializer {
 		// fixes the order for consuming mods. NOTE: do NOT add a "defensive" mixin that touches
 		// CraftingRecipeManager.getInstance() here - merely calling it forces its <clinit> at the wrong
 		// time and reintroduces the crash from the other direction.
-		LOGGER.info("RetroAPI initializing ({} block slots)", Block.BLOCKS.length);
+		LOGGER.debug("RetroAPI initializing ({} block slots)", Block.BLOCKS.length);
 
 		if (!hasStationAPI) {
 			// NOTE: the beta-accurate default vanilla mineable/needs_<tier>_tool membership is registered
@@ -55,6 +55,11 @@ public class RetroAPI implements ModInitializer {
 			// (it needs the registries populated and is display-only).
 			LangLoader.loadModLangFiles();
 
+			// The `retroapi` entrypoint: mods register their content here, in an order RetroAPI
+			// guarantees (platform ready, before the registration events, before recipes are sorted,
+			// before any world assigns ids). See RetroModInitializer for why `init` is not enough.
+			RetroEntrypoints.invokeCommon();
+
 			// Fire registration events so mods can register their blocks/items
 			BlockRegistrationCallback.EVENT.invoker().run();
 			ItemRegistrationCallback.EVENT.invoker().run();
@@ -67,20 +72,25 @@ public class RetroAPI implements ModInitializer {
 			RecipeRegistrationCallback.EVENT.invoker().run();
 			RetroRecipes.sortCraftingRecipes();
 
-			LOGGER.info("Registered {} blocks and {} items",
-				RetroRegistry.getBlocks().size(), RetroRegistry.getItems().size());
+			// One summary line at the end of init is all an end user needs; the per-registration
+			// detail is on the debug logger for when something actually needs diagnosing.
 		} else {
 			// When StationAPI is present, it handles ID management and textures.
 			// Register our lang path so StationAPI scans lang/ directories.
 			StationBridges.get().registerLangPath();
-			LOGGER.info("StationAPI detected - delegating registration, ID management, and textures to StationAPI");
+			LOGGER.info("RetroAPI: StationAPI detected, delegating registration, ID management and textures to it");
+
+			// The `retroapi` entrypoint fires in BOTH worlds. RetroAPI's own block/item/achievement
+			// registration events deliberately do not fire under StationAPI (StationAPI owns registration
+			// there), which is exactly why a mod that registers from the entrypoint - rather than from
+			// those events - is the one shape that behaves the same with and without StationAPI.
+			RetroEntrypoints.invokeCommon();
 		}
 
 		// Entities register into vanilla EntityRegistry (string<->class) the same way with or without
 		// StationAPI; only the spawn/render backend differs (handled by entity mixins + delegation), so
 		// this fires unconditionally. Modded entity ids are stored as id.toString() per the flattening contract.
 		EntityRegistrationCallback.EVENT.invoker().run();
-		LOGGER.info("Registered {} entities", RetroRegistry.getEntities().size());
 
 		// Dimensions, biomes and entities register into RetroAPI's own registries identically whether or
 		// not StationAPI is present (only the spawn/world backend differs, handled by mixins + delegation).
@@ -89,6 +99,9 @@ public class RetroAPI implements ModInitializer {
 		// conversion can read it. Biomes are plain vanilla Biome objects held by a dimension's BiomeSource.
 		DimensionRegistrationCallback.EVENT.invoker().run();
 		BiomeRegistrationCallback.EVENT.invoker().run();
-		LOGGER.info("Registered {} dimensions", com.periut.retroapi.dimension.RetroDimensionRegistry.getAll().size());
+		LOGGER.info("RetroAPI ready: {} blocks, {} items, {} entities, {} dimensions",
+			RetroRegistry.getBlocks().size(), RetroRegistry.getItems().size(),
+			RetroRegistry.getEntities().size(),
+			com.periut.retroapi.dimension.RetroDimensionRegistry.getAll().size());
 	}
 }

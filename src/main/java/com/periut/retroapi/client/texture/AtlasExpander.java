@@ -68,7 +68,7 @@ public class AtlasExpander {
 			itemSpriteSize = spriteSize;
 		}
 
-		LOGGER.info("Expanding {} atlas to {}x{} (vanilla: {}x{})",
+		LOGGER.debug("Expanding {} atlas to {}x{} (vanilla: {}x{})",
 			isTerrain ? "terrain" : "item", atlasSize, atlasSize, original.getWidth(), original.getHeight());
 
 		BufferedImage atlas = new BufferedImage(atlasSize, atlasSize, BufferedImage.TYPE_INT_ARGB);

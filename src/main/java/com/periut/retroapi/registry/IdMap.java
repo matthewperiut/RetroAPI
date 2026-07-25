@@ -27,7 +27,7 @@ public class IdMap {
 			// NbtCompound has no key iteration API in b1.7.3, so use manual NBT key extraction
 			loadFromNbt(root);
 
-			LOGGER.info("Loaded ID map with {} blocks and {} items", blockIds.size(), itemIds.size());
+			LOGGER.debug("Loaded ID map with {} blocks and {} items", blockIds.size(), itemIds.size());
 		} catch (IOException e) {
 			LOGGER.error("Failed to load ID map", e);
 		}
@@ -156,7 +156,7 @@ public class IdMap {
 		// in the world on the next load, so this file must never be truncate-overwritten in place.
 		try {
 			com.periut.retroapi.storage.SidecarIo.writeNow(file, com.periut.retroapi.storage.SidecarIo.snapshot(root));
-			LOGGER.info("Saved ID map with {} blocks and {} items", blockIds.size(), itemIds.size());
+			LOGGER.debug("Saved ID map with {} blocks and {} items", blockIds.size(), itemIds.size());
 		} catch (IOException e) {
 			LOGGER.error("Failed to save ID map", e);
 		}
@@ -225,7 +225,7 @@ public class IdMap {
 		}
 
 		if (removedBlocks > 0 || removedItems > 0) {
-			LOGGER.info("Purged {} stale block and {} stale item entries from ID map", removedBlocks, removedItems);
+			LOGGER.debug("Purged {} stale block and {} stale item entries from ID map", removedBlocks, removedItems);
 		}
 	}
 }

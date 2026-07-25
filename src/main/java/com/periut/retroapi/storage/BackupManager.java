@@ -14,7 +14,7 @@ public class BackupManager {
 	public static void backupRetroApiData(File worldDir) {
 		File retroapiDir = new File(worldDir, "retroapi");
 		if (!retroapiDir.exists() || !retroapiDir.isDirectory()) {
-			LOGGER.info("No retroapi data to backup in {}", worldDir);
+			LOGGER.debug("No retroapi data to backup in {}", worldDir);
 			return;
 		}
 

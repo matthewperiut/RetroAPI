@@ -72,9 +72,9 @@ public abstract class PlayerEntityMixin {
 				return;
 			}
 		}
-		// Tool TIER: needs_<tier>_tool demands the material level (declared statically or dynamically via
-		// RetroItemAccess.tier, or inferred from a ToolItem's material).
-		if (!com.periut.retroapi.tag.RetroToolTier.of(held).isAtLeast(requiredTier)) {
+		// Tool TIER: needs_<tier>_tool demands the material level (declared statically, per stack, or per
+		// stack AND block via RetroItemAccess.tier, or inferred from a ToolItem's material).
+		if (!com.periut.retroapi.tag.RetroToolTier.of(held, block).isAtLeast(requiredTier)) {
 			cir.setReturnValue(false);
 			return;
 		}
@@ -111,7 +111,7 @@ public abstract class PlayerEntityMixin {
 		// Tag path: held tool kind matches a mineable/<tool> tag containing this block.
 		Set<RetroTool> tools = RetroTags.mineableTools(block);
 		if (!tools.isEmpty() && !java.util.Collections.disjoint(RetroTool.kindsOf(item), tools)) {
-			Float speed = retroapi$getToolSpeed(held);
+			Float speed = retroapi$getToolSpeed(held, block);
 			if (speed != null) {
 				cir.setReturnValue(speed);
 			}
@@ -120,7 +120,18 @@ public abstract class PlayerEntityMixin {
 
 	@Unique
 	private Float retroapi$getToolSpeed(ItemStack held) {
+		return retroapi$getToolSpeed(held, null);
+	}
+
+	@Unique
+	private Float retroapi$getToolSpeed(ItemStack held, Block block) {
 		Item item = held.getItem();
+		// An explicitly declared speed wins: that is the whole point of building a tool from parameters
+		// instead of a ToolMaterial (which mods cannot extend - it is an enum).
+		float declared = ((com.periut.retroapi.register.item.RetroItemAccess) item).getMiningSpeed();
+		if (declared > 0.0F && !RetroTool.kindsOf(item).isEmpty()) {
+			return declared;
+		}
 		// Vanilla tool classes: sample the held item's speed against a reference block of
 		// the matching material (gives the tool's material speed: wood 2 .. gold 12).
 		if (item instanceof PickaxeItem) return this.inventory.getStrengthOnBlock(Block.STONE);
@@ -130,9 +141,9 @@ public abstract class PlayerEntityMixin {
 		// Custom ToolItem subclasses (declared via RetroItemAccess.tool): raw material speed.
 		if (item instanceof ToolItem) return ((ToolItemAccessor) item).retroapi$getMiningSpeed();
 		// Declared plain-Item tools: scale with the declared tier, so .tier(IRON) mines like an iron
-		// tool (6x) instead of a flat token boost. Honors a dynamic tier via the stack.
+		// tool (6x) instead of a flat token boost. Honors a dynamic or block-aware tier via the stack.
 		if (!RetroTool.kindsOf(item).isEmpty()) {
-			return retroapi$tierSpeed(com.periut.retroapi.tag.RetroToolTier.of(held));
+			return retroapi$tierSpeed(com.periut.retroapi.tag.RetroToolTier.of(held, block));
 		}
 		return null;
 	}

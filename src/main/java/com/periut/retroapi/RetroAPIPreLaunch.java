@@ -45,7 +45,7 @@ public class RetroAPIPreLaunch implements PreLaunchEntrypoint {
 			// Do NOT touch Block here: that would run Stats.<clinit> -> StationAPI's flattening mixin
 			// (BlockRegistry.getId(...).orElseThrow()) before StationAPI has registered any block. Defer
 			// to StationAPI's ordering; RetroAPI.init() forces Block later, once the registry is ready.
-			RetroAPI.LOGGER.info("RetroAPI preLaunch: StationAPI present - deferring Block-first static init to StationAPI");
+			RetroAPI.LOGGER.debug("RetroAPI preLaunch: StationAPI present - deferring Block-first static init to StationAPI");
 			return;
 		}
 		// Referencing a non-constant Block static forces Block.<clinit> to run to completion now, with
@@ -55,7 +55,7 @@ public class RetroAPIPreLaunch implements PreLaunchEntrypoint {
 	}
 
 	private static void forceBlockFirstStaticInit() {
-		RetroAPI.LOGGER.info("RetroAPI preLaunch: forcing Block-first static init ({} block slots)",
+		RetroAPI.LOGGER.debug("RetroAPI preLaunch: forcing Block-first static init ({} block slots)",
 			net.minecraft.block.Block.BLOCKS.length);
 	}
 }

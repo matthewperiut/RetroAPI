@@ -128,7 +128,7 @@ public final class RetroAchievements {
 		if (stationAPI()) {
 			com.periut.retroapi.compat.StationBridges.get().bindAchievement(a, id.namespace(), id.identifier());
 		}
-		LOGGER.info("Registered achievement {} -> id {}", id, a.id);
+		LOGGER.debug("Registered achievement {} -> id {}", id, a.id);
 		return a;
 	}
 

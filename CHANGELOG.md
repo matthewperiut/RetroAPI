@@ -1,5 +1,112 @@
 # RetroAPI changelog
 
+## 0.3.0 — The `retroapi` entrypoint
+
+All items below are exercised by the test mod's headless self-checks (`runPopulateServer`),
+logged as `[new-features] ... PASS`.
+
+### Entrypoints
+- **New `retroapi` / `retroapi-client` / `retroapi-server` entrypoints.** Implement
+  `RetroModInitializer.initRetro()` (plus the client/server interfaces) and declare them in
+  `fabric.mod.json`. RetroAPI invokes them at the one point where registration is safe: after its
+  registries, tag defaults and lang files are ready, after vanilla's order-sensitive
+  `Block`/`Item`/`Stats` static-init cycle has been entered from the safe side, before RetroAPI's own
+  registration events, before recipes are sorted, and before any world assigns ids. The loader's
+  `init` stage has **no defined order**, so a consuming mod could (and intermittently did) register
+  into a platform that was not built yet. They also fire identically with and without StationAPI,
+  which RetroAPI's registration events deliberately do not. A failure names the offending mod.
+  `init`/`client-init`/`server-init` keep working unchanged.
+
+### Fixes
+- **Recipes (and smelting, fuels, achievement icons) no longer silently stop working.** An
+  `ItemStack` stores a numeric id; mods build them at init, when ids are still provisional, while the
+  real ids arrive later from a world's `id_map.dat` or a server's sync. Every stack built beforehand
+  kept pointing at the old number, so recipes stayed in the list — right count, no matches — unless
+  this session's provisional ids happened to match, which is why relaunching sometimes "fixed" it.
+  RetroAPI now collects every id change into an `IdRemap` and repairs its own tables, then fires
+  `IdRemapCallback` so mods can fix stacks/ids they cached themselves, then re-sorts the crafting list
+  (so late-registered recipes are ordered too).
+- **Modded tools can now break modded blocks, and vanilla tools can break modded blocks.** Two halves
+  of one trap: beta answers "is this tool effective?" from hardcoded block *lists* inside each vanilla
+  tool item. (a) A block with no `mineable` tag now infers one from its material (stone/metal →
+  pickaxe, wood → axe, soil/sand/snow → shovel, leaves → shears/sword/hoe, wool/cobweb → shears);
+  (b) RetroAPI hooks `Item.isSuitableFor`, so a declared `.tool(...)` item satisfies vanilla's own
+  check — drops, breaking speed and the correct-tool test now agree. Leaves are mineable by
+  shears/sword/hoe as a result.
+- **Interface injection actually applies on Ornithe.** The `loom:injected_interfaces` keys were
+  babric-era intermediary names (`class_17`/`class_124`); the Ornithe build uses calamus gen2, so
+  nothing was ever injected and consumers had to cast. Both namespaces are declared now.
+- **`.states(...)` after `.facing()` no longer drops the facing property.** The two declarations merge
+  in either order; auto-facing also preserves any state placement already wrote.
+- **Blocks with more than 16 states survive break → place.** `BlockItemStateMixin` decodes the stack's
+  damage as a flattened state index after placement and writes it back through `RetroStates` (nibble +
+  sidecar), instead of truncating to the metadata nibble.
+- `Block.setUnbreakable()` is reachable as `.unbreakable()` (no subclass just to call a protected setter).
+
+### Particles (new)
+- `RetroParticleRegistry.register(id, factory)` (client) + `RetroParticles.spawn/spawnCloud/spawnOnBlock`
+  (common). Beta resolved particle names in a hardcoded `if` chain with no way in; namespaced names now
+  resolve through the registry and unknown names fall through to vanilla.
+- `RetroSpriteParticle`: a ready-made particle drawing any registered texture, chainable
+  (`lifetime`, `scale`, `gravity`, `drag`, `tint`, `shrink`), drawing the whole sprite rather than a
+  quarter of it. Particle fields are widened so mod subclasses can set themselves up.
+- **Multiplayer bridge.** Vanilla's server-side `addParticle` is an empty method and the protocol has no
+  particle packet, so server-spawned particles reached nobody. Now bridged to players in range, exactly
+  like the existing sound bridge.
+
+### World generation (new)
+- `RetroFeatures.ore(block) / cluster(block, size) / custom(feature)` with placement: `.count(n)`,
+  `.heightRange(min, max)`, `.rarity(n)`, `.dimensions(...)`, and for ores `.size(n)`, `.meta(n)`,
+  `.replace(blocks…)` / `.replaceAnything()`. Vanilla's `OreFeature` has no rarity, no metadata, and
+  replaces only stone; adding anything at all previously required a mixin into the chunk generator.
+- The hook sits on the chunk cache, so vanilla dimensions, modded dimensions and custom generators are
+  all covered; the decoration `Random` is seeded exactly like vanilla's, so seeds still reproduce.
+  A throwing feature is logged and skipped rather than taking the chunk down.
+
+### Blocks
+- **Per-face textures in code:** `.sided(top, side, front[, bottom])`, `.column(top, side)`,
+  `.textures(bottom, top, north, south, west, east)` — the furnace/log look with no model JSON, no
+  blockstate file and no `getTexture` override. `.sided(...)` follows the facing state (4- or 6-way).
+- **`.facingAll()`** — six-way facing (`RetroDirection.PROPERTY`), the dispenser/piston rule.
+- **`.tint(provider)`** — per-position colour for plain code-textured blocks, not just model faces with
+  a `tintindex`; drives the inventory form too.
+- **`.overlay(...)`** — extra render passes over the same block, each with its own tint (vanilla's
+  grass-edge trick, generalised). Static, tinted, or chosen per position by a provider.
+- **`.tag(...)`, `.needsTool(tier)`, `.unbreakable()`** — tags and tiers at registration.
+- **`RetroCharProperty`** — characters as state values (`letters`, `digits`, or an explicit set).
+
+### Tools & items
+- **Tools without a `ToolMaterial`** (which is an enum mods cannot extend): `.miningSpeed(f)`,
+  `.attackDamage(n)`, `.durability(n)`, `.damageOnMine(bool)` on any item.
+- **`RetroToolTier.Contextual`** — `.tier((stack, block) -> ...)`, a tier that sees what is being mined
+  (diamond-tier on stone, wood-tier elsewhere), consulted per harvest ahead of the stack-only form.
+
+### Positions, directions, multiblocks
+- **`RetroVec3i`** — immutable block position: `add`/`subtract`/`multiply`/`negate`, `up/down/north/…`,
+  `offset(direction[, n])`, `rotateTo(facing)`, distances, and world access (`blockId`, `block`, `meta`,
+  `state`, `setBlock`, `setState`, `blockEntity`).
+- **`RetroDirection`** — all six, with `offsetX/Y/Z`, `vector()`, `face()`/`fromFace()`, `opposite()`,
+  `rotateLeft/Right()`, `isHorizontal()`, `axis()`, `fromYaw`, `fromPlacer`, `nearest(dx, dy, dz)`.
+  `RetroFacing` gained the same helpers plus `toDirection()`.
+- **`RetroMultiblock`** — declare a structure as ASCII layers plus a legend (block, state, any-of, or a
+  predicate), match it at a position in one facing or `matchAnyRotation`, read back every matched
+  position (optionally by pattern character), and `fill(...)` to form it.
+- **`BlockEntityLoadedCallback`** — fires once per block entity on its first tick, i.e. after NBT is read
+  AND the world exists; replaces the hand-rolled "have I initialised yet?" boolean.
+
+### Logging
+- **RetroAPI is quiet now.** Registration, id assignment (one line *per item*), tag/lang/sound loading,
+  atlas expansion, id-sync packets and per-teleport chatter all moved to the debug logger. A normal
+  launch prints a single `RetroAPI ready: N blocks, M items, E entities, D dimensions` line (plus the
+  StationAPI notice when it applies); warnings and errors are untouched.
+
+### Rendering
+- `BlockRenderContext` gained the primitives a connected-texture/decal renderer needs:
+  `spriteOverride`, `clearSpriteOverride`, `flipTexture`, `faceRotation`, `clearFaceRotations`,
+  `renderAllFaces`, plus `renderFaceUv(face, sprite, u0, v0, u1, v1[, flip])` and
+  `renderFaceCorner(face, sprite, corner, flip)` for explicit sub-rectangles of a sprite.
+
+
 ## 0.2.4 — State-aware drops
 
 ### Block states

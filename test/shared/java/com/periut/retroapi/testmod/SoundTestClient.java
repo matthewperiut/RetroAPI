@@ -2,7 +2,7 @@ package com.periut.retroapi.testmod;
 
 import com.periut.retroapi.sound.api.RetroSounds;
 import net.fabricmc.loader.api.FabricLoader;
-import net.ornithemc.osl.entrypoints.api.client.ClientModInitializer;
+import com.periut.retroapi.entrypoint.RetroClientModInitializer;
 import net.ornithemc.osl.lifecycle.api.client.MinecraftClientEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -23,11 +23,11 @@ import org.apache.logging.log4j.Logger;
  * <p>Also exercises the public {@link RetroSounds#eventIdFor} helper. Runtime audibility (actually
  * hearing the sound via {@code world.playSound}) is a manual gate, out of scope for the build.</p>
  */
-public class SoundTestClient implements ClientModInitializer {
+public class SoundTestClient implements RetroClientModInitializer {
 	private static final Logger LOGGER = LogManager.getLogger("RetroAPI Test/Sound");
 
 	@Override
-	public void initClient() {
+	public void initRetroClient() {
 		// Derive the expected event ids via the public API (pure, no MC state required).
 		String pingNative = RetroSounds.eventIdFor("retroapi_test", "test/ping.ogg");
 		String pingStation = RetroSounds.eventIdFor("retroapi_test", "test/ping2.ogg");

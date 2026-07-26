@@ -1,5 +1,41 @@
 # RetroAPI changelog
 
+## 0.3.1 — Crash fixes, and a suite that catches them
+
+0.3.0 shipped two crashes that nothing in the build could see. Both are fixed, and both now have a
+test that fails loudly if they come back.
+
+### Fixes
+- **The client crashed on launch.** `WorldRendererParticleMixin` shadowed a field called `minecraft`;
+  the field in `WorldRenderer` is `client`. A `@Shadow` is not checked at compile time — it is checked
+  the moment the game loads the target class, and `WorldRenderer` is built during `Minecraft.init()`,
+  so every client died at startup with
+  `InvalidMixinException: @Shadow field minecraft was not located`.
+- **Tags that reference other tags crashed with a `StackOverflowError`.** Resolving a `#namespace:tag`
+  entry called the public `blocksIn`/`itemsIn`, which re-enter the tag cache — and the cache is not
+  populated until resolution finishes, so resolution restarted from the top and recursed until the
+  stack died. Any pack whose tag files reference each other hit it. The resolver now reads
+  code-registered membership straight from its own map.
+
+### Changed
+- **Contextual tool tiers now receive the player**: `.tier((stack, block, player) -> ...)`, where the
+  old form took `(stack, block)`. The documentation always advertised "a tool that is weaker in the
+  nether", but the lambda had no way to reach a world, so it could not actually be written. The player
+  carries one. It is `null` only when a tier is asked for outside a harvest — a tooltip, another mod's
+  query. `RetroToolTier.of(stack, block)` still exists and passes `null`.
+
+### Testing
+- **New launch smoke suite: `./gradlew smokeTest`** (`clientSmokeTest`, `serverSmokeTest`, and both
+  again under `-Pstationapi`). Each one boots the game, reads RetroAPI's mixin configs, and force-loads
+  every class RetroAPI mixes into with `initialize = false` — so every mixin is applied and every
+  injector runs, in one pass, in seconds. Mixin only validates a mixin when the game happens to load
+  its target, which is why a broken `@Shadow` on a render class can ship: nothing in a build, and
+  nothing in a data test, ever loads it. The client run also asserts the particle registry resolves and
+  that the world-renderer hook is present in the class.
+- The server half runs in CI. The client half needs a display, so run it locally before releasing.
+- The test mod now registers a particle and ships tag files that reference other tags, so both of the
+  above crashes are covered by a test that would have caught them.
+
 ## 0.3.0 — The `retroapi` entrypoint
 
 All items below are exercised by the test mod's headless self-checks (`runPopulateServer`),

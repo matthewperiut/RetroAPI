@@ -46,15 +46,28 @@ public enum RetroToolTier {
 	}
 
 	/**
-	 * A tier that also sees WHAT is being mined - the missing half of {@link Dynamic}, which only got the
-	 * stack and so could not express "diamond-tier on stone, wood-tier on everything else", a drill bit
-	 * that only bites certain ores, or a tool that is weaker in the nether. Declared with
-	 * {@code RetroItemAccess.tier((stack, block) -> ...)} and consulted per harvest, ahead of the
-	 * stack-only and static forms.
+	 * A tier that also sees WHAT is being mined and WHO is mining it - the missing half of {@link Dynamic},
+	 * which only got the stack and so could not express "diamond-tier on stone, wood-tier on everything
+	 * else", a drill bit that only bites certain ores, or a tool that is weaker in the nether. Declared
+	 * with {@code RetroItemAccess.tier((stack, block, player) -> ...)} and consulted per harvest, ahead of
+	 * the stack-only and static forms.
+	 *
+	 * <pre>
+	 * RetroItemAccess.of(this).tier((stack, block, player) -&gt; {
+	 *     if (player != null &amp;&amp; player.world.dimension.isNether) return RetroToolTier.WOOD;
+	 *     return block == Block.STONE ? RetroToolTier.DIAMOND : RetroToolTier.WOOD;
+	 * });
+	 * </pre>
+	 *
+	 * <p>The player is the one breaking the block, and is null only when something asks for a tier outside
+	 * a harvest (a tooltip, another mod's query) - treat it as "no context", not as an error. Beta's
+	 * harvest hooks carry the {@link net.minecraft.block.Block} but no position, so block metadata and
+	 * coordinates are genuinely not available here; a tier that has to see the state needs its own mixin.
 	 */
 	@FunctionalInterface
 	public interface Contextual {
-		RetroToolTier tierFor(ItemStack stack, net.minecraft.block.Block block);
+		RetroToolTier tierFor(ItemStack stack, net.minecraft.block.Block block,
+			net.minecraft.entity.player.PlayerEntity player);
 	}
 
 	/** Numeric mining level, comparable to {@link ToolMaterial#getMiningLevel()}. */
@@ -119,12 +132,23 @@ public enum RetroToolTier {
 	}
 
 	/**
-	 * The tier of the tool in this stack <em>for a specific block</em>. A
-	 * {@code RetroItemAccess.tier((stack, block) -> ...)} declaration wins, then the stack-only dynamic
-	 * form, then a static tier, then a vanilla {@code ToolItem}'s material. This is the overload the
-	 * harvest hook uses, so a tool's level can depend on what it is pointed at.
+	 * The tier of the tool in this stack <em>for a specific block</em>, with no player context. Equivalent
+	 * to {@code of(stack, block, null)}; use the three-argument form from anywhere that knows who is
+	 * mining, so contextual tiers can see the world they are being asked about.
 	 */
 	public static RetroToolTier of(ItemStack stack, net.minecraft.block.Block block) {
+		return of(stack, block, null);
+	}
+
+	/**
+	 * The tier of the tool in this stack <em>for a specific block, in a specific player's hands</em>. A
+	 * {@code RetroItemAccess.tier((stack, block, player) -> ...)} declaration wins, then the stack-only
+	 * dynamic form, then a static tier, then a vanilla {@code ToolItem}'s material. This is the overload
+	 * the harvest hooks use, so a tool's level can depend on what it is pointed at and on where its
+	 * wielder is standing.
+	 */
+	public static RetroToolTier of(ItemStack stack, net.minecraft.block.Block block,
+			net.minecraft.entity.player.PlayerEntity player) {
 		if (stack == null) {
 			return WOOD;
 		}
@@ -134,7 +158,7 @@ public enum RetroToolTier {
 		}
 		Contextual contextual = ((com.periut.retroapi.register.item.RetroItemAccess) item).getToolTierContextual();
 		if (contextual != null) {
-			RetroToolTier tier = contextual.tierFor(stack, block);
+			RetroToolTier tier = contextual.tierFor(stack, block, player);
 			if (tier != null) {
 				return tier;
 			}

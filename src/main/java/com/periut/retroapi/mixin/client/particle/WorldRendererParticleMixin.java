@@ -25,10 +25,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Environment(EnvType.CLIENT)
 public class WorldRendererParticleMixin {
 
-	@Shadow private Minecraft minecraft;
+	@Shadow private Minecraft client;
 	@Shadow private World world;
 
-	@Inject(method = "addParticle", at = @At("HEAD"), cancellable = true, require = 0)
+	@Inject(method = "addParticle", at = @At("HEAD"), cancellable = true)
 	private void retroapi$customParticle(String name, double x, double y, double z,
 			double velocityX, double velocityY, double velocityZ, CallbackInfo ci) {
 		RetroParticleRegistry.Factory factory = RetroParticleRegistry.get(name);
@@ -36,14 +36,14 @@ public class WorldRendererParticleMixin {
 			return;
 		}
 		ci.cancel();
-		if (this.minecraft == null || this.world == null) {
+		if (this.client == null || this.world == null) {
 			return;
 		}
 		// Respect the player's particle setting the way vanilla does: no particles at all on "minimal"
 		// unless something explicitly asks (vanilla's own check lives further down the method we cancel).
 		Particle particle = factory.create(this.world, x, y, z, velocityX, velocityY, velocityZ);
 		if (particle != null) {
-			this.minecraft.particleManager.addParticle(particle);
+			this.client.particleManager.addParticle(particle);
 		}
 	}
 }

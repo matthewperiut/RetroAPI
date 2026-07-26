@@ -335,9 +335,11 @@ public final class RetroTags {
 					String ref = RetroTagKey.normalize(entry.value);
 					if (raw.containsKey(ref) || CODE_TAGS.containsKey(RetroTagKey.block(ref))) {
 						blocks.addAll(resolveBlockTag(ref, raw, result, resolving));
-						for (Block b : blocksIn(RetroTagKey.block(ref))) {
-							blocks.add(b);
-						}
+						// Code membership straight from the map, NOT via blocksIn: that calls
+						// resolvedBlocks(), which is what we are in the middle of, so the cache is still
+						// null and the whole resolution restarts - one referencing tag and it recurses
+						// until the stack dies.
+						blocks.addAll(codeMembers(RetroTagKey.block(ref), Block.class));
 					} else if (entry.required) {
 						RetroAPI.LOGGER.warn("Tag #{} references unknown tag {}", path, entry.value);
 					}
@@ -358,6 +360,24 @@ public final class RetroTags {
 		return blocks;
 	}
 
+	/**
+	 * Code-registered members of a tag, read directly out of {@link #CODE_TAGS}. Safe to call from inside
+	 * tag resolution, which the public {@code blocksIn}/{@code itemsIn} are not.
+	 */
+	private static <T> Set<T> codeMembers(RetroTagKey tag, Class<T> type) {
+		Set<Object> code = CODE_TAGS.get(tag);
+		if (code == null || code.isEmpty()) {
+			return Collections.emptySet();
+		}
+		Set<T> out = new LinkedHashSet<>();
+		for (Object o : code) {
+			if (type.isInstance(o)) {
+				out.add(type.cast(o));
+			}
+		}
+		return out;
+	}
+
 	private static Set<Item> resolveItemTag(String path, Map<String, List<RetroTagLoader.Entry>> raw,
 			Map<String, Set<Item>> result, Set<String> resolving) {
 		Set<Item> existing = result.get(path);
@@ -376,9 +396,9 @@ public final class RetroTags {
 					String ref = RetroTagKey.normalize(entry.value);
 					if (raw.containsKey(ref) || CODE_TAGS.containsKey(RetroTagKey.item(ref))) {
 						items.addAll(resolveItemTag(ref, raw, result, resolving));
-						for (Item i : itemsIn(RetroTagKey.item(ref))) {
-							items.add(i);
-						}
+						// Code membership straight from the map - see resolveBlockTag for why itemsIn()
+						// must not be used here.
+						items.addAll(codeMembers(RetroTagKey.item(ref), Item.class));
 					} else if (entry.required) {
 						RetroAPI.LOGGER.warn("Item tag #{} references unknown tag {}", path, entry.value);
 					}

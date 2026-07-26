@@ -102,6 +102,23 @@ loom {
 			runDir "run"
 			property "retroapi.test.scenario", "populate"
 		}
+		// Launch smoke tests: boot, force every RetroAPI mixin to apply, assert the hooks are live,
+		// write a verdict and exit. These are what catch a mixin that no longer matches the mappings -
+		// a hard crash at class-load time that neither compilation nor the data round-trip can see.
+		smokeClient {
+			client()
+			ideConfigGenerated true
+			name = "Smoke: Client (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "smoke"
+		}
+		smokeServer {
+			server()
+			ideConfigGenerated true
+			name = "Smoke: Server (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "smoke"
+		}
 		// Headless conversion round-trip, step 3: load the reverse-converted (un-flattened) world and
 		// prove the modded content is runtime-valid in plain RetroAPI. Stops itself when done.
 		verifyServer {

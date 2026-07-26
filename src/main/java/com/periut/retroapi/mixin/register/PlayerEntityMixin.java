@@ -21,6 +21,12 @@ public abstract class PlayerEntityMixin {
 
 	@Shadow public PlayerInventory inventory;
 
+	/** The player doing the mining, for contextual tool tiers (which can ask where it is standing). */
+	@Unique
+	private PlayerEntity retroapi$self() {
+		return (PlayerEntity) (Object) this;
+	}
+
 	@Inject(method = "canHarvest", at = @At("HEAD"), cancellable = true)
 	private void retroapi$alwaysDrops(Block block, CallbackInfoReturnable<Boolean> cir) {
 		if (((RetroBlockAccess) block).isAlwaysDrops()) {
@@ -74,7 +80,7 @@ public abstract class PlayerEntityMixin {
 		}
 		// Tool TIER: needs_<tier>_tool demands the material level (declared statically, per stack, or per
 		// stack AND block via RetroItemAccess.tier, or inferred from a ToolItem's material).
-		if (!com.periut.retroapi.tag.RetroToolTier.of(held, block).isAtLeast(requiredTier)) {
+		if (!com.periut.retroapi.tag.RetroToolTier.of(held, block, retroapi$self()).isAtLeast(requiredTier)) {
 			cir.setReturnValue(false);
 			return;
 		}
@@ -143,7 +149,7 @@ public abstract class PlayerEntityMixin {
 		// Declared plain-Item tools: scale with the declared tier, so .tier(IRON) mines like an iron
 		// tool (6x) instead of a flat token boost. Honors a dynamic or block-aware tier via the stack.
 		if (!RetroTool.kindsOf(item).isEmpty()) {
-			return retroapi$tierSpeed(com.periut.retroapi.tag.RetroToolTier.of(held, block));
+			return retroapi$tierSpeed(com.periut.retroapi.tag.RetroToolTier.of(held, block, retroapi$self()));
 		}
 		return null;
 	}

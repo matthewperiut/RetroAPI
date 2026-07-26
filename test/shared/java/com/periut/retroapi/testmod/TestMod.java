@@ -71,6 +71,13 @@ public class TestMod implements RetroModInitializer {
 	public static Item CONTEXT_TOOL;
 	/** 0.3.0: an ASCII-declared multiblock pattern. */
 	public static com.periut.retroapi.world.multiblock.RetroMultiblock TEST_MULTIBLOCK;
+	/**
+	 * 0.3.1: a registered particle and its sprite. Deliberately a terrain texture that no block uses -
+	 * the case {@link com.periut.retroapi.client.particle.RetroSpriteParticle} advertises - so the client
+	 * smoke test can prove the whole particle path (registry + world-renderer hook) is live.
+	 */
+	public static final NamespacedIdentifier SPARK_PARTICLE = NamespacedIdentifiers.from("retroapi_test", "spark");
+	public static com.periut.retroapi.register.block.RetroTexture SPARK_TEXTURE;
 
 	// A data component for the headless round-trip self-check.
 	public static com.periut.retroapi.component.RetroComponentType<Integer> TEST_COUNT;
@@ -191,6 +198,9 @@ public class TestMod implements RetroModInitializer {
 			.texture(id("anim_block"))
 			.register(id("anim_block"));
 
+		// A terrain sprite owned by nothing but the spark particle (see SPARK_PARTICLE).
+		SPARK_TEXTURE = com.periut.retroapi.register.block.RetroTextures.addBlockTexture(id("test_block"));
+
 		// Animated item texture, code-driven: 3-frame strip, no mcmeta.
 		ANIM_ITEM = RetroItemAccess.create()
 			.maxStackSize(64)
@@ -290,13 +300,20 @@ public class TestMod implements RetroModInitializer {
 			.texture(id("test_item"))
 			.register(id("stat_tool"));
 
-		// 0.3.0: a tier that sees the block: diamond on stone, wood on everything else.
+		// 0.3.0: a tier that sees the block: diamond on stone, wood on everything else. 0.3.1 also hands
+		// it the player, so it can blunt itself in the nether - the case the javadoc always advertised
+		// but the two-argument form could not actually reach.
 		CONTEXT_TOOL = (Item) RetroItemAccess.create()
 			.maxStackSize(1)
 			.tool(com.periut.retroapi.tag.RetroTool.PICKAXE)
-			.tier((stack, block) -> block != null && block.material == Material.STONE
-				? com.periut.retroapi.tag.RetroToolTier.DIAMOND
-				: com.periut.retroapi.tag.RetroToolTier.WOOD)
+			.tier((stack, block, player) -> {
+				if (player != null && player.world != null && player.world.dimension.isNether) {
+					return com.periut.retroapi.tag.RetroToolTier.WOOD;
+				}
+				return block != null && block.material == Material.STONE
+					? com.periut.retroapi.tag.RetroToolTier.DIAMOND
+					: com.periut.retroapi.tag.RetroToolTier.WOOD;
+			})
 			.texture(id("test_item"))
 			.register(id("context_tool"));
 
@@ -454,6 +471,19 @@ public class TestMod implements RetroModInitializer {
 		// --- multiblock pattern shape --------------------------------------------------------------
 		boolean multiblock = TEST_MULTIBLOCK != null;
 		LOGGER.info("[new-features] multiblock pattern built {}", multiblock ? "PASS" : "FAIL");
+
+		// --- 0.3.1: tags that reference other tags -------------------------------------------------
+		// Resolving a "#other:tag" entry used to re-enter the tag cache before it was populated, which
+		// restarted resolution and recursed until the stack died - a hard crash for any pack whose tag
+		// files reference each other. Both files exist purely so every run resolves one.
+		java.util.Set<Item> allTools = com.periut.retroapi.tag.RetroTags.itemsIn(
+			com.periut.retroapi.tag.RetroTagKey.item("retroapi_test:all_tools"));
+		java.util.Set<Block> hardThings = com.periut.retroapi.tag.RetroTags.blocksIn(
+			com.periut.retroapi.tag.RetroTagKey.block("retroapi_test:hard_things"));
+		boolean refs = allTools.contains(PAXEL) && allTools.contains(STAT_TOOL)
+			&& hardThings.contains(TAGGED_ORE) && hardThings.contains(Block.OBSIDIAN);
+		LOGGER.info("[new-features] tag references (items={} blocks={}) {}",
+			allTools.size(), hardThings.size(), refs ? "PASS" : "FAIL");
 	}
 
 	private static void registerRecipes() {

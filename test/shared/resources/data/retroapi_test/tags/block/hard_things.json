@@ -1,0 +1,7 @@
+{
+  "//": "The block-side twin of item/all_tools.json: a tag reference, plus a direct block.",
+  "values": [
+    "#retroapi_test:needs_iron_tool",
+    "minecraft:obsidian"
+  ]
+}

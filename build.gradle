@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
 	id 'java'
 	id 'maven-publish'
@@ -206,6 +208,95 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 		tasks.named('convCopyWorld').configure { mustRunAfter populate }
 		roundtrip.mustRunAfter(tasks.named('convCopyWorld'))
 		tasks.named('convGate').configure { mustRunAfter roundtrip }
+	}
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Launch smoke tests - the "does the game still start" suite.
+//
+//   ./gradlew smokeTest                  client + server
+//   ./gradlew smokeTest -Pstationapi     the above, plus both sides with StationAPI installed
+//   ./gradlew clientSmokeTest            just the client
+//
+// Each one boots the game with -Dretroapi.test.scenario=smoke, force-loads every class RetroAPI mixes
+// into (so every mixin is applied and every injector runs), asserts the client hooks are actually
+// present, writes a verdict file and exits.
+//
+// This is the suite that catches mapping drift. A @Shadow naming a field that no longer exists, an
+// @At whose instruction moved, an injector with the wrong callback signature: all compile fine, and
+// all crash the game the moment it loads that one class - which for a render-side mixin can be long
+// after startup, so "it launched" proves nothing. The conversion round-trip cannot see any of it: it
+// tests world data, not class loading. Sweeping every target in one boot does.
+// ---------------------------------------------------------------------------------------------------
+def smokeRuns = [
+	client: [':test', 'runSmokeClient', 'test/run', 'client'],
+	server: [':test', 'runSmokeServer', 'test/run', 'server'],
+]
+if (providers.gradleProperty('stationapi').isPresent()) {
+	smokeRuns.stapiClient = [':test:stapi', 'runSmokeClient', 'test/stapi/run', 'client']
+	smokeRuns.stapiServer = [':test:stapi', 'runSmokeServer', 'test/stapi/run', 'server']
+}
+
+smokeRuns.each { key, cfg ->
+	def (projectPath, runTaskName, runDir, side) = cfg
+	def cap = key.capitalize()
+	def resultPath = "${runDir}/retroapi_smoke_${side}.txt"
+
+	tasks.register("smoke${cap}Clean", Delete) {
+		delete resultPath
+	}
+
+	tasks.register("smoke${cap}Gate") {
+		doLast {
+			def f = file(resultPath)
+			if (!f.exists()) {
+				throw new GradleException("${key} smoke test wrote no result file - the game never reached "
+					+ "the check. It almost certainly crashed during startup; see the log above.")
+			}
+			def text = f.text
+			logger.lifecycle("\n===== ${key} smoke report =====\n${text}===============================")
+			if (!text.contains("smoke(${side}): PASS")) {
+				throw new GradleException("${key} smoke test FAILED - see the report above.")
+			}
+			logger.lifecycle("${key} smoke test PASSED.")
+		}
+	}
+
+	tasks.register("${key}SmokeTest") {
+		group = 'verification'
+		description = "Boot the ${key} game, apply every RetroAPI mixin, assert the hooks are live."
+		dependsOn "smoke${cap}Clean", "${projectPath}:${runTaskName}", "smoke${cap}Gate"
+	}
+}
+
+tasks.register('smokeTest') {
+	group = 'verification'
+	description = 'Run every launch smoke test (client + server, and both with StationAPI under -Pstationapi).'
+	dependsOn smokeRuns.keySet().collect { "${it}SmokeTest" }
+}
+
+gradle.projectsEvaluated {
+	smokeRuns.each { key, cfg ->
+		def (projectPath, runTaskName, runDir, side) = cfg
+		def cap = key.capitalize()
+		def run = project(projectPath).tasks.getByName(runTaskName)
+		run.mustRunAfter(tasks.named("smoke${cap}Clean"))
+		// Let the gate deliver the verdict, not the exit code: a failing smoke run exits non-zero, and
+		// stopping there would skip the report that says WHICH mixin broke. A crash before the check
+		// still fails the build - the gate finds no result file.
+		if (run instanceof JavaExec) {
+			run.ignoreExitValue = true
+		}
+		// A client that dies inside an entrypoint does not necessarily exit: the exception lands on the
+		// AWT thread, the window stays up, and the build blocks forever. Cap it - the gate then reports
+		// a missing result file, which is the truth.
+		run.timeout = Duration.ofMinutes(5)
+		tasks.named("smoke${cap}Gate").configure { mustRunAfter run }
+	}
+	// One launcher at a time: two dev clients sharing a run directory (and a display) is a coin flip.
+	def order = smokeRuns.collect { key, cfg -> project(cfg[0]).tasks.getByName(cfg[1]) }
+	for (int i = 1; i < order.size(); i++) {
+		order[i].mustRunAfter(order[i - 1])
 	}
 }
 

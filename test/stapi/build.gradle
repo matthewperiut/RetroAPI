@@ -107,6 +107,23 @@ loom {
 			name = "Test Server + StationAPI (b1.7.3)"
 			runDir "run"
 		}
+		// Launch smoke tests with StationAPI installed - the mixin set differs (RetroAPIMixinPlugin
+		// disables a chunk of it and the retroapi-stationapi mod adds its own), so both sides need
+		// their own sweep.
+		smokeClient {
+			client()
+			ideConfigGenerated true
+			name = "Smoke: Client + StationAPI (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "smoke"
+		}
+		smokeServer {
+			server()
+			ideConfigGenerated true
+			name = "Smoke: Server + StationAPI (b1.7.3)"
+			runDir "run"
+			property "retroapi.test.scenario", "smoke"
+		}
 		// Headless conversion round-trip, step 2: forward-convert the populated world to flattened,
 		// verify, reverse-convert back to McRegion + sidecar, verify, write the result file, exit.
 		roundtripClient {

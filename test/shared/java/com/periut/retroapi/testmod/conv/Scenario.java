@@ -18,6 +18,8 @@ import java.io.File;
  *       it back to McRegion, verify again, write a result file and exit (non-zero on any data loss).</li>
  *   <li>{@code verify} (non-StationAPI server) - load the (reverse-converted) world and confirm the
  *       modded content is runtime-valid in plain RetroAPI.</li>
+ *   <li>{@code smoke} (client or server, with or without StationAPI) - force every RetroAPI mixin to
+ *       apply, assert the hooks are live, write a verdict and exit. No world involved.</li>
  * </ul>
  *
  * The whole flow is wired together by the {@code conversionRoundTripTest} Gradle task; each step is a
@@ -29,6 +31,8 @@ public final class Scenario {
 	public static final String POPULATE = "populate";
 	public static final String ROUNDTRIP = "roundtrip";
 	public static final String VERIFY = "verify";
+	/** Launch smoke test - see {@link com.periut.retroapi.testmod.smoke.SmokeTest}. World-independent. */
+	public static final String SMOKE = "smoke";
 
 	/** Manifest + result file names, kept inside the world directory so they travel with it. */
 	public static final String MANIFEST_FILE = "retroapi_test_manifest.dat";

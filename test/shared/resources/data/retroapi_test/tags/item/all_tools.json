@@ -1,0 +1,7 @@
+{
+  "//": "A tag that REFERENCES another tag. Resolving a reference used to re-enter the tag cache before it was populated, restarting resolution and recursing until the stack died - so every build must resolve one.",
+  "values": [
+    "#retroapi_test:base_tools",
+    "retroapi_test:stat_tool"
+  ]
+}

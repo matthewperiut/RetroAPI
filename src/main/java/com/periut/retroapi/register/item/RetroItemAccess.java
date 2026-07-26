@@ -88,12 +88,19 @@ public interface RetroItemAccess {
 	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier);
 
 	/**
-	 * Declares a tier that also sees WHAT is being mined, so one tool can be worth different levels on
-	 * different blocks - "diamond-tier on stone, stone-tier on wood", a drill whose bit only bites certain
-	 * ores, a tool that is weaker inside a dimension. Wins over both the dynamic and the static tier.
+	 * Declares a tier that also sees WHAT is being mined and WHO is mining it, so one tool can be worth
+	 * different levels on different blocks - "diamond-tier on stone, stone-tier on wood", a drill whose
+	 * bit only bites certain ores - or in different places, since the player carries the world with it.
+	 * Wins over both the dynamic and the static tier.
 	 * <pre>
-	 * .tier((stack, block) -&gt; block.material == Material.STONE ? RetroToolTier.DIAMOND : RetroToolTier.WOOD)
+	 * .tier((stack, block, player) -&gt; block.material == Material.STONE ? RetroToolTier.DIAMOND : RetroToolTier.WOOD)
+	 *
+	 * // the same tool, blunted in the nether:
+	 * .tier((stack, block, player) -&gt; player != null &amp;&amp; player.world.dimension.isNether
+	 *     ? RetroToolTier.WOOD : RetroToolTier.DIAMOND)
 	 * </pre>
+	 * The player is null only when a tier is asked for outside a harvest; the block never carries
+	 * metadata or a position, because beta's harvest hooks do not pass one.
 	 */
 	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier);
 

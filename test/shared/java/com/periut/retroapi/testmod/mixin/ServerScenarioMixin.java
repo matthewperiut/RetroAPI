@@ -34,13 +34,22 @@ public abstract class ServerScenarioMixin {
 	private void retroapi_test$runScenario(CallbackInfo ci) {
 		boolean populate = Scenario.is(Scenario.POPULATE);
 		boolean verify = Scenario.is(Scenario.VERIFY);
-		if (!populate && !verify) return;
+		boolean smoke = Scenario.is(Scenario.SMOKE);
+		if (!populate && !verify && !smoke) return;
 		if (retroapi_test$ran) return;
 		// Let the world finish loading + a couple of ticks of entity settling before acting.
 		if (++retroapi_test$settleTicks < 10) return;
 		retroapi_test$ran = true;
 
 		MinecraftServer server = (MinecraftServer) (Object) this;
+
+		// The smoke scenario is world-independent: sweep the mixins, write its own verdict, stop.
+		if (smoke) {
+			com.periut.retroapi.testmod.smoke.SmokeTest.runServer();
+			((ServerControlAccessor) server).retroapi_test$setRunning(false);
+			return;
+		}
+
 		File worldDir = SidecarManager.getWorldDir();
 		if (worldDir == null) worldDir = Scenario.worldDir();
 

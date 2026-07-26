@@ -1,5 +1,16 @@
 # RetroAPI changelog
 
+## Unreleased
+
+- **The client no longer tries to load dedicated-server classes.** Thirteen mixins targeting
+  `net.minecraft.server.*` (and `ServerPlayerEntity`, `EntityTracker`, `ServerChunkCache`) sat in the
+  mixin config's common `mixins` list, so every client launch attempted each one and logged
+  `Cannot load class ... in environment type CLIENT`. b1.7.3 has no integrated server — singleplayer
+  *is* the client — so none of them could ever apply there. They are in the `server` list now, and a
+  client launch logs no mixin warnings at all.
+- The mixin sweep fails on any common-section mixin whose targets are all absent for the running side,
+  so this cannot drift back.
+
 ## 0.3.1 — Crash fixes, and a suite that catches them
 
 0.3.0 shipped two crashes that nothing in the build could see. Both are fixed, and both now have a

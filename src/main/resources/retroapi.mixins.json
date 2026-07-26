@@ -38,7 +38,6 @@
 		"storage.WorldStorageAccessor",
 		"world.WorldSetBlockMixin",
 		"world.ChunkCacheDecorateMixin",
-		"world.ServerChunkCacheDecorateMixin",
 		"client.LanguageAccessor",
 		"achievement.AchievementAccessor",
 		"recipe.CraftingManagerAccessor",
@@ -55,7 +54,11 @@
 		"component.PlayerInventoryComponentMixin",
 		"component.SlotUpdateComponentMixin",
 		"component.InventoryComponentMixin",
-		"component.ItemEntitySpawnComponentMixin",
+		"component.ItemEntitySpawnComponentMixin"
+	],
+	"//server": "Dedicated-server classes only. b1.7.3 has no integrated server - singleplayer IS the client - so net.minecraft.server.* does not exist client-side at all. Listing these under 'mixins' made the client try to load each target and log 'Cannot load class ... in environment type CLIENT' on every launch.",
+	"server": [
+		"world.ServerChunkCacheDecorateMixin",
 		"dimension.server.MinecraftServerMixin",
 		"dimension.server.PlayerManagerMixin",
 		"dimension.server.ServerPlayerEntityMixin",

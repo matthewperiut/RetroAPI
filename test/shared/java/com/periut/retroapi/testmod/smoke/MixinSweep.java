@@ -14,8 +14,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
@@ -54,9 +56,10 @@ public final class MixinSweep {
 	private static final String MIXIN_DESC = "Lorg/spongepowered/asm/mixin/Mixin;";
 
 	/** What a sweep found. */
-	public record Report(int configs, int targets, int loaded, int absent, List<String> failures) {
+	public record Report(int configs, int targets, int loaded, int absent,
+			List<String> failures, List<String> misfiled) {
 		public boolean pass() {
-			return configs > 0 && targets > 0 && failures.isEmpty();
+			return configs > 0 && targets > 0 && failures.isEmpty() && misfiled.isEmpty();
 		}
 
 		public List<String> lines() {
@@ -72,8 +75,15 @@ public final class MixinSweep {
 			out.add("mixinSweep: " + (pass() ? "PASS" : "FAIL") + " - " + loaded + "/" + targets
 				+ " target classes applied cleanly, from " + configs + " config(s)"
 				+ (absent > 0 ? ", " + absent + " not on this side's classpath" : "")
-				+ (failures.isEmpty() ? "" : ", " + failures.size() + " FAILED"));
+				+ (failures.isEmpty() ? "" : ", " + failures.size() + " FAILED")
+				+ (misfiled.isEmpty() ? "" : ", " + misfiled.size() + " MISFILED"));
 			out.addAll(failures);
+			if (!misfiled.isEmpty()) {
+				out.add("  these mixins are in the config's common \"mixins\" list but every class they");
+				out.add("  target is absent on this side - move them to \"client\"/\"server\" so the game");
+				out.add("  stops trying to load them:");
+				out.addAll(misfiled);
+			}
 			return out;
 		}
 	}
@@ -85,6 +95,8 @@ public final class MixinSweep {
 
 		int configs = 0;
 		Set<String> mixinClasses = new LinkedHashSet<>();
+		// Mixins from the config's common "mixins" list, so a server-only one sitting there can be named.
+		Set<String> commonMixins = new LinkedHashSet<>();
 		List<ModContainer> mods = new ArrayList<>();
 		for (String modId : modIds) {
 			FabricLoader.getInstance().getModContainer(modId).ifPresent(mods::add);
@@ -105,23 +117,29 @@ public final class MixinSweep {
 					TestMod.LOGGER.warn("[smoke] {} has no mixin package", configName);
 					continue;
 				}
-				List<String> names = new ArrayList<>(array(json, "mixins"));
-				names.addAll(array(json, client ? "client" : "server"));
-				for (String n : names) {
+				for (String n : array(json, "mixins")) {
+					String c = (pkg + "." + n).replace('.', '/');
+					mixinClasses.add(c);
+					commonMixins.add(c);
+				}
+				for (String n : array(json, client ? "client" : "server")) {
 					mixinClasses.add((pkg + "." + n).replace('.', '/'));
 				}
-				TestMod.LOGGER.debug("[smoke] {} -> {} mixins for this side", configName, names.size());
+				TestMod.LOGGER.debug("[smoke] {} -> {} mixins for this side", configName, mixinClasses.size());
 			}
 		}
 
+		Map<String, Set<String>> byMixin = new LinkedHashMap<>();
 		Set<String> targets = new TreeSet<>();
 		for (String mixinClass : mixinClasses) {
-			targets.addAll(targetsOf(mods, loader, mixinClass));
+			Set<String> own = targetsOf(mods, loader, mixinClass);
+			byMixin.put(mixinClass, own);
+			targets.addAll(own);
 		}
 
 		List<String> failures = new ArrayList<>();
+		Set<String> absentTargets = new LinkedHashSet<>();
 		int loaded = 0;
-		int absent = 0;
 		for (String target : targets) {
 			String binary = target.replace('/', '.');
 			try {
@@ -131,20 +149,30 @@ public final class MixinSweep {
 				loaded++;
 			} catch (ClassNotFoundException | NoClassDefFoundError e) {
 				// A target that only exists on the other side, or behind a mod that is not installed.
-				absent++;
+				absentTargets.add(target);
 			} catch (Throwable t) {
 				// Fabric refuses to load a server class on a client (and vice versa) before Mixin ever
-				// sees it. A common-section mixin targeting the other side's class is normal - Mixin
-				// simply never applies it here - so that is "not on this side", not a failure.
+				// sees it - that is "not on this side", not an apply failure.
 				if (isWrongSide(t)) {
-					absent++;
+					absentTargets.add(target);
 					continue;
 				}
 				failures.add("  " + binary + "  <-  " + describe(t));
 				TestMod.LOGGER.error("[smoke] mixin apply failed for {}", binary, t);
 			}
 		}
-		return new Report(configs, targets.size(), loaded, absent, failures);
+
+		// A common-section mixin whose every target is missing here is filed wrong: the game tries to
+		// load each of those classes on every launch and logs a warning for each. It belongs in the
+		// "client"/"server" list instead. (A mixin with SOME targets present is a legitimate straddle.)
+		List<String> misfiled = new ArrayList<>();
+		for (String mixinClass : commonMixins) {
+			Set<String> own = byMixin.getOrDefault(mixinClass, Set.of());
+			if (!own.isEmpty() && absentTargets.containsAll(own)) {
+				misfiled.add("    " + mixinClass.replace('/', '.') + "  ->  " + own);
+			}
+		}
+		return new Report(configs, targets.size(), loaded, absentTargets.size(), failures, misfiled);
 	}
 
 	// --- reading the mixin metadata -----------------------------------------------------------------

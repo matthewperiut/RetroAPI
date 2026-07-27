@@ -269,6 +269,59 @@ public abstract class ItemMixin implements RetroItemAccess {
 		return this;
 	}
 
+	/** Statically declared render-time layers (see RetroItemAccess.overlay(id, tint)). Null until used. */
+	@org.spongepowered.asm.mixin.Unique
+	private java.util.List<com.periut.retroapi.component.RetroTextureLayer> retroapi$declaredLayers = null;
+
+	@Override
+	public RetroItemAccess overlay(NamespacedIdentifier overlayTextureId, int tint) {
+		retroapi$seedBaseLayer();
+		this.retroapi$declaredLayers.add(com.periut.retroapi.component.RetroTextureLayer.tinted(
+			// get-or-add, not add: the same overlay sprite declared across twenty items is one atlas slot,
+			// and the handle resolves its index at draw time, so this is safe before the atlas is built.
+			RetroTextures.getOrAddItemTexture(overlayTextureId), tint));
+		return this;
+	}
+
+	@Override
+	public RetroItemAccess layer(com.periut.retroapi.component.RetroTextureLayer layer) {
+		if (layer == null) {
+			return this;
+		}
+		if (this.retroapi$declaredLayers == null) {
+			this.retroapi$declaredLayers = new java.util.ArrayList<>();
+		}
+		this.retroapi$declaredLayers.add(layer);
+		return this;
+	}
+
+	@Override
+	public java.util.List<com.periut.retroapi.component.RetroTextureLayer> getDeclaredLayers() {
+		return this.retroapi$declaredLayers == null
+			? java.util.Collections.emptyList()
+			: java.util.Collections.unmodifiableList(this.retroapi$declaredLayers);
+	}
+
+	/**
+	 * Makes sure layer 0 is the item's own sprite before the first overlay stacks onto it. Prefers the
+	 * tracked {@link RetroTexture} handle so the base resolves at draw time too; falls back to whatever
+	 * sprite index the item currently reports (a vanilla item, or one whose texture came from elsewhere).
+	 */
+	@org.spongepowered.asm.mixin.Unique
+	private void retroapi$seedBaseLayer() {
+		if (this.retroapi$declaredLayers != null) {
+			return;
+		}
+		this.retroapi$declaredLayers = new java.util.ArrayList<>();
+		Item self = (Item) (Object) this;
+		RetroTexture base = this.retroapi$baseTexture != null
+			? this.retroapi$baseTexture
+			: RetroTextures.getTrackedTexture(self);
+		this.retroapi$declaredLayers.add(base != null
+			? com.periut.retroapi.component.RetroTextureLayer.plain(base)
+			: com.periut.retroapi.component.RetroTextureLayer.plain(self.getTextureId(0)));
+	}
+
 	@Override
 	public Item register(NamespacedIdentifier id) {
 		Item self = (Item) (Object) this;

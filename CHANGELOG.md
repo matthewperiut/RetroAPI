@@ -1,5 +1,21 @@
 # RetroAPI changelog
 
+## Unreleased
+
+### Added
+- **Statically tinted item layers: `RetroItemAccess.overlay(textureId, tint)`**, the item twin of
+  `RetroBlockAccess.overlay(id, tint)`. The untinted `overlay(id)` flattens its sprite into the atlas at
+  stitch time, which is why it cannot tint — by then the layers are one image. This draws as a separate
+  render-time pass, so the `0xRRGGBB` multiply survives. Crucially it is *declared*, not implemented, so
+  it works on any item — including a subclass the mod does not own, where `RetroLayeredTexture` cannot be
+  added. An item that does implement that interface still wins, so a component-driven per-stack look
+  keeps overriding the declared one. The overlay sprite goes through `getOrAddItemTexture`, so declaring
+  it across twenty items costs one atlas slot, and the handle resolves its index at draw time — a texture
+  named before the atlas is stitched still points at the right sprite.
+- `RetroItemAccess.layer(RetroTextureLayer)` appends a fully-specified layer (a tinted base, or one built
+  from a sprite index you already hold), and `getDeclaredLayers()` reads them back — the read-back for
+  what `.overlay(...)`/`.layers(...)` was given.
+
 ## 0.3.3 — Closing the gaps around block state
 
 A sweep for one shape of bug: an API that quietly does less than it looks like it does. Every entry

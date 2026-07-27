@@ -61,6 +61,47 @@ public interface RetroItemAccess {
 	default RetroItemAccess overlay(NamespacedIdentifier overlayTextureId) { throw RetroInjected.missing(); }
 
 	/**
+	 * Stacks a TINTED sprite on top of this item, the item twin of
+	 * {@link com.periut.retroapi.register.block.RetroBlockAccess#overlay(NamespacedIdentifier, int)}.
+	 *
+	 * <p>The untinted {@link #overlay(NamespacedIdentifier)} flattens its sprite into the atlas at stitch
+	 * time, which is why it cannot tint: by the time anything could apply a color the layers are one
+	 * image. This one is drawn as a separate pass at render time, so the {@code 0xRRGGBB} multiply
+	 * survives - and because it is declared here rather than implemented, it works on <em>any</em> item,
+	 * including a subclass you did not write:
+	 * <pre>
+	 * RetroItemAccess.of(id -&gt; new MyOreItem(id, material))
+	 *     .texture(id("ore_reg/raw"))
+	 *     .overlay(id("ore_reg/raw_overlay"), material.color)
+	 *     .register(id("raw_" + material.id));
+	 * </pre>
+	 *
+	 * <p>The base is layer 0, taken from the {@link #texture}/{@link #layers} already declared, so call
+	 * this after one of those. The overlay sprite is registered with
+	 * {@link com.periut.retroapi.register.block.RetroTextures#getOrAddItemTexture} rather than a fresh
+	 * slot, so declaring the same sprite on twenty items costs one slot, and its index is read at draw
+	 * time - a handle captured before the atlas resolves still points at the right sprite.
+	 *
+	 * <p>An item that implements {@link com.periut.retroapi.component.RetroLayeredTexture} overrides this:
+	 * per-stack layers win over declared ones, so a component-driven look can still vary per stack.
+	 */
+	default RetroItemAccess overlay(NamespacedIdentifier overlayTextureId, int tint) { throw RetroInjected.missing(); }
+
+	/**
+	 * Appends one fully-specified {@link com.periut.retroapi.component.RetroTextureLayer}, for a look that
+	 * {@link #overlay(NamespacedIdentifier, int)} cannot express - a tinted base, or a layer built from a
+	 * sprite index you already hold. Layers draw back to front; the first is the base.
+	 */
+	default RetroItemAccess layer(com.periut.retroapi.component.RetroTextureLayer layer) { throw RetroInjected.missing(); }
+
+	/**
+	 * The static layers declared on this item, in draw order, or an empty list if none. This is the
+	 * read-back for {@link #overlay(NamespacedIdentifier, int)}/{@link #layer} - so code that builds items
+	 * generically can inspect (or re-derive) the look it gave them.
+	 */
+	default java.util.List<com.periut.retroapi.component.RetroTextureLayer> getDeclaredLayers() { throw RetroInjected.missing(); }
+
+	/**
 	 * Declares this item's tool kind(s) for the {@code mineable/<tool>} tag system, for custom tool
 	 * items that don't subclass the vanilla tool classes (those are inferred by instanceof and need no
 	 * call). Pass more than one to make a multi-tool, e.g. {@code .tool(RetroTool.PICKAXE, RetroTool.AXE)}

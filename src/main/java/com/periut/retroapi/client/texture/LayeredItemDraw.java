@@ -33,13 +33,22 @@ public final class LayeredItemDraw {
 
 	/** The layers of a stack, or null if it is not a (non-empty) layered item. */
 	public static List<RetroTextureLayer> layersOf(ItemStack stack) {
-		if (stack != null && stack.getItem() instanceof RetroLayeredTexture) {
+		if (stack == null || stack.getItem() == null) {
+			return null;
+		}
+		// Per-stack layers win: an item that computes its look from components should be able to override
+		// whatever was declared at registration.
+		if (stack.getItem() instanceof RetroLayeredTexture) {
 			List<RetroTextureLayer> layers = ((RetroLayeredTexture) stack.getItem()).getTextureLayers(stack);
 			if (layers != null && !layers.isEmpty()) {
 				return layers;
 			}
 		}
-		return null;
+		// Static layers from RetroItemAccess.overlay(id, tint)/layer(...). This is what lets ANY item -
+		// including a subclass the mod does not own - carry tinted layers without implementing an interface.
+		List<RetroTextureLayer> declared =
+			((com.periut.retroapi.register.item.RetroItemAccess) stack.getItem()).getDeclaredLayers();
+		return declared.isEmpty() ? null : declared;
 	}
 
 	public static void begin(RetroTextureLayer layer) {

@@ -37,6 +37,7 @@ public final class SmokeTest {
 		ok &= check(log, "particleRegistry", SmokeTest::particleRegistryCheck);
 		ok &= check(log, "particleHookLive", SmokeTest::particleHookCheck);
 		ok &= check(log, "entityRenderer", SmokeTest::entityRendererCheck);
+		ok &= check(log, "staticItemTintDraws", SmokeTest::staticTintDrawCheck);
 		finish("client", ok, log);
 		System.exit(ok ? 0 : 1);
 	}
@@ -84,6 +85,32 @@ public final class SmokeTest {
 		}
 		throw new IllegalStateException("WorldRenderer has no retroapi$customParticle handler - the "
 			+ "particle injection did not apply");
+	}
+
+	/**
+	 * Declaring tinted layers is only half of it - the renderer has to actually choose them. This asks the
+	 * draw path the same question it asks every frame, so a static declaration that never reaches the
+	 * screen fails here instead of looking fine in the builder and rendering untinted in game.
+	 */
+	private static void staticTintDrawCheck() {
+		java.util.List<com.periut.retroapi.component.RetroTextureLayer> layers =
+			com.periut.retroapi.client.texture.LayeredItemDraw.layersOf(
+				new net.minecraft.item.ItemStack(TestMod.TINT_ITEM));
+		if (layers == null || layers.size() != 2) {
+			throw new IllegalStateException("declared layers did not reach the draw path: " + layers);
+		}
+		if (layers.get(1).tint() != 0x3355FF) {
+			throw new IllegalStateException("overlay lost its tint: 0x" + Integer.toHexString(layers.get(1).tint()));
+		}
+		if (layers.get(1).resolvedSpriteId() <= 0) {
+			throw new IllegalStateException("overlay sprite did not resolve against the atlas: "
+				+ layers.get(1).resolvedSpriteId());
+		}
+		// A plain vanilla item must still take the ordinary single-sprite path.
+		if (com.periut.retroapi.client.texture.LayeredItemDraw.layersOf(
+				new net.minecraft.item.ItemStack(net.minecraft.item.Item.STICK)) != null) {
+			throw new IllegalStateException("a vanilla item was wrongly routed through the layered draw");
+		}
 	}
 
 	/** The test mob's renderer must have reached the dispatcher. */

@@ -76,6 +76,8 @@ public class TestMod implements RetroModInitializer {
 	 * the case {@link com.periut.retroapi.client.particle.RetroSpriteParticle} advertises - so the client
 	 * smoke test can prove the whole particle path (registry + world-renderer hook) is live.
 	 */
+	/** 0.3.3: a plain vanilla Item carrying a statically declared, tinted overlay layer. */
+	public static Item TINT_ITEM;
 	public static final NamespacedIdentifier SPARK_PARTICLE = NamespacedIdentifiers.from("retroapi_test", "spark");
 	public static com.periut.retroapi.register.block.RetroTexture SPARK_TEXTURE;
 
@@ -197,6 +199,13 @@ public class TestMod implements RetroModInitializer {
 			.strength(0.5f)
 			.texture(id("anim_block"))
 			.register(id("anim_block"));
+
+		// A statically tinted item: base sprite + a colored overlay pass, declared on a stock Item.
+		TINT_ITEM = RetroItemAccess.create()
+			.maxStackSize(64)
+			.texture(id("test_item"))
+			.overlay(id("layer_overlay"), 0x3355FF)
+			.register(id("tint_item"));
 
 		// A terrain sprite owned by nothing but the spark particle (see SPARK_PARTICLE).
 		SPARK_TEXTURE = com.periut.retroapi.register.block.RetroTextures.addBlockTexture(id("test_block"));
@@ -485,6 +494,21 @@ public class TestMod implements RetroModInitializer {
 		// --- multiblock pattern shape --------------------------------------------------------------
 		boolean multiblock = TEST_MULTIBLOCK != null;
 		LOGGER.info("[new-features] multiblock pattern built {}", multiblock ? "PASS" : "FAIL");
+
+		// --- 0.3.3: statically tinted item layers, on an item we do not subclass -------------------
+		// The point is that TINT_ITEM is a plain vanilla Item: no RetroLayeredTexture implementation,
+		// no subclass of ours. Declaring .overlay(id, tint) has to be enough, because the whole use case
+		// is wrapping an item class the mod does not own.
+		java.util.List<com.periut.retroapi.component.RetroTextureLayer> declared =
+			((com.periut.retroapi.register.item.RetroItemAccess) TINT_ITEM).getDeclaredLayers();
+		boolean tinted = declared.size() == 2
+			&& declared.get(0).tint() == com.periut.retroapi.component.RetroTextureLayer.NO_TINT
+			&& declared.get(1).tint() == 0x3355FF
+			&& declared.get(1).texture() != null;
+		LOGGER.info("[new-features] static item tint layers={} overlayTint=0x{} {}",
+			declared.size(),
+			declared.size() > 1 ? Integer.toHexString(declared.get(1).tint()) : "-",
+			tinted ? "PASS" : "FAIL");
 
 		// --- 0.3.3: a tier that REFUSES ------------------------------------------------------------
 		// null means "no opinion, fall through", and falling through lands on WOOD, so a contextual

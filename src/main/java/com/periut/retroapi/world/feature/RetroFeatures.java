@@ -116,6 +116,24 @@ public final class RetroFeatures {
 		world.setBlockWithoutNotifyingNeighbors(x, y, z, blockId, meta);
 	}
 
+	/**
+	 * Generation-safe placement of a full block STATE, for blocks with more than 16 states. The
+	 * {@code meta} overload above can only carry the vanilla nibble, so a state index past 15 would be
+	 * truncated - this writes the sidecar bits too, still without notifying neighbors.
+	 *
+	 * <pre>
+	 * RetroFeatures.custom((world, random, x, y, z) -&gt; {
+	 *     RetroFeatures.setBlock(world, x, y, z,
+	 *         RetroStates.getDefault(MyMod.PILLAR).with(MyMod.AGE, 7));
+	 *     return true;
+	 * }).count(1).register();
+	 * </pre>
+	 */
+	public static void setBlock(World world, int x, int y, int z,
+			com.periut.retroapi.state.RetroBlockState state) {
+		com.periut.retroapi.state.RetroStates.placeWithoutNotifyingNeighbors(world, x, y, z, state);
+	}
+
 	/** The topmost solid block Y at a column, for surface-placed features. */
 	public static int surfaceY(World world, int x, int z) {
 		return world.getTopY(x, z);

@@ -1,5 +1,26 @@
 # RetroAPI changelog
 
+## Unreleased
+
+### Added
+- **A no-notify state setter.** `RetroStates.set(...)` always notified neighbors, which during world
+  generation can cascade a block update back into the chunk still being built. There was no way to opt
+  out, so anything placing a stateful block had to work around it.
+  `RetroStates.setWithoutNotifyingNeighbors(...)` is the state equivalent of
+  `World.setBlockWithoutNotifyingNeighbors`, and `RetroStates.placeWithoutNotifyingNeighbors(...)` does
+  block + state in one call. The position is still marked dirty and a dedicated server still syncs the
+  index — those are not neighbor updates, and skipping them would leave the block invisible rather than
+  merely un-notified.
+- **`RetroFeatures.setBlock(world, x, y, z, state)`.** The existing overload takes a 4-bit `meta`, so a
+  feature simply could not place a block with more than 16 states — the index truncated to the nibble.
+
+### Testing
+- The populate stage now places a state index of 19 through the no-notify path and reads it back, so a
+  setter that dropped the sidecar bits would fail the build.
+- **A failing populate stage now fails the build.** It wrote its own PASS/FAIL, but `convCopyWorld`
+  deliberately drops that file so the round-trip gate reads only the round-trip's verdict — so a failing
+  populate sailed through silently. It is gated where it is written, before the copy.
+
 ## 0.3.2 — Shared component state, and the IDE storm
 
 ### Fixes

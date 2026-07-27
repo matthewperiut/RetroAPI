@@ -140,6 +140,49 @@ public final class RetroStates {
 		}
 	}
 
+	/**
+	 * Writes a state WITHOUT notifying neighbors - the state equivalent of
+	 * {@code World.setBlockWithoutNotifyingNeighbors}, and what world generation must use.
+	 *
+	 * <p>{@link #set} propagates a block update, which during decoration can cascade back into the chunk
+	 * being generated (a falling block, a redstone update, a plant re-checking its support) and, at worst,
+	 * re-enter generation for a chunk that is not finished. Placement code that owns its surroundings -
+	 * a feature, a structure, a multiblock being assembled in one pass - wants this instead.
+	 *
+	 * <p>The position is still marked dirty so it re-renders, and a dedicated server still syncs the full
+	 * index, because those are not neighbor updates: skipping them would leave the block invisible or
+	 * wrongly-rendered rather than merely un-notified.
+	 */
+	public static void setWithoutNotifyingNeighbors(World world, int x, int y, int z, RetroBlockState state) {
+		int index = state.getIndex();
+		ChunkExtendedBlocks extended = extendedAt(world, x, z);
+		if (extended != null) {
+			extended.setXmeta(ChunkExtendedBlocks.toIndex(x & 15, y, z & 15), (index >> 4) & 0xFF);
+		}
+		world.setBlockMetaWithoutNotifyingNeighbors(x, y, z, index & 15);
+		world.setBlockDirty(x, y, z);
+
+		if (!world.isRemote
+			&& net.fabricmc.loader.api.FabricLoader.getInstance().getEnvironmentType() == net.fabricmc.api.EnvType.SERVER) {
+			StateSyncServer.send(world, x, y, z, index);
+		}
+	}
+
+	/**
+	 * Places a block AND its full state in one call, without notifying neighbors: the generation-safe
+	 * counterpart to {@code world.setBlock} followed by {@link #set}. Use it from a
+	 * {@link com.periut.retroapi.world.feature.RetroFeature} or any other code placing blocks into a
+	 * chunk it is still building.
+	 */
+	public static void placeWithoutNotifyingNeighbors(World world, int x, int y, int z, RetroBlockState state) {
+		if (y < 0 || y > 127) {
+			return;
+		}
+		int index = state.getIndex();
+		world.setBlockWithoutNotifyingNeighbors(x, y, z, state.getBlock().id, index & 15);
+		setWithoutNotifyingNeighbors(world, x, y, z, state);
+	}
+
 	/** Internal: applies a synced full index on the client (low bits + xmeta + re-render). */
 	public static void applySynced(World world, int x, int y, int z, int index) {
 		ChunkExtendedBlocks extended = extendedAt(world, x, z);

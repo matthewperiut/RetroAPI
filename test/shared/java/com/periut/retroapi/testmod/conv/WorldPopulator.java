@@ -2,6 +2,7 @@ package com.periut.retroapi.testmod.conv;
 
 import com.periut.retroapi.component.RetroComponents;
 import com.periut.retroapi.storage.SidecarManager;
+import com.periut.retroapi.testmod.TestLampBlock;
 import com.periut.retroapi.testmod.TestMod;
 import com.periut.retroapi.testmod.ZeveEntity;
 import net.minecraft.block.Block;
@@ -128,8 +129,15 @@ public final class WorldPopulator {
 			TestMod.LOGGER.warn("[conv-populate] test dimension (serial {}) not available; skipping dim content", dimSerial);
 		}
 
+		// --- Generation-safe state placement: the no-notify path, past the 4-bit nibble ---
+		// RetroFeatures.setBlock(world, x, y, z, state) is what a world feature uses to place a block with
+		// more than 16 states. The meta overload can only carry the vanilla nibble, so an index past 15
+		// would silently truncate; LAMP has 20 states (LIT x AGE), so a lit age-9 lamp is index >= 10 and
+		// only survives if the sidecar bits are written too - and none of it may notify neighbors.
+		boolean noNotifyState = noNotifyStateCheck(world, bx + 6, py, bz);
+
 		// --- Self-verify the placement in-engine before saving ---
-		boolean ok = selfVerify(world, manifest);
+		boolean ok = selfVerify(world, manifest) && noNotifyState;
 
 		// --- Persist: save chunks (drives the sidecar hook) + flush level, then flush the sidecars ---
 		world.saveWithLoadingDisplay(true, null);
@@ -154,6 +162,28 @@ public final class WorldPopulator {
 			ok ? "PASS" : "FAIL", manifest.blocks.size(), manifest.chestItems.size(),
 			manifest.itemEntities.size(), manifest.entities.size(), manifest.dimBlock != null);
 		return ok;
+	}
+
+	/**
+	 * Places a &gt;15 state index through the generation-safe, no-notify path and reads it back. Guards two
+	 * things at once: that the sidecar bits are written (a truncating setter would read back age 0 or a
+	 * wrapped value), and that a feature has a way to place such a block at all.
+	 */
+	private static boolean noNotifyStateCheck(ServerWorld world, int x, int y, int z) {
+		com.periut.retroapi.state.RetroBlockState wanted =
+			com.periut.retroapi.state.RetroStates.getDefault(TestMod.LAMP)
+				.with(TestLampBlock.LIT, true)
+				.with(TestLampBlock.AGE, 9);
+		com.periut.retroapi.world.feature.RetroFeatures.setBlock(world, x, y, z, wanted);
+
+		com.periut.retroapi.state.RetroBlockState got =
+			com.periut.retroapi.state.RetroStates.get(world, x, y, z);
+		boolean sameBlock = world.getBlockId(x, y, z) == TestMod.LAMP.id;
+		boolean sameState = got != null && got.getIndex() == wanted.getIndex();
+		TestMod.LOGGER.info("[conv-populate] no-notify state (index {} > 15) block={} readBack={} {}",
+			wanted.getIndex(), sameBlock, got == null ? "null" : got.getIndex(),
+			(sameBlock && sameState) ? "PASS" : "FAIL");
+		return sameBlock && sameState;
 	}
 
 	private static void placeBlock(ServerWorld world, ConvManifest m, int x, int y, int z, Block block, String name, int meta) {

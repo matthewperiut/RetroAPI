@@ -180,6 +180,23 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 		exclude 'retroapi_test_result.txt'
 	}
 
+	// The populate stage writes its own PASS/FAIL, and convCopyWorld deliberately drops that file so the
+	// round-trip gate reads only the round-trip's verdict - which meant a FAILING populate stage sailed
+	// through silently. Gate it where it is written, before the copy.
+	tasks.register('convPopulateGate') {
+		doLast {
+			def f = file("${convWorldSrc}/retroapi_test_result.txt")
+			if (!f.exists()) {
+				throw new GradleException('populate stage wrote no result file - the server did not finish.')
+			}
+			def text = f.text
+			logger.lifecycle("\n===== populate report =====\n${text}===========================")
+			if (!text.contains('populate: PASS')) {
+				throw new GradleException('populate stage FAILED - see the report above.')
+			}
+		}
+	}
+
 	tasks.register('convGate') {
 		doLast {
 			def f = file("${convWorldDst}/retroapi_test_result.txt")
@@ -198,14 +215,16 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 	tasks.register('conversionRoundTripTest') {
 		group = 'verification'
 		description = 'Headless vanilla<->StationAPI world conversion round-trip; fails on any modded-data loss.'
-		dependsOn 'convCleanWorlds', ':test:runPopulateServer', 'convCopyWorld', ':test:stapi:runRoundtripClient', 'convGate'
+		dependsOn 'convCleanWorlds', ':test:runPopulateServer', 'convPopulateGate', 'convCopyWorld',
+			':test:stapi:runRoundtripClient', 'convGate'
 	}
 
 	gradle.projectsEvaluated {
 		def populate = project(':test').tasks.getByName('runPopulateServer')
 		def roundtrip = project(':test:stapi').tasks.getByName('runRoundtripClient')
 		populate.mustRunAfter(tasks.named('convCleanWorlds'))
-		tasks.named('convCopyWorld').configure { mustRunAfter populate }
+		tasks.named('convPopulateGate').configure { mustRunAfter populate }
+		tasks.named('convCopyWorld').configure { mustRunAfter tasks.named('convPopulateGate') }
 		roundtrip.mustRunAfter(tasks.named('convCopyWorld'))
 		tasks.named('convGate').configure { mustRunAfter roundtrip }
 	}

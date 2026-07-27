@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+### Fixes
+- **Every item shared one set of components.** `RetroComponentType.getDefault()` returned the exact
+  instance passed at registration, so `get(stack, TYPE)` on any stack that had not set a value handed
+  back the same object every time — and mutating it (`get(stack, LIST).add(x)`) wrote into the value
+  every other stack reads, so the data appeared on every item in the game at once. Only mutable
+  components could show it, which is why it presented as "all items share the same components, at least
+  for list components". `List`/`Set`/`Map` defaults are now copied per read, so existing mods are fixed
+  without a code change; `RetroComponents.registerSupplied(id, supplier, serializer)` covers a mutable
+  default of a type RetroAPI cannot copy for you.
+- **Mods no longer inherit 56 unimplemented methods.** `RetroItemAccess`/`RetroBlockAccess` declared
+  their methods abstract, and 0.3.0 made interface injection actually work — so from an IDE's point of
+  view every class extending `Item` or `Block` suddenly had to implement all of them. `javac` never
+  complained (it does not re-verify a binary superclass), which is why it looked like an IDE-only
+  hallucination and only surfaced once a class implemented some interface of its own. Every method is
+  now a `default` that throws; the mixin's real implementation is a method on the class, and a class
+  method always wins over an interface default, so nothing changes at runtime.
+
 - **The client no longer tries to load dedicated-server classes.** Thirteen mixins targeting
   `net.minecraft.server.*` (and `ServerPlayerEntity`, `EntityTracker`, `ServerChunkCache`) sat in the
   mixin config's common `mixins` list, so every client launch attempted each one and logged

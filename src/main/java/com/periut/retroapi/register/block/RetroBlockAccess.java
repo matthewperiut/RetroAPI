@@ -1,5 +1,6 @@
 package com.periut.retroapi.register.block;
 
+import com.periut.retroapi.register.RetroInjected;
 import com.periut.retroapi.register.rendertype.RenderType;
 import net.minecraft.sound.BlockSoundGroup;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
@@ -24,39 +25,37 @@ public interface RetroBlockAccess {
 
 	// --- Block property wrappers (delegate to protected Block methods) ---
 
-//	RetroBlockAccess sounds(BlockSoundGroup sounds);
+	default RetroBlockAccess sounds(BlockSoundGroup sounds) { throw RetroInjected.missing(); }
 
-    RetroBlockAccess sounds(BlockSoundGroup sounds);
-
-    /** Sets both hardness and blast resistance to the same value. */
-	RetroBlockAccess strength(float strength);
+	/** Sets both hardness and blast resistance to the same value. */
+	default RetroBlockAccess strength(float strength) { throw RetroInjected.missing(); }
 
 	/** Sets hardness and blast resistance separately. */
-	RetroBlockAccess strength(float strength, float resistance);
+	default RetroBlockAccess strength(float strength, float resistance) { throw RetroInjected.missing(); }
 
-	RetroBlockAccess resistance(float resistance);
+	default RetroBlockAccess resistance(float resistance) { throw RetroInjected.missing(); }
 
-	RetroBlockAccess light(float light);
+	default RetroBlockAccess light(float light) { throw RetroInjected.missing(); }
 
-	RetroBlockAccess opacity(int opacity);
+	default RetroBlockAccess opacity(int opacity) { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes this block always drop items when broken, regardless of which tool is used.
 	 * By default, blocks with stone/metal material only drop when mined with the correct tool.
 	 */
-	RetroBlockAccess alwaysDrops();
+	default RetroBlockAccess alwaysDrops() { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes any tool effective at mining this block (not just the material-appropriate tool).
 	 */
-	RetroBlockAccess alwaysEffectiveTool();
+	default RetroBlockAccess alwaysEffectiveTool() { throw RetroInjected.missing(); }
 
 	/**
 	 * Sets a specific tool class as the effective tool for this block.
 	 * Use with {@link net.minecraft.item.PickaxeItem}, {@link net.minecraft.item.AxeItem},
 	 * {@link net.minecraft.item.ShovelItem}, or {@link net.minecraft.item.SwordItem}.
 	 */
-	RetroBlockAccess effectiveTool(Class<? extends Item> toolClass);
+	default RetroBlockAccess effectiveTool(Class<? extends Item> toolClass) { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares this block's state definition: an ordered property list whose Cartesian
@@ -69,13 +68,13 @@ public interface RetroBlockAccess {
 	 * get an implicit {@code meta} property (0-15). The blockstate JSON can declare the
 	 * same definition with {@code "properties": {...}} (code wins on conflict).</p>
 	 */
-	RetroBlockAccess states(com.periut.retroapi.state.RetroProperty<?>... properties);
+	default RetroBlockAccess states(com.periut.retroapi.state.RetroProperty<?>... properties) { throw RetroInjected.missing(); }
 
 	/**
 	 * Overrides the default state, e.g. {@code .defaultState(s -> s.with(LIT, false))}.
 	 * Must come after {@link #states}.
 	 */
-	RetroBlockAccess defaultState(java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> transformer);
+	default RetroBlockAccess defaultState(java.util.function.UnaryOperator<com.periut.retroapi.state.RetroBlockState> transformer) { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes this block turn to face the placer, the furnace/chest behavior, with no {@code onPlaced} code
@@ -88,7 +87,7 @@ public interface RetroBlockAccess {
 	 * {@code facing=} value (the freezer pattern); a {@code BlockWithEntity} still needs its
 	 * {@code getRenderType()} override to honor the model, exactly as documented.</p>
 	 */
-	RetroBlockAccess facing();
+	default RetroBlockAccess facing() { throw RetroInjected.missing(); }
 
 	/**
 	 * Six-way facing: the same deal as {@link #facing()}, but the block can also point straight up or down
@@ -99,10 +98,10 @@ public interface RetroBlockAccess {
 	 * <p>Pairs with {@link #sided}: when the facing is vertical the front texture goes on the top (or
 	 * bottom) face and the ring of four gets the side texture.
 	 */
-	RetroBlockAccess facingAll();
+	default RetroBlockAccess facingAll() { throw RetroInjected.missing(); }
 
 	/** True when {@link #facing()} or {@link #facingAll()} was called: the block auto-orients toward the placer. */
-	boolean isAutoFacing();
+	default boolean isAutoFacing() { throw RetroInjected.missing(); }
 
 	/**
 	 * Per-face textures in code - the furnace look with no model JSON, no blockstate file and no
@@ -118,25 +117,29 @@ public interface RetroBlockAccess {
 	 * {@link #sided(NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier)}
 	 * to give it its own.
 	 */
-	RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front);
+	default RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front) { throw RetroInjected.missing(); }
 
 	/** {@link #sided(NamespacedIdentifier, NamespacedIdentifier, NamespacedIdentifier)} with an explicit bottom texture. */
-	RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front,
-		NamespacedIdentifier bottom);
+	default RetroBlockAccess sided(NamespacedIdentifier top, NamespacedIdentifier side, NamespacedIdentifier front,
+		NamespacedIdentifier bottom) {
+		throw RetroInjected.missing();
+	}
 
 	/**
 	 * A log-style column: one texture on both end caps, another around the sides. Sugar for
 	 * {@code .sided(top, side, side, top)} on a block that does not turn.
 	 */
-	RetroBlockAccess column(NamespacedIdentifier top, NamespacedIdentifier side);
+	default RetroBlockAccess column(NamespacedIdentifier top, NamespacedIdentifier side) { throw RetroInjected.missing(); }
 
 	/**
 	 * One texture nailed to each world face, in vanilla face order: bottom, top, north, south, west, east.
 	 * Unlike {@link #sided} these do not follow a facing state. Pass {@code null} for a face to leave it
 	 * on the block's main {@link #texture} sprite.
 	 */
-	RetroBlockAccess textures(NamespacedIdentifier bottom, NamespacedIdentifier top, NamespacedIdentifier north,
-		NamespacedIdentifier south, NamespacedIdentifier west, NamespacedIdentifier east);
+	default RetroBlockAccess textures(NamespacedIdentifier bottom, NamespacedIdentifier top, NamespacedIdentifier north,
+		NamespacedIdentifier south, NamespacedIdentifier west, NamespacedIdentifier east) {
+		throw RetroInjected.missing();
+	}
 
 	/**
 	 * Declares which tool kinds mine this block effectively, exactly like modern
@@ -151,7 +154,7 @@ public interface RetroBlockAccess {
 	 * hand-breakable block in {@code mineable/axe} still drops by hand and just mines faster with an axe.
 	 * {@link #alwaysDrops()} forces it to always drop.</p>
 	 */
-	RetroBlockAccess mineable(com.periut.retroapi.tag.RetroTool... tools);
+	default RetroBlockAccess mineable(com.periut.retroapi.tag.RetroTool... tools) { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares the tool TIER needed to harvest this block, the code form of a
@@ -160,7 +163,7 @@ public interface RetroBlockAccess {
 	 * {@code RetroTags.addToTag(tier.needsTag(), block)}, so it composes with data files rather than
 	 * replacing them. {@code WOOD} is a no-op (everything mines wood tier).
 	 */
-	RetroBlockAccess needsTool(com.periut.retroapi.tag.RetroToolTier tier);
+	default RetroBlockAccess needsTool(com.periut.retroapi.tag.RetroToolTier tier) { throw RetroInjected.missing(); }
 
 	/**
 	 * Adds this block to arbitrary tags at registration, so a tag no longer needs a separate
@@ -170,14 +173,14 @@ public interface RetroBlockAccess {
 	 * </pre>
 	 * Unions with any data-file membership.
 	 */
-	RetroBlockAccess tag(com.periut.retroapi.tag.RetroTagKey... tags);
+	default RetroBlockAccess tag(com.periut.retroapi.tag.RetroTagKey... tags) { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes this block indestructible in survival, the bedrock rule: infinite hardness and blast
 	 * resistance. Vanilla's {@code setUnbreakable()} is protected, so this used to force a Block subclass
 	 * for something with no behavior in it at all.
 	 */
-	RetroBlockAccess unbreakable();
+	default RetroBlockAccess unbreakable() { throw RetroInjected.missing(); }
 
 	/**
 	 * Tints this block's rendering by a color computed per position, with NO model JSON and no custom
@@ -191,7 +194,7 @@ public interface RetroBlockAccess {
 	 * form, so one lambda covers both. For a JSON model, the same provider drives faces with
 	 * {@code tintindex} - this call just makes it work on plain code-textured blocks too.
 	 */
-	RetroBlockAccess tint(com.periut.retroapi.client.render.RetroBlockColors.Provider provider);
+	default RetroBlockAccess tint(com.periut.retroapi.client.render.RetroBlockColors.Provider provider) { throw RetroInjected.missing(); }
 
 	/**
 	 * Draws another sprite on top of this block's faces, with no model JSON and no custom renderer - the
@@ -203,42 +206,45 @@ public interface RetroBlockAccess {
 	 * independently of the base ({@link #overlay(NamespacedIdentifier, int)}) and can change per state
 	 * without needing one flattened sprite per combination.
 	 */
-	RetroBlockAccess overlay(NamespacedIdentifier textureId);
+	default RetroBlockAccess overlay(NamespacedIdentifier textureId) { throw RetroInjected.missing(); }
 
 	/** {@link #overlay(NamespacedIdentifier)} with a fixed {@code 0xRRGGBB} tint for that layer only. */
-	RetroBlockAccess overlay(NamespacedIdentifier textureId, int tint);
+	default RetroBlockAccess overlay(NamespacedIdentifier textureId, int tint) { throw RetroInjected.missing(); }
 
 	/**
 	 * {@link #overlay(NamespacedIdentifier)} whose sprite and tint are chosen per position, for overlays
 	 * that depend on state or neighbors. Return {@code null} from the provider to skip the layer at that
 	 * position.
 	 */
-	RetroBlockAccess overlay(com.periut.retroapi.register.block.RetroBlockLayer.Provider provider);
+	default RetroBlockAccess overlay(com.periut.retroapi.register.block.RetroBlockLayer.Provider provider) { throw RetroInjected.missing(); }
 
 	/** The overlay layers as drawn with no world context (the inventory/hand form). Never null. */
-	java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers();
+	default java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers() { throw RetroInjected.missing(); }
 
 	/** The overlay layers for one position, with each provider consulted. Never null. */
-	java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers(
-		com.periut.retroapi.state.RetroBlockState state, net.minecraft.world.BlockView world, int x, int y, int z);
+	default java.util.List<com.periut.retroapi.register.block.RetroBlockLayer> getOverlayLayers(
+			com.periut.retroapi.state.RetroBlockState state, net.minecraft.world.BlockView world,
+			int x, int y, int z) {
+		throw RetroInjected.missing();
+	}
 
 	/** True when {@link #overlay} was called at least once (a cheap pre-check for the renderer). */
-	boolean hasOverlayLayers();
+	default boolean hasOverlayLayers() { throw RetroInjected.missing(); }
 
 	/**
 	 * Check if this block always drops items regardless of tool.
 	 */
-	boolean isAlwaysDrops();
+	default boolean isAlwaysDrops() { throw RetroInjected.missing(); }
 
 	/**
 	 * Check if any tool is effective at mining this block.
 	 */
-	boolean isAlwaysEffectiveTool();
+	default boolean isAlwaysEffectiveTool() { throw RetroInjected.missing(); }
 
 	/**
 	 * Get the effective tool class for this block, or null if not set.
 	 */
-	Class<? extends Item> getEffectiveTool();
+	default Class<? extends Item> getEffectiveTool() { throw RetroInjected.missing(); }
 
 	// --- RetroAPI extensions ---
 
@@ -247,44 +253,44 @@ public interface RetroBlockAccess {
 	 * Allows neighboring blocks to render their adjacent faces
 	 * and lets light pass through.
 	 */
-	RetroBlockAccess nonOpaque();
+	default RetroBlockAccess nonOpaque() { throw RetroInjected.missing(); }
 
 	/**
 	 * Set persistent block bounds for collision, selection, and rendering.
 	 * Unlike {@link Block#setBoundingBox}, these bounds survive inventory rendering resets.
 	 */
-	RetroBlockAccess bounds(float minX, float minY, float minZ, float maxX, float maxY, float maxZ);
+	default RetroBlockAccess bounds(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) { throw RetroInjected.missing(); }
 
 	/**
 	 * Set the render type for this block using a flattened identifier.
 	 *
 	 * @see RenderType for vanilla and custom render type identifiers
 	 */
-	RetroBlockAccess renderType(NamespacedIdentifier renderTypeId);
+	default RetroBlockAccess renderType(NamespacedIdentifier renderTypeId) { throw RetroInjected.missing(); }
 
 	/**
 	 * Set the sprite index for this block (used for particles and fallback rendering).
 	 */
-	RetroBlockAccess sprite(int spriteId);
+	default RetroBlockAccess sprite(int spriteId) { throw RetroInjected.missing(); }
 
 	/**
 	 * Register a single texture for all faces.
 	 * Texture file: assets/{id.namespace()}/textures/block/{id.identifier()}.png
 	 */
-	RetroBlockAccess texture(NamespacedIdentifier textureId);
+	default RetroBlockAccess texture(NamespacedIdentifier textureId) { throw RetroInjected.missing(); }
 
 	/**
 	 * Register this block with RetroAPI.
 	 * Handles BlockItem creation, registry, and StationAPI compat.
 	 */
-	Block register(NamespacedIdentifier id);
+	default Block register(NamespacedIdentifier id) { throw RetroInjected.missing(); }
 
 	/**
 	 * Register this block with a custom BlockItem (e.g. {@link RetroMetaBlockItem} for
 	 * meta-named blocks). The factory receives the shifted item id expected by the
 	 * {@link net.minecraft.item.BlockItem} constructor (block id - 256).
 	 */
-	Block register(NamespacedIdentifier id, java.util.function.IntFunction<net.minecraft.item.BlockItem> itemFactory);
+	default Block register(NamespacedIdentifier id, java.util.function.IntFunction<net.minecraft.item.BlockItem> itemFactory) { throw RetroInjected.missing(); }
 
 	/**
 	 * Create a new Block with an automatically allocated placeholder ID.

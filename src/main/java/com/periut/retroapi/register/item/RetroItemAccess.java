@@ -1,5 +1,6 @@
 package com.periut.retroapi.register.item;
 
+import com.periut.retroapi.register.RetroInjected;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
 import net.minecraft.item.Item;
 
@@ -39,9 +40,9 @@ public interface RetroItemAccess {
 	 */
 	int AUTO_ID = Integer.MIN_VALUE;
 
-	RetroItemAccess maxStackSize(int size);
+	default RetroItemAccess maxStackSize(int size) { throw RetroInjected.missing(); }
 
-	RetroItemAccess texture(NamespacedIdentifier textureId);
+	default RetroItemAccess texture(NamespacedIdentifier textureId) { throw RetroInjected.missing(); }
 
 	/**
 	 * Layered sprite with NO model JSON: {@code base} is the bottom layer, each of {@code overlays} stacks
@@ -50,14 +51,14 @@ public interface RetroItemAccess {
 	 * {@code .layers(id("minecraft","apple"), id("mymod","sugar_sparkle"))} with no {@code items/} or
 	 * {@code models/item/} JSON at all. A model JSON, if present, still overrides this at registration.
 	 */
-	RetroItemAccess layers(NamespacedIdentifier base, NamespacedIdentifier... overlays);
+	default RetroItemAccess layers(NamespacedIdentifier base, NamespacedIdentifier... overlays) { throw RetroInjected.missing(); }
 
 	/**
 	 * Stacks one more sprite on top of this item's current texture (set by {@link #texture} or
 	 * {@link #layers}). Chain several for multiple layers: {@code .texture(base).overlay(a).overlay(b)}.
 	 * Must follow a {@code .texture(...)}/{@code .layers(...)} call that established the base.
 	 */
-	RetroItemAccess overlay(NamespacedIdentifier overlayTextureId);
+	default RetroItemAccess overlay(NamespacedIdentifier overlayTextureId) { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares this item's tool kind(s) for the {@code mineable/<tool>} tag system, for custom tool
@@ -66,10 +67,10 @@ public interface RetroItemAccess {
 	 * for a paxel that mines everything in both tags. Each call REPLACES the previously declared kinds.
 	 * See {@code RetroBlockAccess.mineable(...)}.
 	 */
-	RetroItemAccess tool(com.periut.retroapi.tag.RetroTool... tools);
+	default RetroItemAccess tool(com.periut.retroapi.tag.RetroTool... tools) { throw RetroInjected.missing(); }
 
 	/** The declared tool kinds (empty if none). Prefer {@code RetroTool.kindsOf(item)}, which also infers vanilla classes. */
-	java.util.Set<com.periut.retroapi.tag.RetroTool> getToolKinds();
+	default java.util.Set<com.periut.retroapi.tag.RetroTool> getToolKinds() { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares this item's tool TIER for the {@code needs_<tier>_tool} tag system, for custom
@@ -77,7 +78,7 @@ public interface RetroItemAccess {
 	 * mining level automatically). Chainable like every builder method, and equally usable from
 	 * an item constructor via {@code RetroItemAccess.of(this).tier(...)}.
 	 */
-	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier tier);
+	default RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier tier) { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares a DYNAMIC tool tier, computed from the actual {@link net.minecraft.item.ItemStack} at
@@ -85,7 +86,7 @@ public interface RetroItemAccess {
 	 * damage/NBT). Wins over a static {@link #tier(com.periut.retroapi.tag.RetroToolTier)}. Example:
 	 * {@code .tier(stack -> stack.getDamage() < 100 ? RetroToolTier.DIAMOND : RetroToolTier.IRON)}.
 	 */
-	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier);
+	default RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Dynamic tier) { throw RetroInjected.missing(); }
 
 	/**
 	 * Declares a tier that also sees WHAT is being mined and WHO is mining it, so one tool can be worth
@@ -102,16 +103,16 @@ public interface RetroItemAccess {
 	 * The player is null only when a tier is asked for outside a harvest; the block never carries
 	 * metadata or a position, because beta's harvest hooks do not pass one.
 	 */
-	RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier);
+	default RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier) { throw RetroInjected.missing(); }
 
 	/** The declared static tool tier, or null. Prefer {@code RetroToolTier.of(stack)} which also infers ToolItems and honors the dynamic tier. */
-	com.periut.retroapi.tag.RetroToolTier getToolTier();
+	default com.periut.retroapi.tag.RetroToolTier getToolTier() { throw RetroInjected.missing(); }
 
 	/** The declared dynamic tool-tier supplier, or null. */
-	com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic();
+	default com.periut.retroapi.tag.RetroToolTier.Dynamic getToolTierDynamic() { throw RetroInjected.missing(); }
 
 	/** The declared block-aware tool-tier supplier, or null. */
-	com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual();
+	default com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual() { throw RetroInjected.missing(); }
 
 	/**
 	 * How fast this item mines the blocks its {@link #tool} kinds cover - the {@code miningSpeed} of a
@@ -121,19 +122,19 @@ public interface RetroItemAccess {
 	 * <p>Reference points: wood 2, stone 4, iron 6, diamond 8, gold 12. Unset, a declared tool mines at
 	 * its {@link #tier} speed.
 	 */
-	RetroItemAccess miningSpeed(float speed);
+	default RetroItemAccess miningSpeed(float speed) { throw RetroInjected.missing(); }
 
 	/** The declared mining speed, or {@code 0} when none was set. */
-	float getMiningSpeed();
+	default float getMiningSpeed() { throw RetroInjected.missing(); }
 
 	/**
 	 * How much damage this item deals in hand - the {@code attackDamage} of a {@code ToolMaterial},
 	 * without needing one. Vanilla references: sword 4-7, pickaxe 2-5, bare hand 1.
 	 */
-	RetroItemAccess attackDamage(int damage);
+	default RetroItemAccess attackDamage(int damage) { throw RetroInjected.missing(); }
 
 	/** The declared attack damage, or {@code -1} when none was set. */
-	int getAttackDamage();
+	default int getAttackDamage() { throw RetroInjected.missing(); }
 
 	/**
 	 * How many uses this item survives, i.e. its durability. Sugar for vanilla's {@code setMaxDamage},
@@ -145,14 +146,14 @@ public interface RetroItemAccess {
 	 *     .handheld().texture(id("drill")).register(id("drill"));
 	 * </pre>
 	 */
-	RetroItemAccess durability(int uses);
+	default RetroItemAccess durability(int uses) { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes this item lose a point of durability each time it breaks a block hard enough to matter,
 	 * exactly like a vanilla tool. On by default for items that declare both a {@link #tool} kind and a
 	 * {@link #durability}; call with {@code false} to opt out (a creative-style tool that never wears).
 	 */
-	RetroItemAccess damageOnMine(boolean enabled);
+	default RetroItemAccess damageOnMine(boolean enabled) { throw RetroInjected.missing(); }
 
 	/**
 	 * Marks this item as held like a tool: the in-hand render angles it through the fist
@@ -160,7 +161,7 @@ public interface RetroItemAccess {
 	 * Vanilla {@code ToolItem}s already are; plain Items opt in here, or automatically by
 	 * giving the item a model JSON with {@code "parent": "minecraft:item/handheld"}.
 	 */
-	RetroItemAccess handheld();
+	default RetroItemAccess handheld() { throw RetroInjected.missing(); }
 
 	/**
 	 * Makes this item EDIBLE: right-clicking eats one and restores {@code health} points
@@ -177,12 +178,12 @@ public interface RetroItemAccess {
 	}
 
 	/** Edible, full control: heal amount, whether it counts as meat, and the on-eat effect. */
-	RetroItemAccess food(int health, boolean meat, RetroFood.OnEaten onEaten);
+	default RetroItemAccess food(int health, boolean meat, RetroFood.OnEaten onEaten) { throw RetroInjected.missing(); }
 
 	/**
 	 * Register this item with RetroAPI.
 	 */
-	Item register(NamespacedIdentifier id);
+	default Item register(NamespacedIdentifier id) { throw RetroInjected.missing(); }
 
 	/**
 	 * Create a new Item with an automatically allocated placeholder ID.

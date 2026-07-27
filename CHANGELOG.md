@@ -1,6 +1,6 @@
 # RetroAPI changelog
 
-## Unreleased
+## 0.3.2 — Shared component state, and the IDE storm
 
 ### Fixes
 - **Every item shared one set of components.** `RetroComponentType.getDefault()` returned the exact
@@ -18,7 +18,6 @@
   hallucination and only surfaced once a class implemented some interface of its own. Every method is
   now a `default` that throws; the mixin's real implementation is a method on the class, and a class
   method always wins over an interface default, so nothing changes at runtime.
-
 - **The client no longer tries to load dedicated-server classes.** Thirteen mixins targeting
   `net.minecraft.server.*` (and `ServerPlayerEntity`, `EntityTracker`, `ServerChunkCache`) sat in the
   mixin config's common `mixins` list, so every client launch attempted each one and logged

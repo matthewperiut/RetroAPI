@@ -7,7 +7,7 @@ import net.minecraft.block.Block;
  * reproducing beta 1.7.3's own {@code MinecraftPickaxe}/{@code MinecraftAxe}/{@code MinecraftShovel}
  * effective-block lists and harvest levels. Registered once at init by {@link com.periut.retroapi.RetroAPI}
  * when StationAPI is <b>absent</b> (StationAPI already ships this exact set as data tags, so RetroAPI stands
- * back and lets it own vanilla harvesting — see the StationAPI compat notes).
+ * back and lets it own vanilla harvesting - see the StationAPI compat notes).
  *
  * <p>This is the fix for "custom tools only worked on modded blocks": before, no vanilla block was in any
  * RetroAPI tag, so a {@code .tool(PICKAXE).tier(IRON)} plain item had nothing to bite on vanilla stone or

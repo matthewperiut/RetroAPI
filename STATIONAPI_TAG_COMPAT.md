@@ -38,8 +38,8 @@ the responsibilities are split cleanly rather than fought over.
    `mineable`/`needs_*_tool` data tags and owns vanilla harvesting (its `StationTool` +
    `ToolEffectivenessImpl`). So RetroAPI **does not register its default vanilla tool tags** when
    `stationapi` is loaded (`RetroTags.ensureVanillaDefaults` is a no-op there). RetroAPI's harvest
-   hooks still fire, but only for blocks that are in a RetroAPI tag — i.e. modded blocks RetroAPI
-   itself tagged — so the two systems act on disjoint block sets and never fight.
+   hooks still fire, but only for blocks that are in a RetroAPI tag - i.e. modded blocks RetroAPI
+   itself tagged - so the two systems act on disjoint block sets and never fight.
 
 4. **RetroAPI-unique things stay unique.** Runtime `addToTag` (item **and** block), the dynamic
    per-stack tool tier, multi-kind tools, and plain-`Item` tools have no StationAPI equivalent;
@@ -48,7 +48,7 @@ the responsibilities are split cleanly rather than fought over.
 ## Decoupled harvest semantics (matches modern Minecraft)
 
 A `mineable/<tool>` tag grants **speed only**. Whether a block needs a tool to **drop** comes from
-its material (`Material.isHandHarvestable()` — beta's own stone/metal rule) or from a
+its material (`Material.isHandHarvestable()` - beta's own stone/metal rule) or from a
 `needs_<tier>_tool` tag. This is the modern split, and it is why RetroAPI can now ship vanilla
 `mineable/axe`/`mineable/shovel` membership for hand-harvestable wood/dirt blocks (so custom axes
 and shovels get their speed) without ever wrongly gating those blocks' hand-harvest.

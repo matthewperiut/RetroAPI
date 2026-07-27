@@ -53,6 +53,42 @@ public class RetroTextures {
 	}
 
 	/**
+	 * The item texture for an id, registering it only if it is not registered yet.
+	 *
+	 * <p>{@link #addItemTexture} allocates a NEW atlas slot every call, so asking for the same sprite
+	 * twice - from two places that both need it, or from code that runs on both sides - quietly burns a
+	 * slot and hands back a second handle to the same image. Use this whenever the caller does not
+	 * <em>own</em> the texture, e.g. a layer that tints a sprite someone else registered.
+	 *
+	 * <p>Safe on either side and at any time: registration is common (the atlas is only stitched on the
+	 * client), and repeat calls return the identical handle, so its {@code .id} still resolves correctly
+	 * once the atlas is built.
+	 */
+	public static RetroTexture getOrAddItemTexture(NamespacedIdentifier id) {
+		RetroTexture existing = findByIdentifier(itemTextures, id);
+		return existing != null ? existing : addItemTexture(id);
+	}
+
+	/** {@link #getOrAddItemTexture} for a block/terrain sprite. */
+	public static RetroTexture getOrAddBlockTexture(NamespacedIdentifier id) {
+		RetroTexture existing = findByIdentifier(terrainTextures, id);
+		return existing != null ? existing : addBlockTexture(id);
+	}
+
+	private static RetroTexture findByIdentifier(List<RetroTexture> pool, NamespacedIdentifier id) {
+		if (id == null) {
+			return null;
+		}
+		for (int i = 0; i < pool.size(); i++) {
+			RetroTexture tex = pool.get(i);
+			if (id.equals(tex.getIdentifier())) {
+				return tex;
+			}
+		}
+		return null;
+	}
+
+	/**
 	 * Registers an animated block texture from code, equivalent to a {@code .png.mcmeta}
 	 * with a uniform {@code frametime}. The PNG at
 	 * {@code assets/{namespace}/textures/block/{path}.png} holds square frames stacked

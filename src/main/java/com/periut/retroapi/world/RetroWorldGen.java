@@ -59,6 +59,24 @@ public final class RetroWorldGen {
 	}
 
 	/**
+	 * Set a block STATE in a chunk from {@link #createChunk}. {@code meta} is only the vanilla nibble, so
+	 * the overload above cannot express a block with more than 16 states - a generator that wanted one had
+	 * no way to place it. This writes the low bits through the same path and the high bits into the
+	 * chunk's xmeta overlay, so the state is intact before the chunk is ever handed to the world.
+	 *
+	 * <p>Coordinates are chunk-local (0-15, 0-127, 0-15), same as {@link #setBlockInChunk}.
+	 */
+	public static void setStateInChunk(Chunk chunk, int x, int y, int z,
+			com.periut.retroapi.state.RetroBlockState state) {
+		int index = state.getIndex();
+		IMPL.setBlock(chunk, x, y, z, state.getBlock().id, index & 15);
+		if (index > 15) {
+			((ExtendedBlocksAccess) chunk).retroapi$getExtendedBlocks()
+				.setXmeta(com.periut.retroapi.storage.ChunkExtendedBlocks.toIndex(x, y, z), (index >> 4) & 0xFF);
+		}
+	}
+
+	/**
 	 * The StationAPI backend lives in the optional {@code retroapi-stationapi} mod and is loaded reflectively
 	 * by class name, so core carries no StationAPI reference. This runs once at class load; when StationAPI is
 	 * absent (or the bridge mod is missing), the legacy vanilla backend is used.

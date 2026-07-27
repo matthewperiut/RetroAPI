@@ -197,6 +197,32 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 		}
 	}
 
+	// Step 4: take the world the client just reverse-converted BACK to McRegion + sidecar, and load it on a
+	// plain (non-StationAPI) dedicated server. Disk verification proves the bytes survived; this proves the
+	// content is runtime-valid in plain RetroAPI, which is the actual claim - that a converted world is
+	// genuinely usable, not merely intact. The `verify` scenario has always existed and been documented as
+	// this step, and was wired into nothing.
+	tasks.register('convCopyBackWorld', Copy) {
+		from convWorldDst
+		into convWorldSrc
+		// Keep the populate verdict already in the destination; verify appends its own line.
+		exclude 'retroapi_test_result.txt'
+	}
+
+	tasks.register('convVerifyGate') {
+		doLast {
+			def f = file("${convWorldSrc}/retroapi_test_result.txt")
+			if (!f.exists()) {
+				throw new GradleException('verify stage wrote no result file - the server did not finish.')
+			}
+			def text = f.text
+			logger.lifecycle("\n===== verify (mcregion) report =====\n${text}====================================")
+			if (!text.contains('verify(mcregion): PASS')) {
+				throw new GradleException('reverse-converted world is NOT runtime-valid in plain RetroAPI - see above.')
+			}
+		}
+	}
+
 	tasks.register('convGate') {
 		doLast {
 			def f = file("${convWorldDst}/retroapi_test_result.txt")
@@ -216,7 +242,8 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 		group = 'verification'
 		description = 'Headless vanilla<->StationAPI world conversion round-trip; fails on any modded-data loss.'
 		dependsOn 'convCleanWorlds', ':test:runPopulateServer', 'convPopulateGate', 'convCopyWorld',
-			':test:stapi:runRoundtripClient', 'convGate'
+			':test:stapi:runRoundtripClient', 'convGate',
+			'convCopyBackWorld', ':test:runVerifyServer', 'convVerifyGate'
 	}
 
 	gradle.projectsEvaluated {
@@ -227,6 +254,11 @@ if (providers.gradleProperty('stationapi').isPresent()) {
 		tasks.named('convCopyWorld').configure { mustRunAfter tasks.named('convPopulateGate') }
 		roundtrip.mustRunAfter(tasks.named('convCopyWorld'))
 		tasks.named('convGate').configure { mustRunAfter roundtrip }
+
+		def verify = project(':test').tasks.getByName('runVerifyServer')
+		tasks.named('convCopyBackWorld').configure { mustRunAfter tasks.named('convGate') }
+		verify.mustRunAfter(tasks.named('convCopyBackWorld'))
+		tasks.named('convVerifyGate').configure { mustRunAfter verify }
 	}
 }
 

@@ -486,6 +486,26 @@ public class TestMod implements RetroModInitializer {
 		boolean multiblock = TEST_MULTIBLOCK != null;
 		LOGGER.info("[new-features] multiblock pattern built {}", multiblock ? "PASS" : "FAIL");
 
+		// --- 0.3.3: a tier that REFUSES ------------------------------------------------------------
+		// null means "no opinion, fall through", and falling through lands on WOOD, so a contextual
+		// lambda had no way to say "this tool cannot harvest this block". NONE is below every tier, so
+		// it satisfies nothing - not even the implicit WOOD a tool-requiring block demands.
+		boolean refuses = !com.periut.retroapi.tag.RetroToolTier.NONE
+			.isAtLeast(com.periut.retroapi.tag.RetroToolTier.WOOD)
+			&& com.periut.retroapi.tag.RetroToolTier.fromLevel(-1) == com.periut.retroapi.tag.RetroToolTier.NONE
+			&& com.periut.retroapi.tag.RetroToolTier.DIAMOND
+				.isAtLeast(com.periut.retroapi.tag.RetroToolTier.NONE);
+		LOGGER.info("[new-features] NONE tier refuses every requirement {}", refuses ? "PASS" : "FAIL");
+
+		// --- 0.3.3: texture get-or-register must not burn a second atlas slot ----------------------
+		com.periut.retroapi.register.block.RetroTexture firstAsk =
+			com.periut.retroapi.register.block.RetroTextures.getOrAddItemTexture(id("test_item"));
+		com.periut.retroapi.register.block.RetroTexture secondAsk =
+			com.periut.retroapi.register.block.RetroTextures.getOrAddItemTexture(id("test_item"));
+		boolean deduped = firstAsk == secondAsk;
+		LOGGER.info("[new-features] getOrAddItemTexture reuses the slot (slot {}) {}",
+			firstAsk.id, deduped ? "PASS" : "FAIL");
+
 		// --- 0.3.1: tags that reference other tags -------------------------------------------------
 		// Resolving a "#other:tag" entry used to re-enter the tag cache before it was populated, which
 		// restarted resolution and recursed until the stack died - a hard crash for any pack whose tag

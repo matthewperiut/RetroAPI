@@ -94,6 +94,18 @@ public final class RetroMultiblock {
 				world.setBlock(pos.x, pos.y, pos.z, block == null ? 0 : block.id, meta);
 			}
 		}
+
+		/**
+		 * Replaces every matched position with one block STATE. The {@code meta} overload can only carry
+		 * the vanilla nibble, so a block with more than 16 states would be filled in truncated - this
+		 * writes the sidecar bits too.
+		 */
+		public void fill(World world, com.periut.retroapi.state.RetroBlockState state) {
+			for (RetroVec3i pos : positions) {
+				world.setBlock(pos.x, pos.y, pos.z, state.getBlock().id, state.getIndex() & 15);
+				com.periut.retroapi.state.RetroStates.set(world, pos.x, pos.y, pos.z, state);
+			}
+		}
 	}
 
 	private final List<String[]> layers;

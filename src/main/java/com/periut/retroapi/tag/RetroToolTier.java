@@ -21,6 +21,20 @@ import net.minecraft.item.ToolMaterial;
  * {@code RetroTags.addToTag(RetroToolTier.IRON.needsTag(), block)}.</p>
  */
 public enum RetroToolTier {
+	/**
+	 * Not a tool at all: below every tier, so it satisfies no {@code needs_<tier>_tool} requirement -
+	 * not even the implicit WOOD one that any tool-requiring block demands.
+	 *
+	 * <p>This is what a {@link Dynamic}/{@link Contextual} declaration returns to say "this tool cannot
+	 * harvest THIS block", which {@code null} cannot express: {@code null} means "no opinion, fall
+	 * through to the next declaration", and falling through lands on WOOD, so a lambda had no way to
+	 * refuse. A drill bit that only bites certain ores is
+	 * {@code .tier((stack, block, player) -> isOre(block) ? DIAMOND : NONE)}.
+	 *
+	 * <p>It does not stop a block being broken by hand - a block that needs no tool never consults a
+	 * tier at all - it only means this item does not count as the tool such a block requires.
+	 */
+	NONE(-1, null),
 	WOOD(0, null),
 	STONE(1, "needs_stone_tool"),
 	IRON(2, "needs_iron_tool"),
@@ -166,11 +180,21 @@ public enum RetroToolTier {
 		return of(stack);
 	}
 
-	/** The tier for a numeric mining level, clamped into the known range. */
+	/** The tier for a numeric mining level, clamped into the known range. Negative levels are {@link #NONE}. */
 	public static RetroToolTier fromLevel(int level) {
 		if (level >= 3) return DIAMOND;
 		if (level == 2) return IRON;
 		if (level == 1) return STONE;
-		return WOOD;
+		if (level == 0) return WOOD;
+		return NONE;
+	}
+
+	/**
+	 * The bare tag name this tier demands ({@code "needs_iron_tool"}), or null for {@link #WOOD} and
+	 * {@link #NONE}, which demand none. {@link #needsTag()} gives the same thing as a {@link RetroTagKey};
+	 * this is here for code building tag ids of its own.
+	 */
+	public String getTagName() {
+		return this.tagName;
 	}
 }

@@ -1,6 +1,10 @@
 # RetroAPI changelog
 
-## Unreleased
+## 0.3.3 — Closing the gaps around block state
+
+A sweep for one shape of bug: an API that quietly does less than it looks like it does. Every entry
+below is a call that compiled, ran, and silently lost data or had no way to express the thing it
+documented.
 
 ### Added
 - **A no-notify state setter.** `RetroStates.set(...)` always notified neighbors, which during world
@@ -13,8 +17,25 @@
   merely un-notified.
 - **`RetroFeatures.setBlock(world, x, y, z, state)`.** The existing overload takes a 4-bit `meta`, so a
   feature simply could not place a block with more than 16 states — the index truncated to the nibble.
+- **`RetroWorldGen.setStateInChunk(...)` and `RetroMultiblock.Match.fill(world, state)`** — the same
+  truncation, in the two other places that place blocks. A custom chunk generator had no way at all to
+  put a >16-state block into a chunk, and a multiblock could only be formed out of the low nibble.
+- **`RetroToolTier.NONE`.** A `Dynamic`/`Contextual` tier could not refuse: `null` means "no opinion,
+  fall through", and falling through lands on `WOOD`. `NONE` sits below every tier, so it satisfies no
+  requirement — a drill bit that only bites certain ores is now
+  `.tier((stack, block, player) -> isOre(block) ? DIAMOND : NONE)`.
+- **`RetroTextures.getOrAddItemTexture(...)` / `getOrAddBlockTexture(...)`.** `addItemTexture` allocates
+  a *new* atlas slot on every call, so two callers wanting the same sprite silently burned a slot and got
+  two handles to one image. The get-or-add form is safe on either side and at any time, which is what
+  code that tints someone else's sprite needs.
+- **`RetroToolTier.getTagName()`**, for building `needs_<tier>_tool` ids from code.
 
 ### Testing
+- The four-stage conversion pipeline actually runs all four stages. Step 4 — load the reverse-converted
+  world on a plain, non-StationAPI server and prove the modded content is *runtime*-valid, not merely
+  intact on disk — existed as a documented scenario, was described in the pipeline comment, and was
+  wired into no task. Disk verification proves the bytes survived; this proves the world is usable,
+  which is the actual claim RetroAPI makes about conversion.
 - The populate stage now places a state index of 19 through the no-notify path and reads it back, so a
   setter that dropped the sidecar bits would fail the build.
 - **A failing populate stage now fails the build.** It wrote its own PASS/FAIL, but `convCopyWorld`

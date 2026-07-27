@@ -154,14 +154,13 @@ public abstract class PlayerEntityMixin {
 		return null;
 	}
 
-	/** Vanilla ToolMaterial mining speeds by tier: wood 2, stone 4, iron 6, diamond 8. */
+	/**
+	 * Mining speed for a tier: the vanilla ToolMaterial speeds (wood 2, stone 4, iron 6, diamond 8) come
+	 * from the built-in tiers, and a mod-registered tier carries its own, which is why this is a lookup
+	 * and not a switch.
+	 */
 	@Unique
 	private static float retroapi$tierSpeed(com.periut.retroapi.tag.RetroToolTier tier) {
-		switch (tier) {
-			case DIAMOND: return 8.0f;
-			case IRON: return 6.0f;
-			case STONE: return 4.0f;
-			default: return 2.0f;
-		}
+		return tier == null ? 2.0f : tier.getMiningSpeed();
 	}
 }

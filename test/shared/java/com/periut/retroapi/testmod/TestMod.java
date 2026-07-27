@@ -63,6 +63,14 @@ public class TestMod implements RetroModInitializer {
 	public static Block FACING_BLOCK;
 	/** 0.3.0: a stone-material block with NO mineable tag, to prove the material-inferred defaults. */
 	public static Block UNTAGGED_STONE_BLOCK;
+	public static Block AUTO_ID_BLOCK;
+
+	/** A Block subclass that forwards {@code RetroBlockAccess.AUTO_ID} to super, the documented shape. */
+	public static class AutoIdTestBlock extends Block {
+		public AutoIdTestBlock(int id) {
+			super(id, Material.STONE);
+		}
+	}
 	/** 0.3.0: six-way facing + code-declared per-face textures. */
 	public static Block SIX_WAY_BLOCK;
 	/** 0.3.0: a tool built from parameters instead of a (non-extensible) ToolMaterial. */
@@ -284,6 +292,14 @@ public class TestMod implements RetroModInitializer {
 			.strength(1.5f)
 			.sprite(Block.COBBLESTONE.getTexture(0))
 			.register(id("untagged_stone"));
+
+		// 0.3.5: the AUTO_ID sentinel on the BLOCK side. Constructed the way a mod that owns its Block
+		// subclass would: pass the sentinel to super and let RetroAPI resolve it inside the constructor.
+		AUTO_ID_BLOCK = RetroBlockAccess.of(new AutoIdTestBlock(RetroBlockAccess.AUTO_ID))
+			.sounds(Block.STONE_SOUND_GROUP)
+			.strength(1.5f)
+			.sprite(Block.COBBLESTONE.getTexture(0))
+			.register(id("auto_id_block"));
 
 		// 0.3.0: six-way facing (up/down too) + per-face textures declared in code, no model JSON.
 		// .states(...) after .facing*() must NOT drop the facing property - that ordering bug is

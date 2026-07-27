@@ -38,6 +38,9 @@ public final class SmokeTest {
 		ok &= check(log, "particleHookLive", SmokeTest::particleHookCheck);
 		ok &= check(log, "entityRenderer", SmokeTest::entityRendererCheck);
 		ok &= check(log, "staticItemTintDraws", SmokeTest::staticTintDrawCheck);
+		ok &= shared(log);
+		ok &= check(log, "blockUseHookLive",
+			() -> hookApplied(net.minecraft.client.InteractionManager.class, "retroapi$blockUse"));
 		finish("client", ok, log);
 		System.exit(ok ? 0 : 1);
 	}
@@ -46,7 +49,24 @@ public final class SmokeTest {
 	public static boolean runServer() {
 		List<String> log = new ArrayList<>();
 		boolean ok = sweep(log, "server");
+		ok &= shared(log);
+		ok &= check(log, "blockUseHookLive", () -> hookApplied(
+			net.minecraft.server.network.ServerPlayerInteractionManager.class, "retroapi$blockUse"));
+		ok &= check(log, "blockEntitySyncHookLive", () -> hookApplied(
+			net.minecraft.entity.player.ServerPlayerEntity.class, "retroapi$syncBlockEntity"));
 		finish("server", ok, log);
+		return ok;
+	}
+
+	/** The checks that mean the same thing on both sides. */
+	private static boolean shared(List<String> log) {
+		boolean ok = check(log, "blockAutoId", SmokeTest::blockAutoIdCheck);
+		ok &= check(log, "vanillaMiningUnchanged", SmokeTest::vanillaMiningCheck);
+		ok &= check(log, "blockUseEventComposes", SmokeTest::blockUseEventCheck);
+		ok &= check(log, "blockEntitySyncRoundtrip", SmokeTest::blockEntitySyncCheck);
+		ok &= check(log, "multiblockAnywhere", SmokeTest::multiblockAnywhereCheck);
+		ok &= check(log, "customToolTier", SmokeTest::customToolTierCheck);
+		ok &= check(log, "positionalToolTier", SmokeTest::positionalToolTierCheck);
 		return ok;
 	}
 
@@ -110,6 +130,321 @@ public final class SmokeTest {
 		if (com.periut.retroapi.client.texture.LayeredItemDraw.layersOf(
 				new net.minecraft.item.ItemStack(net.minecraft.item.Item.STICK)) != null) {
 			throw new IllegalStateException("a vanilla item was wrongly routed through the layered draw");
+		}
+	}
+
+	// --- 0.3.5 checks -------------------------------------------------------------------------------
+
+	/**
+	 * The block registered with the AUTO_ID sentinel (TestMod, registration time - StationAPI refuses to
+	 * construct a Block outside its registration flow, so this cannot be done here) must have landed in a
+	 * real, free, modded slot.
+	 */
+	private static void blockAutoIdCheck() {
+		net.minecraft.block.Block block = TestMod.AUTO_ID_BLOCK;
+		if (block == null) {
+			throw new IllegalStateException("the AUTO_ID block was never registered");
+		}
+		if (block.id < 256 || block.id >= net.minecraft.block.Block.BLOCKS.length) {
+			throw new IllegalStateException("AUTO_ID resolved to a bad slot: " + block.id);
+		}
+		if (net.minecraft.block.Block.BLOCKS[block.id] != block) {
+			throw new IllegalStateException("AUTO_ID block is not the one stored at its own id");
+		}
+		// The reservation must hold: a fresh allocation cannot hand out a slot already in use.
+		int next = com.periut.retroapi.register.block.RetroBlockAccess.allocateId();
+		if (next == block.id || net.minecraft.block.Block.BLOCKS[next] != null) {
+			throw new IllegalStateException("allocateId handed out an occupied slot: " + next);
+		}
+		if (com.periut.retroapi.register.block.RetroBlockAccess.allocateId() == next) {
+			throw new IllegalStateException("allocateId handed out the same slot twice");
+		}
+		// A modded stone-material block still infers its tool, which is what the inference is for.
+		if (!com.periut.retroapi.tag.RetroTags.mineableTools(block)
+				.contains(com.periut.retroapi.tag.RetroTool.PICKAXE)) {
+			throw new IllegalStateException("a modded stone block lost its inferred mineable/pickaxe");
+		}
+	}
+
+	/**
+	 * RetroAPI must not silently rewrite how vanilla plays. Leaves are the LEAVES material and modern
+	 * Minecraft files them under mineable/hoe, so material inference used to hand every beta hoe a
+	 * leaf-cutting speed bonus just by installing the library.
+	 */
+	private static void vanillaMiningCheck() {
+		// Material inference must not reach a vanilla block at all. Asked directly, so the check means
+		// the same thing under StationAPI, which ships its own real tags (leaves ARE mineable/shears
+		// there, and that is a declaration, not an inference).
+		java.util.Set<com.periut.retroapi.tag.RetroTool> inferred =
+			com.periut.retroapi.tag.RetroTags.defaultMineableTools(net.minecraft.block.Block.LEAVES);
+		if (!inferred.isEmpty()) {
+			throw new IllegalStateException("vanilla leaves still infer tools from their material: " + inferred);
+		}
+		java.util.Set<com.periut.retroapi.tag.RetroTool> leaves =
+			com.periut.retroapi.tag.RetroTags.mineableTools(net.minecraft.block.Block.LEAVES);
+		if (leaves.contains(com.periut.retroapi.tag.RetroTool.HOE)) {
+			throw new IllegalStateException("vanilla leaves are tagged mineable/hoe: " + leaves);
+		}
+		// The explicit beta-accurate list is untouched: stone still wants a pickaxe.
+		if (!com.periut.retroapi.tag.RetroTags.mineableTools(net.minecraft.block.Block.STONE)
+				.contains(com.periut.retroapi.tag.RetroTool.PICKAXE)) {
+			throw new IllegalStateException("vanilla stone lost mineable/pickaxe");
+		}
+	}
+
+	/** Listeners run in order and the first non-PASS wins; PASS falls through to vanilla. */
+	private static void blockUseEventCheck() {
+		final int[] calls = {0};
+		// Only ever claims a y coordinate no real block can have, so registering these is inert in game.
+		com.periut.retroapi.register.block.event.BlockUseCallback.EVENT.register(
+			(player, world, held, x, y, z, face) -> {
+				calls[0]++;
+				return com.periut.retroapi.register.block.event.BlockUseCallback.Result.PASS;
+			});
+		com.periut.retroapi.register.block.event.BlockUseCallback.EVENT.register(
+			(player, world, held, x, y, z, face) -> {
+				calls[0]++;
+				return y == SENTINEL_Y
+					? com.periut.retroapi.register.block.event.BlockUseCallback.Result.SUCCESS
+					: com.periut.retroapi.register.block.event.BlockUseCallback.Result.PASS;
+			});
+		com.periut.retroapi.register.block.event.BlockUseCallback.EVENT.register(
+			(player, world, held, x, y, z, face) -> {
+				calls[0]++;
+				return com.periut.retroapi.register.block.event.BlockUseCallback.Result.PASS;
+			});
+
+		var result = com.periut.retroapi.register.block.event.BlockUseCallback.EVENT.invoker()
+			.onUseBlock(null, null, null, 0, SENTINEL_Y, 0, 1);
+		if (result != com.periut.retroapi.register.block.event.BlockUseCallback.Result.SUCCESS) {
+			throw new IllegalStateException("a SUCCESS listener did not claim the click: " + result);
+		}
+		if (calls[0] != 2) {
+			throw new IllegalStateException("listeners after the claim still ran: " + calls[0] + " calls");
+		}
+		var pass = com.periut.retroapi.register.block.event.BlockUseCallback.EVENT.invoker()
+			.onUseBlock(null, null, null, 0, 64, 0, 1);
+		if (pass != com.periut.retroapi.register.block.event.BlockUseCallback.Result.PASS) {
+			throw new IllegalStateException("an unclaimed click did not fall through: " + pass);
+		}
+	}
+
+	/** The block-entity sync wire format has to survive a round trip, or the client shows stale data. */
+	private static void blockEntitySyncCheck() {
+		// The wire form is NBT, and vanilla's writeNbt refuses to write an unregistered class at all, so
+		// sync is only ever available to a block entity that went through RetroBlockEntities.register.
+		com.periut.retroapi.register.blockentity.RetroBlockEntities.register(
+			"retroapi_test:smoke_sync", SyncedTestBlockEntity.class);
+		SyncedTestBlockEntity source = new SyncedTestBlockEntity();
+		source.x = 12;
+		source.y = 70;
+		source.z = -34;
+		source.counter = 4711;
+		byte[] data = com.periut.retroapi.register.blockentity.BlockEntitySyncCodec.encode(source);
+		if (data == null || data.length == 0) {
+			throw new IllegalStateException("a synced block entity encoded to nothing");
+		}
+		SyncedTestBlockEntity target = new SyncedTestBlockEntity();
+		com.periut.retroapi.register.blockentity.BlockEntitySyncCodec.decode(target, data);
+		if (target.counter != 4711 || target.x != 12 || target.y != 70 || target.z != -34) {
+			throw new IllegalStateException("sync round trip lost data: counter=" + target.counter
+				+ " at " + target.x + "," + target.y + "," + target.z);
+		}
+		if (!target.synced) {
+			throw new IllegalStateException("onSynced was never called on the receiving side");
+		}
+		// A block entity that does not opt in must produce nothing at all.
+		if (com.periut.retroapi.register.blockentity.BlockEntitySyncCodec.encode(
+				new net.minecraft.block.entity.SignBlockEntity()) != null) {
+			throw new IllegalStateException("a non-synced block entity was put on the wire anyway");
+		}
+	}
+
+	/** matchAnywhere has to find the structure from a cell that is NOT the anchor, in every rotation. */
+	private static void multiblockAnywhereCheck() {
+		com.periut.retroapi.world.multiblock.RetroMultiblock pattern =
+			com.periut.retroapi.world.multiblock.RetroMultiblock.builder()
+				.layer("BBB",
+					   "BCB",
+					   "BBB")
+				.where('B', net.minecraft.block.Block.BRICKS)
+				.where('C', net.minecraft.block.Block.GOLD_BLOCK)
+				.anchor('C')
+				.build();
+
+		// Build the 3x3 around (100, 64, 100) with the gold core in the middle.
+		StubBlockView world = new StubBlockView();
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				world.set(100 + dx, 64, 100 + dz, net.minecraft.block.Block.BRICKS.id);
+			}
+		}
+		world.set(100, 64, 100, net.minecraft.block.Block.GOLD_BLOCK.id);
+
+		if (pattern.matchAnyRotation(world, 100, 64, 100) == null) {
+			throw new IllegalStateException("matchAnyRotation missed the structure at its own anchor");
+		}
+		// Every brick in the ring must resolve back to the same anchor.
+		for (int dx = -1; dx <= 1; dx++) {
+			for (int dz = -1; dz <= 1; dz++) {
+				var match = pattern.matchAnywhere(world, 100 + dx, 64, 100 + dz);
+				if (match == null) {
+					throw new IllegalStateException("matchAnywhere missed the structure from offset "
+						+ dx + "," + dz);
+				}
+				var anchor = match.anchor();
+				if (anchor.x != 100 || anchor.y != 64 || anchor.z != 100) {
+					throw new IllegalStateException("matchAnywhere found the wrong anchor: " + anchor);
+				}
+			}
+		}
+		if (pattern.matchAnywhere(world, 200, 64, 200) != null) {
+			throw new IllegalStateException("matchAnywhere invented a structure out of empty air");
+		}
+
+		// Freeform: the whole brick ring is one connected region, and the limit is honored.
+		var region = com.periut.retroapi.world.multiblock.RetroBlockRegion.flood(
+			world, 100, 64, 101, 64, net.minecraft.block.Block.BRICKS, net.minecraft.block.Block.GOLD_BLOCK);
+		if (!region.complete() || region.size() != 9) {
+			throw new IllegalStateException("flood found " + region.size()
+				+ " blocks (complete=" + region.complete() + "), expected 9");
+		}
+		var capped = com.periut.retroapi.world.multiblock.RetroBlockRegion.flood(
+			world, 100, 64, 101, 4, net.minecraft.block.Block.BRICKS, net.minecraft.block.Block.GOLD_BLOCK);
+		if (capped.complete() || capped.size() != 4) {
+			throw new IllegalStateException("flood ignored its limit: " + capped.size()
+				+ " complete=" + capped.complete());
+		}
+	}
+
+	/** A mod-registered tool tier must slot in between the built-ins and behave like one. */
+	private static void customToolTierCheck() {
+		com.periut.retroapi.tag.RetroToolTier bronze =
+			com.periut.retroapi.tag.RetroToolTier.register("bronze", 1, 5.0F);
+		if (com.periut.retroapi.tag.RetroToolTier.get("bronze") != bronze) {
+			throw new IllegalStateException("a registered tier did not come back out of the registry");
+		}
+		if (com.periut.retroapi.tag.RetroToolTier.register("bronze", 9, 99.0F) != bronze) {
+			throw new IllegalStateException("registering the same name twice made a second tier");
+		}
+		if (!bronze.isAtLeast(com.periut.retroapi.tag.RetroToolTier.STONE)
+			|| bronze.isAtLeast(com.periut.retroapi.tag.RetroToolTier.IRON)) {
+			throw new IllegalStateException("custom tier sits in the wrong place: level " + bronze.getLevel());
+		}
+		if (bronze.getMiningSpeed() != 5.0F) {
+			throw new IllegalStateException("custom tier lost its mining speed: " + bronze.getMiningSpeed());
+		}
+		if (!"needs_bronze_tool".equals(bronze.getTagName())) {
+			throw new IllegalStateException("custom tier got the wrong tag name: " + bronze.getTagName());
+		}
+		boolean listed = false;
+		for (com.periut.retroapi.tag.RetroToolTier tier : com.periut.retroapi.tag.RetroToolTier.values()) {
+			if (tier == bronze) listed = true;
+		}
+		if (!listed) {
+			throw new IllegalStateException("custom tier is missing from values(), so tags will skip it");
+		}
+		// The built-ins must be untouched: they are ordinary registry entries now, and if registration
+		// order or level lookup shifted, every vanilla harvest rule shifts with it.
+		if (com.periut.retroapi.tag.RetroToolTier.fromLevel(2) != com.periut.retroapi.tag.RetroToolTier.IRON
+			|| com.periut.retroapi.tag.RetroToolTier.fromLevel(-1) != com.periut.retroapi.tag.RetroToolTier.NONE
+			|| com.periut.retroapi.tag.RetroToolTier.DIAMOND.getMiningSpeed() != 8.0F) {
+			throw new IllegalStateException("the built-in tiers changed meaning");
+		}
+	}
+
+	/** A positional tier must be consulted, and must get "no context" rather than a stale position. */
+	private static void positionalToolTierCheck() {
+		net.minecraft.item.Item item = TestMod.STAT_TOOL;
+		com.periut.retroapi.register.item.RetroItemAccess access =
+			(com.periut.retroapi.register.item.RetroItemAccess) item;
+		com.periut.retroapi.tag.RetroToolTier.Positional previous = access.getToolTierPositional();
+		final Object[] seen = new Object[1];
+		try {
+			access.tier((com.periut.retroapi.tag.RetroToolTier.Positional)
+				(stack, block, player, world, x, y, z) -> {
+					seen[0] = world;
+					return com.periut.retroapi.tag.RetroToolTier.DIAMOND;
+				});
+			com.periut.retroapi.tag.RetroToolTier tier = com.periut.retroapi.tag.RetroToolTier.of(
+				new net.minecraft.item.ItemStack(item), net.minecraft.block.Block.STONE, null);
+			if (tier != com.periut.retroapi.tag.RetroToolTier.DIAMOND) {
+				throw new IllegalStateException("the positional tier was never consulted: " + tier);
+			}
+			if (seen[0] != null) {
+				throw new IllegalStateException("no break is in progress, so the world must be null");
+			}
+		} finally {
+			access.tier(previous);
+		}
+		if (com.periut.retroapi.tag.RetroBreakTarget.current(null) != null) {
+			throw new IllegalStateException("a null player produced a break target");
+		}
+	}
+
+	/** A y coordinate no world can hold, so the smoke test's own listeners never fire in game. */
+	private static final int SENTINEL_Y = Integer.MIN_VALUE;
+
+	/** Mixin names an {@code @Inject} handler after the method in the mixin source. */
+	private static void hookApplied(Class<?> target, String handler) {
+		for (java.lang.reflect.Method m : target.getDeclaredMethods()) {
+			if (m.getName().contains(handler)) {
+				return;
+			}
+		}
+		throw new IllegalStateException(target.getSimpleName() + " has no " + handler
+			+ " handler - the injection did not apply");
+	}
+
+	/** A block entity that opts into RetroAPI sync and carries one value across the wire. */
+	private static final class SyncedTestBlockEntity extends net.minecraft.block.entity.BlockEntity
+			implements com.periut.retroapi.register.blockentity.RetroSyncedBlockEntity {
+		int counter;
+		boolean synced;
+
+		@Override
+		public void writeNbt(net.minecraft.nbt.NbtCompound nbt) {
+			super.writeNbt(nbt);
+			nbt.putInt("counter", counter);
+		}
+
+		@Override
+		public void readNbt(net.minecraft.nbt.NbtCompound nbt) {
+			super.readNbt(nbt);
+			counter = nbt.getInt("counter");
+		}
+
+		@Override
+		public void onSynced() {
+			synced = true;
+		}
+	}
+
+	/** A block-id map standing in for a world, so the multiblock checks need no loaded chunks. */
+	private static final class StubBlockView implements net.minecraft.world.BlockView {
+		private final java.util.Map<Long, Integer> ids = new java.util.HashMap<>();
+
+		void set(int x, int y, int z, int id) {
+			ids.put(key(x, y, z), id);
+		}
+
+		private static long key(int x, int y, int z) {
+			return ((long) x & 0x3FFFFFF) << 38 | ((long) y & 0xFFF) << 26 | ((long) z & 0x3FFFFFF);
+		}
+
+		@Override public int getBlockId(int x, int y, int z) { return ids.getOrDefault(key(x, y, z), 0); }
+		@Override public net.minecraft.block.entity.BlockEntity getBlockEntity(int x, int y, int z) { return null; }
+		@Override public float getNaturalBrightness(int x, int y, int z, int min) { return 1.0F; }
+		@Override public float getLuminance(int x, int y, int z) { return 1.0F; }
+		@Override public int getBlockMeta(int x, int y, int z) { return 0; }
+		@Override public boolean isOpaque(int x, int y, int z) { return false; }
+		@Override public boolean shouldSuffocate(int x, int y, int z) { return false; }
+		@Override public net.minecraft.world.biome.source.BiomeSource getBiomeSource() { return null; }
+
+		@Override
+		public net.minecraft.block.material.Material getMaterial(int x, int y, int z) {
+			int id = getBlockId(x, y, z);
+			return id == 0 ? net.minecraft.block.material.Material.AIR : net.minecraft.block.Block.BLOCKS[id].material;
 		}
 	}
 

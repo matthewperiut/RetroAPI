@@ -124,6 +124,27 @@ public class RetroAPIClient implements ClientModInitializer {
 			}
 		});
 
+		// Block entity sync: b1.7.3 has no generic block-entity packet, so the server sends a modded
+		// block entity's NBT over OSL (ChunkMapBlockEntitySyncMixin on change, and
+		// PlayerChunkBlockEntitySyncMixin on chunk send) and we apply it to the client's own copy.
+		ClientPlayNetworking.registerListener(RetroAPINetworking.BLOCK_ENTITY_SYNC_CHANNEL, (ctx, buffer) -> {
+			int x = buffer.readInt();
+			int y = buffer.readInt();
+			int z = buffer.readInt();
+			byte[] data = buffer.readByteArray();
+			ctx.ensureOnMainThread();
+			net.minecraft.world.World world = ctx.minecraft().world;
+			if (world == null) {
+				return;
+			}
+			net.minecraft.block.entity.BlockEntity blockEntity = world.getBlockEntity(x, y, z);
+			if (blockEntity == null) {
+				return; // the chunk is not loaded here yet; the chunk-send pass will carry it
+			}
+			com.periut.retroapi.register.blockentity.BlockEntitySyncCodec.decode(blockEntity, data);
+			world.setBlocksDirty(x, y, z, x, y, z);
+		});
+
 		// World sound bridge: b1.7.3 has no sound packet, so the server forwards world.playSound
 		// calls over OSL (ServerWorldSoundMixin) and we play them through the local world here.
 		// Local plays win: if the client already played this sound itself (prediction, entity

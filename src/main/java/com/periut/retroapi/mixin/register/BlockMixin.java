@@ -34,6 +34,30 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Shadow protected abstract Block setOpacity(int opacity);
 	@Shadow protected abstract Block setUnbreakable();
 
+	/**
+	 * Resolve the {@link RetroBlockAccess#AUTO_ID} sentinel into a real, reserved placeholder slot
+	 * before the constructor consumes it (the original body runs {@code Block.BLOCKS[id] = this} and
+	 * fills the parallel {@code BLOCKS_*} arrays immediately after this point). Allocating here - rather
+	 * than scanning in advance and passing the result in - makes the scan and the store a single atomic
+	 * step, so no other block can claim the same slot in between. Any real id is left untouched.
+	 *
+	 * <p>Both constructors are covered; the two-arg form delegates to the three-arg one, and since only
+	 * the sentinel is rewritten the second pass is a no-op, so an id is never allocated twice.
+	 */
+	@org.spongepowered.asm.mixin.injection.ModifyVariable(
+		method = "<init>(ILnet/minecraft/block/material/Material;)V",
+		at = @At("HEAD"), argsOnly = true, ordinal = 0)
+	private static int retroapi$resolveAutoId(int id) {
+		return id == RetroBlockAccess.AUTO_ID ? com.periut.retroapi.register.block.RetroBlockIds.allocate() : id;
+	}
+
+	@org.spongepowered.asm.mixin.injection.ModifyVariable(
+		method = "<init>(IILnet/minecraft/block/material/Material;)V",
+		at = @At("HEAD"), argsOnly = true, ordinal = 0)
+	private static int retroapi$resolveAutoIdTextured(int id) {
+		return id == RetroBlockAccess.AUTO_ID ? com.periut.retroapi.register.block.RetroBlockIds.allocate() : id;
+	}
+
 	@Unique private int retroapi$renderType = -1;
 	@Unique private boolean retroapi$solidRenderSet = false;
 	@Unique private boolean retroapi$solidRender = true;

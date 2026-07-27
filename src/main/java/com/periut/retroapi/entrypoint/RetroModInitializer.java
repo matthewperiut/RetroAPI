@@ -44,9 +44,27 @@ package com.periut.retroapi.entrypoint;
 public interface RetroModInitializer {
 
 	/**
-	 * Registers this mod's content: blocks, items, block entities, entities, recipes, achievements,
-	 * dimensions, tags, features - everything RetroAPI hands out a {@code register(...)} for. Runs on
-	 * both sides (client and dedicated server), exactly once, before any world exists.
+	 * Registers this mod's content: blocks, items, block entities, entities, dimensions, tags, features -
+	 * everything RetroAPI hands out a {@code register(...)} for. Runs on both sides (client and dedicated
+	 * server), exactly once, before any world exists.
+	 *
+	 * <p><b>Anything that REFERENCES another mod's content belongs in a registration callback instead,
+	 * not here.</b> Every mod's {@code initRetro()} runs before any callback fires, but they run in mod
+	 * load order relative to each other - so a recipe or an achievement icon built here that names another
+	 * mod's item works or fails depending on which mod loaded first, which surfaces as an intermittent
+	 * crash that moves around when you add an unrelated dependency. The callbacks exist precisely to give
+	 * that a defined order:
+	 *
+	 * <pre>
+	 * RecipeRegistrationCallback.EVENT.register(() -&gt; { ... });        // after ALL blocks and items
+	 * AchievementRegistrationCallback.EVENT.register(() -&gt; { ... });   // after ALL blocks and items
+	 * </pre>
+	 *
+	 * <p>The full order is: every mod's {@code initRetro()}, then
+	 * {@link com.periut.retroapi.register.block.event.BlockRegistrationCallback}, then
+	 * {@link com.periut.retroapi.register.item.event.ItemRegistrationCallback}, then achievements, then
+	 * recipes. Registering your own blocks and items here (not in a callback) is right and is what the
+	 * callbacks are ordered around.
 	 */
 	void initRetro();
 }

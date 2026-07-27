@@ -23,6 +23,27 @@ import net.minecraft.item.Item;
  */
 public interface RetroBlockAccess {
 
+	/**
+	 * Sentinel id meaning "RetroAPI, allocate a placeholder slot for me." Pass it straight to a
+	 * vanilla {@code Block} (or subclass) constructor in place of a real id; RetroAPI fills in a free,
+	 * reserved slot atomically from <em>inside</em> the constructor, so there is no
+	 * {@link #allocateId()} call to make and no scan-then-construct window to race:
+	 * <pre>
+	 * MyBlock block = (MyBlock) RetroBlockAccess.of(new MyBlock(RetroBlockAccess.AUTO_ID, Material.STONE))
+	 *     .strength(1.5f)
+	 *     .register(id("my_block"));
+	 * </pre>
+	 * and from a subclass that adds its own constructor args, forward the sentinel to {@code super}:
+	 * <pre>
+	 * public MyBlock(int id) { super(id, Material.STONE); ... }   // new MyBlock(RetroBlockAccess.AUTO_ID)
+	 * </pre>
+	 *
+	 * <p>This is the block twin of {@link com.periut.retroapi.register.item.RetroItemAccess#AUTO_ID} and
+	 * has the same value, so the two can never be told apart by accident. It is a deliberately
+	 * out-of-range value rather than {@code -1}, which is a legitimate id in the item space.
+	 */
+	int AUTO_ID = Integer.MIN_VALUE;
+
 	// --- Block property wrappers (delegate to protected Block methods) ---
 
 	default RetroBlockAccess sounds(BlockSoundGroup sounds) { throw RetroInjected.missing(); }
@@ -293,6 +314,25 @@ public interface RetroBlockAccess {
 	default Block register(NamespacedIdentifier id, java.util.function.IntFunction<net.minecraft.item.BlockItem> itemFactory) { throw RetroInjected.missing(); }
 
 	/**
+	 * This same block as a plain {@link Block}, for reaching a vanilla method mid-chain.
+	 *
+	 * <p>Every builder method here returns {@code RetroBlockAccess} so the chain keeps working inside
+	 * RetroAPI itself, which cannot compile against its own interface injection - so from a consuming mod,
+	 * where {@code Block} does carry all of these methods, a chain that starts with a RetroAPI call is
+	 * stuck in RetroAPI's half of the API until {@link #register} hands back a {@code Block}. This is the
+	 * way out and back:
+	 * <pre>
+	 * Block slab = RetroBlockAccess.create(Material.STONE).strength(2f).block();
+	 * slab.setBoundingBox(0f, 0f, 0f, 1f, 0.5f, 1f);           // vanilla, returns void
+	 * RetroBlockAccess.of(slab).texture(id("slab")).register(id("slab"));
+	 * </pre>
+	 * A free cast, not a conversion: it is the same object either way.
+	 */
+	default Block block() {
+		return (Block) this;
+	}
+
+	/**
 	 * Create a new Block with an automatically allocated placeholder ID.
 	 */
 	static RetroBlockAccess create(Material material) {
@@ -339,16 +379,13 @@ public interface RetroBlockAccess {
 	/**
 	 * Allocate a placeholder block ID.
 	 * Use when subclassing Block: {@code super(RetroBlockAccess.allocateId(), material)}
+	 *
+	 * <p>Every slot handed out is reserved and never handed out again, so holding one across other
+	 * registration is safe. {@link #AUTO_ID} is still preferable where you can use it: allocating from
+	 * inside the constructor makes the scan and the store one atomic step.
 	 */
 	static int allocateId() {
-		Block[] byId = Block.BLOCKS;
-		Item[] itemById = Item.ITEMS;
-		for (int i = 256; i < byId.length; i++) {
-			if (byId[i] == null && (i >= itemById.length || itemById[i] == null)) {
-				return i;
-			}
-		}
-		throw new RuntimeException("No more placeholder block IDs available (256-" + (byId.length - 1) + " exhausted)");
+		return RetroBlockIds.allocate();
 	}
 
 	/** @deprecated Use {@link #allocateId()} */

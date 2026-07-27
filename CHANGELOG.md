@@ -1,5 +1,85 @@
 # RetroAPI changelog
 
+## 0.3.5 - Right-click behavior, block entity sync, freeform multiblocks
+
+Everything here comes from one modder hitting the same wall three different ways: RetroAPI gave you a
+place to put your block, and nothing to put in it. A block could not gain right-click behavior without
+breaking other mods, a block entity could not talk to the client without pretending to be a chest, and a
+multiblock had to be a fixed shape with a controller in the middle.
+
+### Added
+- **`BlockUseCallback`: right-click behavior on any block, safely.** Beta's `CropBlock` (and most blocks)
+  never overrides `onUse`, which tempts you into mixing a fresh `onUse` INTO `CropBlock` to add, say,
+  right-click harvest. That method then shadows `Block.onUse`, and every other mod's `@Inject` into
+  `Block.onUse` silently stops running for crops - their mod breaks, from three dependencies away, with
+  no error anywhere. Listeners on this event compose instead: they run in registration order until one
+  returns `SUCCESS` or `FAIL`, and it fires for every block, before the block's own `onUse`, so it can
+  also replace or veto vanilla behavior. Hooked on the side that actually decides the interaction (the
+  client in singleplayer, the dedicated server in multiplayer), so a listener runs exactly once per
+  click.
+- **`RetroSyncedBlockEntity`: block entity data on the client, without an inventory.** b1.7.3's protocol
+  has no generic block-entity packet - the only one that carries block-entity data is the sign packet -
+  so the only vanilla-shaped way for a modded block entity to reach the client was to masquerade as a
+  container and push its state through the inventory/window packets. Anything that is not an inventory (a
+  tank's fluid level, a machine's progress bar, a barrel's displayed stack) had no answer at all.
+  Implement the interface and RetroAPI carries the block entity's NBT over its own channel, automatically
+  on chunk send and on every `setBlockDirty`; `RetroBlockEntities.sync(blockEntity)` is the explicit push.
+  It rides vanilla's own per-chunk player tracking, so only players who can see the block get the packet.
+  Override `writeSyncNbt`/`readSyncNbt` to send less than goes to disk.
+- **`RetroMultiblock.matchAnywhere(...)`: find the structure from any of its blocks.** `match` and
+  `matchAnyRotation` both assume the position IS the anchor, which is the dedicated-controller shape:
+  walk around to the core block and click that. This tries the position as every cell of the pattern in
+  every rotation and returns the first whole structure standing around it, so right-clicking any part
+  works. `Match.anchor()` reports where the controller actually landed.
+- **`RetroBlockRegion`: freeform multiblocks.** A pattern is the wrong tool for a structure whose size
+  and shape are the player's choice - a tank however many blocks tall, a room walled off with your
+  bricks, a shrine that just has to be big enough. There is no pattern to write for those, only a rule
+  for what counts as a member. `RetroBlockRegion.flood(...)` walks outward from any block through
+  everything that rule accepts, face-adjacent or through corners, with a visit limit so an unbounded
+  structure comes back marked incomplete rather than freezing the tick.
+- **Registrable tool tiers.** `RetroToolTier` was an enum, which made its five tiers the only tiers that
+  could ever exist: a mod adding bronze between stone and iron, or mithril above diamond, had to pick the
+  nearest vanilla tier and lose the distinction. It is a registry now, and the built-ins are ordinary
+  entries in it: `RetroToolTier.register("bronze", 1, 5.0F)`. Levels need not be unique, so two tiers can
+  harvest the same blocks and still differ in speed and in which `needs_<name>_tool` tag they answer to.
+  Being a class rather than an enum, it can no longer be used in a `switch` or an `EnumSet`; compare with
+  `isAtLeast` or read `getLevel()`. `values()` is kept so existing loops still compile.
+- **`RetroToolTier.Positional`: a tool tier that can see the block's position and state.** `Contextual`
+  gets the `Block`, which is the block TYPE, and every state of a block is the same `Block` object, so
+  "diamond-tier on lit ore, wood-tier on unlit" was not expressible. Beta's harvest hooks carry no
+  coordinates at all, so RetroAPI records what a player is breaking (`RetroBreakTarget`, captured in the
+  interaction managers) and hands the position over. Reads are validated against the world, so a stale
+  record from an abandoned break can never answer for the wrong block, and the world is null outside an
+  actual break rather than wrong.
+- **`RetroBlockAccess.AUTO_ID`.** The item side has had this since 0.3.0 and the block side simply never
+  got it. Pass it to a `Block` constructor in place of an id and RetroAPI fills in a free slot from
+  inside the constructor, so the scan and the store are one atomic step.
+- **`RetroBlockAccess.block()` and `RetroItemAccess.item()`.** Every builder method returns the RetroAPI
+  interface, so from a consuming mod - where interface injection puts all of these methods on `Block` and
+  `Item` themselves - a chain that starts with a RetroAPI call is stuck in RetroAPI's half of the API
+  until `register` hands the vanilla type back. These are the way out and back mid-chain. (The return
+  types cannot simply be flipped to `Block`/`Item`: RetroAPI cannot compile against its own interface
+  injection, so its own source would stop chaining.)
+
+### Fixed
+- **Hoes no longer mine leaves faster.** Material inference gave any block with no declared tags a
+  sensible default tool, and it was applying to vanilla blocks too. Leaves are the `LEAVES` material,
+  modern Minecraft files leaves under `mineable/hoe`, and so merely installing RetroAPI handed every beta
+  hoe a leaf-cutting speed bonus. Vanilla membership is spelled out block by block in `VanillaToolTags`,
+  transcribed from beta's own tool code, and that list is now the whole truth about vanilla blocks;
+  inference stops at the modded id range. A mod that wants beta leaves in a tag can still say so
+  explicitly. A library has no business changing how vanilla plays.
+- **`RetroBlockAccess.allocateId()` now reserves what it hands out.** It scanned `Block.BLOCKS` for a
+  null slot and returned it, so two allocations before either constructor ran picked the same id and the
+  second store silently won - the exact race `RetroItemIds` was written to close on the item side. Block
+  ids now go through the same reserving, synchronized allocator.
+- **`RetroModInitializer.initRetro()`'s own javadoc caused a bug.** It listed recipes and achievements
+  among the things to register there. Every mod's `initRetro()` runs before any callback fires, but they
+  run in mod load order relative to each other, so a recipe built there that names another mod's item
+  works or fails depending on which mod loaded first: an intermittent crash that moves around when you add
+  an unrelated dependency. The doc now says what the ordered callbacks
+  (`RecipeRegistrationCallback`, `AchievementRegistrationCallback`) are for and spells out the full order.
+
 ## 0.3.4 - Tinted item layers on any item
 
 ### Added

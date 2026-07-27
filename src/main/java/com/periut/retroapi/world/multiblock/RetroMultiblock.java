@@ -63,11 +63,14 @@ public final class RetroMultiblock {
 	/** A successful match: the facing it matched in, and every position the pattern covers. */
 	public static final class Match {
 		private final RetroFacing facing;
+		private final RetroVec3i anchor;
 		private final List<RetroVec3i> positions;
 		private final Map<Character, List<RetroVec3i>> byKey;
 
-		Match(RetroFacing facing, List<RetroVec3i> positions, Map<Character, List<RetroVec3i>> byKey) {
+		Match(RetroFacing facing, RetroVec3i anchor, List<RetroVec3i> positions,
+				Map<Character, List<RetroVec3i>> byKey) {
 			this.facing = facing;
+			this.anchor = anchor;
 			this.positions = positions;
 			this.byKey = byKey;
 		}
@@ -75,6 +78,15 @@ public final class RetroMultiblock {
 		/** The rotation the structure was found in (its "front"). */
 		public RetroFacing facing() {
 			return facing;
+		}
+
+		/**
+		 * Where the anchor cell landed in the world - the controller block. Worth reading after
+		 * {@link RetroMultiblock#matchAnywhere}, which finds the structure from a position that is
+		 * usually NOT the anchor.
+		 */
+		public RetroVec3i anchor() {
+			return anchor;
 		}
 
 		/** Every world position the pattern covers, anchor included. */
@@ -165,7 +177,7 @@ public final class RetroMultiblock {
 				}
 			}
 		}
-		return new Match(facing, positions, byKey);
+		return new Match(facing, new RetroVec3i(x, y, z), positions, byKey);
 	}
 
 	/**
@@ -177,6 +189,55 @@ public final class RetroMultiblock {
 			Match match = match(world, x, y, z, facing);
 			if (match != null) {
 				return match;
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * Finds the structure from ANY of its blocks, not just the anchor - the "right-click the thing
+	 * anywhere and it works" behavior, rather than "walk around to the controller and click that".
+	 *
+	 * <p>{@link #match} and {@link #matchAnyRotation} both assume {@code (x, y, z)} IS the anchor cell,
+	 * which is the dedicated-controller shape: one block owns the multiblock and everything else is
+	 * scenery. This one tries the position as every cell of the pattern in turn, in every rotation, and
+	 * returns the first whole structure that stands up around it. Read {@link Match#anchor()} for where
+	 * the controller actually is.
+	 *
+	 * <pre>
+	 * BlockUseCallback.EVENT.register((player, world, held, x, y, z, face) -&gt; {
+	 *     RetroMultiblock.Match match = ALTAR.matchAnywhere(world, x, y, z);
+	 *     if (match == null) return BlockUseCallback.Result.PASS;   // just a brick, not my altar
+	 *     ...
+	 * });
+	 * </pre>
+	 *
+	 * <p>Costs one {@link #match} attempt per (cell, rotation) pair, so it is a tick-time call for a
+	 * structure of a few dozen cells, not something to run for every block in a chunk.
+	 */
+	public Match matchAnywhere(BlockView world, int x, int y, int z) {
+		RetroVec3i anchorOffset = findAnchor();
+		if (anchorOffset == null) {
+			return null;
+		}
+		for (int layer = 0; layer < layers.size(); layer++) {
+			String[] rows = layers.get(layer);
+			for (int row = 0; row < rows.length; row++) {
+				String line = rows[row];
+				for (int col = 0; col < line.length(); col++) {
+					if (keys.get(line.charAt(col)) == ANY) {
+						continue; // a don't-care cell tells us nothing about where the anchor is
+					}
+					RetroVec3i cell = new RetroVec3i(col, layer, row).subtract(anchorOffset);
+					for (RetroFacing facing : RetroFacing.values()) {
+						// (x,y,z) is this cell, so the anchor sits back along the rotated offset.
+						RetroVec3i offset = cell.rotateTo(facing);
+						Match match = match(world, x - offset.x, y - offset.y, z - offset.z, facing);
+						if (match != null) {
+							return match;
+						}
+					}
+				}
 			}
 		}
 		return null;

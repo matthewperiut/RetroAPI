@@ -53,6 +53,8 @@ public final class RetroTags {
 	private static Map<Block, RetroToolTier> tierCache = null;
 	/** Guards the one-time lazy registration of the default vanilla tool-tag membership. */
 	private static boolean vanillaDefaultsLoaded = false;
+	/** Vanilla owns block ids 1-255; everything from here up is modded (see IdAssigner). */
+	private static final int VANILLA_BLOCK_IDS = 256;
 
 	private RetroTags() {}
 
@@ -209,18 +211,27 @@ public final class RetroTags {
 	}
 
 	/**
-	 * What a block is mineable with when nothing declared it - inferred from its material, the way modern
-	 * Minecraft's own tags are laid out (stone/metal -&gt; pickaxe, wood -&gt; axe, soil/sand -&gt; shovel,
-	 * leaves -&gt; shears + hoe + sword, wool -&gt; shears).
+	 * What a MODDED block is mineable with when nothing declared it - inferred from its material, the way
+	 * modern Minecraft's own tags are laid out (stone/metal -&gt; pickaxe, wood -&gt; axe, soil/sand -&gt;
+	 * shovel, leaves -&gt; shears + hoe + sword, wool -&gt; shears).
 	 *
 	 * <p>This closes the trap behind "my tool can't break my block". Beta decides whether a tool is
 	 * effective from hardcoded block LISTS inside each vanilla tool item - lists a modded block obviously
 	 * is not in - so a modded stone-material block dropped nothing for ANY tool, vanilla or modded, until
 	 * its author found {@code .mineable(...)}. Inferring the obvious default makes a block behave like the
 	 * vanilla blocks it is made of, while an explicit {@code .mineable(...)} or a data tag still wins.
+	 *
+	 * <p><b>Vanilla blocks are excluded on purpose.</b> Their membership is spelled out block by block in
+	 * {@link VanillaToolTags}, transcribed from beta's own tool code, and that list is the whole truth
+	 * about them - falling through to material inference for the blocks it omits would silently rewrite
+	 * vanilla gameplay. It did exactly that once: leaves are the {@code LEAVES} material, modern
+	 * Minecraft files leaves under {@code mineable/hoe}, and so installing RetroAPI made every hoe in
+	 * beta chop leaves faster than it should. A library has no business changing how vanilla plays, so
+	 * inference now stops at the modded id range. A mod that WANTS beta leaves in a tag can still say so
+	 * with {@code RetroTags.addToTag(RetroTool.HOE.mineableTag(), Block.LEAVES)}.
 	 */
 	public static Set<RetroTool> defaultMineableTools(Block block) {
-		if (block == null) {
+		if (block == null || block.id < VANILLA_BLOCK_IDS) {
 			return Collections.emptySet();
 		}
 		net.minecraft.block.material.Material material = block.material;

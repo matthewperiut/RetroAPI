@@ -10,6 +10,10 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 public class ServerPlayerInteractionManagerMixin {
 	// Server-side half of the worldEvent(2001) block-break packing widening (see RetroIds /
 	// ClientPlayerInteractionManagerMixin). Matches StationAPI's flattening layout: meta * (1<<28).
+	//
+	// NOTE: this whole class is disabled under StationAPI (RetroAPIMixinPlugin), so nothing that should
+	// stay live under StationAPI may live here. The BlockUseCallback hook targets the same class from
+	// BlockUseServerMixin for exactly that reason.
 	@ModifyConstant(method = "tryBreakBlock", constant = @Constant(intValue = 256))
 	private int retroapi$widenBlockIdPacking(int original) {
 		return RetroIds.BREAK_EVENT_META_MULTIPLIER;

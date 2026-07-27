@@ -83,6 +83,8 @@ public abstract class ItemMixin implements RetroItemAccess {
 	@org.spongepowered.asm.mixin.Unique
 	private com.periut.retroapi.tag.RetroToolTier.Contextual retroapi$toolTierContextual = null;
 	@org.spongepowered.asm.mixin.Unique
+	private com.periut.retroapi.tag.RetroToolTier.Positional retroapi$toolTierPositional = null;
+	@org.spongepowered.asm.mixin.Unique
 	private float retroapi$miningSpeed = 0.0F;
 	@org.spongepowered.asm.mixin.Unique
 	private int retroapi$attackDamage = -1;
@@ -108,6 +110,17 @@ public abstract class ItemMixin implements RetroItemAccess {
 	@Override
 	public com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual() {
 		return this.retroapi$toolTierContextual;
+	}
+
+	@Override
+	public RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Positional tier) {
+		this.retroapi$toolTierPositional = tier;
+		return this;
+	}
+
+	@Override
+	public com.periut.retroapi.tag.RetroToolTier.Positional getToolTierPositional() {
+		return this.retroapi$toolTierPositional;
 	}
 
 	@Override

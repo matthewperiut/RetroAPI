@@ -35,6 +35,14 @@ public class RetroAPINetworking {
 	public static final NamespacedIdentifier STATE_SYNC_CHANNEL =
 		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "state_sync"), true, false);
 
+	// Block entity sync (server -> client): x, y, z, then the block entity's sync NBT. b1.7.3's protocol
+	// has no generic block-entity packet at all (the only one that carries block-entity data is the sign
+	// packet), so a modded block entity's server-side state could never reach the client except by
+	// masquerading as a container. Sent on chunk send and on every setBlockDirty for block entities that
+	// implement RetroSyncedBlockEntity. See RetroBlockEntities.sync.
+	public static final NamespacedIdentifier BLOCK_ENTITY_SYNC_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "block_entity_sync"), true, false);
+
 	// World sound bridge (server -> client): b1.7.3's protocol has NO sound packet - vanilla's
 	// ServerWorldEventListener.playSound is an empty method, so every world.playSound on a dedicated
 	// server is silently dropped (mob attack sounds, custom block sounds...). The bridge sends

@@ -14,9 +14,12 @@ public class ClientPlayerInteractionManagerMixin {
 	// Widen the worldEvent(2001) block-break packing from vanilla's `blockId + meta*256` (8-bit id)
 	// to `blockId + meta*(1<<28)` (28-bit id), matching StationAPI's flattening layout so the encode
 	// here agrees with WorldRendererMixin's decode. See RetroIds for the full rationale.
+	//
+	// NOTE: this whole class is disabled under StationAPI (RetroAPIMixinPlugin), so nothing that should
+	// stay live under StationAPI may live here. The BlockUseCallback hook targets the same class from
+	// BlockUseClientMixin for exactly that reason.
 	@ModifyConstant(method = "breakBlock", constant = @Constant(intValue = 256))
 	private int retroapi$widenBlockIdPacking(int original) {
 		return RetroIds.BREAK_EVENT_META_MULTIPLIER;
 	}
 }
-

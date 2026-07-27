@@ -146,6 +146,24 @@ public interface RetroItemAccess {
 	 */
 	default RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Contextual tier) { throw RetroInjected.missing(); }
 
+	/**
+	 * A tool tier that also sees WHERE the block is, so it can read that block's state.
+	 * {@link com.periut.retroapi.tag.RetroToolTier.Contextual} gets the {@code Block}, which is the block
+	 * TYPE, and every state of a block is the same {@code Block} object - so "diamond-tier on lit ore,
+	 * wood-tier on unlit" was not expressible. RetroAPI records the block a player is breaking and hands
+	 * the position over here.
+	 * <pre>
+	 * .tier((stack, block, player, world, x, y, z) -&gt; {
+	 *     RetroBlockState state = RetroStates.get(world, x, y, z);
+	 *     return state != null &amp;&amp; state.get(MyOre.RICH) ? RetroToolTier.DIAMOND : RetroToolTier.IRON;
+	 * })
+	 * </pre>
+	 * The world is null (and the coordinates zero) when a tier is asked for outside an actual break -
+	 * a tooltip, another mod's query - the same "no context" rule as the player. Consulted ahead of every
+	 * other tier form.
+	 */
+	default RetroItemAccess tier(com.periut.retroapi.tag.RetroToolTier.Positional tier) { throw RetroInjected.missing(); }
+
 	/** The declared static tool tier, or null. Prefer {@code RetroToolTier.of(stack)} which also infers ToolItems and honors the dynamic tier. */
 	default com.periut.retroapi.tag.RetroToolTier getToolTier() { throw RetroInjected.missing(); }
 
@@ -154,6 +172,9 @@ public interface RetroItemAccess {
 
 	/** The declared block-aware tool-tier supplier, or null. */
 	default com.periut.retroapi.tag.RetroToolTier.Contextual getToolTierContextual() { throw RetroInjected.missing(); }
+
+	/** The declared position-aware tool-tier supplier, or null. */
+	default com.periut.retroapi.tag.RetroToolTier.Positional getToolTierPositional() { throw RetroInjected.missing(); }
 
 	/**
 	 * How fast this item mines the blocks its {@link #tool} kinds cover - the {@code miningSpeed} of a
@@ -225,6 +246,25 @@ public interface RetroItemAccess {
 	 * Register this item with RetroAPI.
 	 */
 	default Item register(NamespacedIdentifier id) { throw RetroInjected.missing(); }
+
+	/**
+	 * This same item as a plain {@link Item}, for reaching a vanilla method mid-chain.
+	 *
+	 * <p>Every builder method here returns {@code RetroItemAccess} so the chain keeps working inside
+	 * RetroAPI itself, which cannot compile against its own interface injection - so from a consuming mod,
+	 * where {@code Item} does carry all of these methods, a chain that starts with a RetroAPI call is
+	 * stuck in RetroAPI's half of the API until {@link #register} hands back an {@code Item}. This is the
+	 * way out and back:
+	 * <pre>
+	 * RetroItemAccess.of(RetroItemAccess.create().maxStackSize(16).item().setTranslationKey("wand"))
+	 *     .texture(id("wand"))
+	 *     .register(id("wand"));
+	 * </pre>
+	 * A free cast, not a conversion: it is the same object either way.
+	 */
+	default Item item() {
+		return (Item) this;
+	}
 
 	/**
 	 * Create a new Item with an automatically allocated placeholder ID.

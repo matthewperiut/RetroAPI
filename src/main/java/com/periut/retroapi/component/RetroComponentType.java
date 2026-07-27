@@ -26,21 +26,52 @@ public final class RetroComponentType<T> {
 	}
 
 	private final NamespacedIdentifier id;
-	private final T defaultValue;
+	private final java.util.function.Supplier<T> defaultSupplier;
 	private final Serializer<T> serializer;
 
 	RetroComponentType(NamespacedIdentifier id, T defaultValue, Serializer<T> serializer) {
+		this(id, defaultSupplierFor(defaultValue), serializer);
+	}
+
+	RetroComponentType(NamespacedIdentifier id, java.util.function.Supplier<T> defaultSupplier,
+			Serializer<T> serializer) {
 		this.id = id;
-		this.defaultValue = defaultValue;
+		this.defaultSupplier = defaultSupplier;
 		this.serializer = serializer;
+	}
+
+	/**
+	 * A default value is handed out to every stack that has not set one, so a MUTABLE default must not be
+	 * shared: a mod that does {@code get(stack, LIST).add(x)} would be writing into the one instance every
+	 * other stack also reads, and the value would appear on every item at once. Collections and maps are
+	 * therefore copied per read; anything else (a boxed number, a String, a record) is immutable in
+	 * practice and shared safely. Register a {@link com.periut.retroapi.component.RetroComponents#registerSupplied}
+	 * default for a mutable type of your own.
+	 */
+	@SuppressWarnings("unchecked")
+	private static <T> java.util.function.Supplier<T> defaultSupplierFor(T value) {
+		if (value instanceof java.util.List<?> list) {
+			return () -> (T) new java.util.ArrayList<>(list);
+		}
+		if (value instanceof java.util.Set<?> set) {
+			return () -> (T) new java.util.LinkedHashSet<>(set);
+		}
+		if (value instanceof java.util.Map<?, ?> map) {
+			return () -> (T) new java.util.LinkedHashMap<>(map);
+		}
+		return () -> value;
 	}
 
 	public NamespacedIdentifier getId() {
 		return this.id;
 	}
 
+	/**
+	 * A fresh default value for a stack that has none. Never the same mutable instance twice - see
+	 * {@link #defaultSupplierFor}.
+	 */
 	public T getDefault() {
-		return this.defaultValue;
+		return this.defaultSupplier.get();
 	}
 
 	public Serializer<T> getSerializer() {

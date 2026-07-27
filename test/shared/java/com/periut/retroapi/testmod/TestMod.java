@@ -347,6 +347,20 @@ public class TestMod implements RetroModInitializer {
 		TEST_LIST = com.periut.retroapi.component.RetroComponents.register(id("test_list"), java.util.Collections.emptyList(),
 			com.periut.retroapi.component.RetroComponentType.listOf(com.periut.retroapi.component.RetroComponentType.INT));
 
+		// A MUTABLE component default must not be shared between stacks. It used to be handed out as one
+		// instance, so a mod that mutated what get() returned was writing into the value every other
+		// stack reads - the data showed up on every item in the game at once, and only for list/map/set
+		// components, which is exactly how it presented in the wild.
+		ItemStack one = new ItemStack(Item.STICK);
+		ItemStack two = new ItemStack(Item.STICK);
+		com.periut.retroapi.component.RetroComponents.get(one, TEST_LIST).add(99);
+		java.util.List<Integer> otherStack =
+			com.periut.retroapi.component.RetroComponents.get(two, TEST_LIST);
+		boolean isolated = otherStack.isEmpty()
+			&& !com.periut.retroapi.component.RetroComponents.has(one, TEST_LIST);
+		LOGGER.info("[new-features] mutable component default isolated (other stack sees {}) {}",
+			otherStack, isolated ? "PASS" : "FAIL");
+
 		// Register achievements AFTER blocks/items so icons can reference registered content.
 		TestAchievements.register();
 

@@ -36,10 +36,33 @@ public final class RetroComponents {
 	private RetroComponents() {
 	}
 
-	/** Registers a component type. Mirrors modern's {@code DataComponentType.builder().persistent(codec)}. */
+	/**
+	 * Registers a component type. Mirrors modern's {@code DataComponentType.builder().persistent(codec)}.
+	 *
+	 * <p>A {@code List}/{@code Set}/{@code Map} default is copied for each stack that reads it, so
+	 * mutating what {@link #get} returns can never leak onto other stacks. For a mutable default of your
+	 * own type, use {@link #registerSupplied} - or treat the value as immutable and always {@link #set}
+	 * a new one.
+	 */
 	public static <T> RetroComponentType<T> register(NamespacedIdentifier id, T defaultValue,
 			RetroComponentType.Serializer<T> serializer) {
 		RetroComponentType<T> type = new RetroComponentType<>(id, defaultValue, serializer);
+		REGISTRY.put(id.toString(), type);
+		return type;
+	}
+
+	/**
+	 * Registers a component type whose default is built fresh each time it is handed out. Use this for a
+	 * mutable default of a type RetroAPI cannot copy for you (anything that is not a list, set or map):
+	 * a shared mutable default is read by every stack that has not set its own value, so mutating it in
+	 * place writes to all of them at once.
+	 * <pre>
+	 * RetroComponents.registerSupplied(id("loadout"), Loadout::new, LOADOUT_SERIALIZER);
+	 * </pre>
+	 */
+	public static <T> RetroComponentType<T> registerSupplied(NamespacedIdentifier id,
+			java.util.function.Supplier<T> defaultSupplier, RetroComponentType.Serializer<T> serializer) {
+		RetroComponentType<T> type = new RetroComponentType<>(id, defaultSupplier, serializer);
 		REGISTRY.put(id.toString(), type);
 		return type;
 	}

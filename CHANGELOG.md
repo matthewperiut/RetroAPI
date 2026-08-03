@@ -1,5 +1,95 @@
 # RetroAPI changelog
 
+## 0.3.7 - World generation: modern noise, cubic biomes, carvers, and world height
+
+Four additions, all from the same gap. RetroAPI could add a block to a world and could add a feature to
+decoration, and had nothing at all to say about the two things a world-generation mod actually needs: the
+*shape* of the terrain, and somewhere to record what a place **is**.
+
+### Added
+
+- **`world.noise`: the modern noise stack, ported.** Beta ships `OctavePerlinNoiseSampler`, which takes an
+  octave *count* and halves the amplitude each step - one fixed spectrum. Modern worldgen takes a
+  `firstOctave` and an amplitude *per octave*, so a noise can be deliberately lumpy at one scale and smooth
+  at another, and it sums two Perlins at incommensurable scales so the lattice artifacts that make a single
+  Perlin's tunnels run along the axes cancel out. Neither is expressible on beta's sampler, and both are
+  load-bearing for anything that wants modern cave or terrain shapes.
+
+  `RetroNormalNoise` / `RetroPerlinNoise` / `RetroImprovedNoise` / `RetroXoroshiro` /
+  `RetroPositionalRandom` / `RetroDensity` are faithful ports with no dependency on beta's or Mojang's
+  classes, including the positional random factory - noises are forked by *name*
+  (`fromHashOf("mymod:cheese")`), which is what keeps a dozen simultaneous noises independent and means
+  adding a new one later does not shift the ones a world already generated with.
+
+  ```java
+  RetroPositionalRandom forks = new RetroXoroshiro(world.getSeed()).forkPositional();
+  RetroNormalNoise cheese = RetroNormalNoise.create(
+      forks.fromHashOf("mymod:cave_cheese"), -8, 0.5, 1, 2, 1, 2, 1, 0, 2, 0);
+  double d = cheese.getValue(x, y, z, 1.0, 2.0 / 3.0);
+  ```
+
+  `RetroDensity` carries the density-function transforms (`squeeze`, `quarterNegative`, `intervalSelect`,
+  `yGradient`, ...) so a formula transcribed from modern worldgen data reads the way its source did.
+- **`RetroCubicBiomes`: biomes on a cubic grid, stored with the world.** Beta has exactly one notion of
+  where you are: `Biome.getBiome(temperature, rainfall)`, a pure function of two 2D noises. Everything at
+  an X/Z is in the same biome from bedrock to sky and the answer is recomputed from the seed rather than
+  stored. That cannot express a cave - a mushroom cavern under a desert is not a property of the desert,
+  two caverns a hundred blocks apart vertically are not the same place, and a cavern a player has walked
+  through has an identity that has to survive being unloaded.
+
+  So: a sparse grid of 16x16x16 cells, each either **unassigned** or holding a registered
+  `RetroCubicBiome`. `get` returns `null` for unassigned rather than a fallback biome, because "no cave
+  biome here" is the right answer for most of the world and code that must distinguish the two cannot if
+  the API lies about it. A chunk whose cells are all unassigned writes **no sidecar section at all**, so
+  its file stays byte-identical to a 0.3.6 one.
+
+  ```java
+  public static final RetroCubicBiome MUSHROOM = RetroCubicBiomes.register(id("mushroom"));
+
+  RetroCubicBiomes.setCell(chunk, cellY, MUSHROOM);              // during generation
+  RetroCubicBiome here = RetroCubicBiomes.get(world, x, y, z);   // null when unassigned
+  ```
+
+  Cells are stored by *name* through a per-chunk palette, and a cell naming a biome whose mod is missing
+  this session is parked and written back out on save rather than erased - the same discipline the modded
+  block and block-reference sections already use, for the same reason. Sync rides its own
+  `retroapi:cubic_biome` channel rather than the chunk packet, deliberately: `WorldChunkPacketMixin` is
+  disabled under StationAPI, so a section on that packet would silently stop syncing in exactly the
+  configuration that has to work.
+- **`RetroCarvers`: carving you can register, and vanilla carving you can turn off.** Beta welds caves into
+  its generators - each constructs its own `CaveCarver` and calls it from `getChunk`, with no registry, no
+  event and no switch. A mod wanting different caves had to mixin every generator, or carve afterwards
+  through `world.setBlock` and pay lighting and re-render costs per block of every cave in the world.
+
+  ```java
+  RetroCarvers.setVanillaCarving(0, false);
+  RetroCarvers.register(new MyNoiseCarver()).dimension(0).register();
+  ```
+
+  Carvers run against the chunk's raw `byte[]` before lighting, heightmaps or decoration exist, which is
+  the cheapest possible place to shape terrain. `RetroCarverContext.surfaceTop` deserves a note: it reports
+  the topmost **solid** block, not the heightmap, because beta's heightmap counts water - a carver that
+  measured depth from it would open holes in sea floors and drain oceans into the caves.
+- **`RetroWorldHeight`: per-dimension vertical extension.** Beta's Y is seven bits wide in the chunk array,
+  so a block at y128 or y-1 has nowhere to go - which turns out to be what makes extension vanilla-safe:
+  the blocks live in the sidecar (a new dense `vext` section, absent from chunks with none) and a vanilla
+  session plays an ordinary 0-127 world, unaware and undamaged.
+
+  ```java
+  RetroWorldHeight.extend(0, 48, 0);        // overworld: y -48 .. 127
+  RetroWorldHeight.setBlock(world, x, -20, z, Block.STONE.id, 0);
+  ```
+
+  With a downward extension the y0-4 bedrock band is **not** duplicated at the new bottom; `bedrockY`
+  reports the extended floor and the world's floor moves down rather than the world gaining a second one
+  halfway up its new depth. The cost is explicit: a vanilla session then finds breakable stone at y0.
+
+  **Scope: this release ships the data layer only.** Bounds, storage, persistence and block read/write all
+  work. Client rendering and lighting of the extension range do **not** - beta's `WorldRenderer` builds its
+  chunk grid over a hardcoded 0-127 column and the light arrays are sized to match, so a block below y0 is
+  saved and reloaded correctly and is not drawn or lit. A dimension that never calls `extend` is completely
+  unaffected either way.
+
 ## 0.3.6 - Auxiliary per-position block data
 
 One addition, for the storage gap between "a few bits" and "a block entity". RetroAPI already had both

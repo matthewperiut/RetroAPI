@@ -17,6 +17,21 @@ public class ChunkExtendedBlocks {
 	 * {@link com.periut.retroapi.storage.RetroBlockData}.
 	 */
 	private final Map<String, Map<Integer, Integer>> data = new HashMap<>();
+	/**
+	 * Cubic biome cells by cellY, persisted in the sidecar's v5 cbio section. A chunk is exactly one
+	 * cell wide and one deep, so a 16-cube cell is addressed by its vertical index alone. Absent means
+	 * <em>unassigned</em>, which is not a biome and not a default - see
+	 * {@link com.periut.retroapi.biome.cubic.RetroCubicBiomes}.
+	 */
+	private final Map<Integer, Integer> cubicBiomes = new HashMap<>();
+	/**
+	 * Blocks outside vanilla's 0-127 column, when the dimension is extended; persisted in the sidecar's
+	 * v5 vext section. Allocates nothing until something is actually stored outside the column, so a
+	 * chunk in an unextended dimension carries only this empty holder. See
+	 * {@link com.periut.retroapi.world.height.RetroWorldHeight}.
+	 */
+	private final com.periut.retroapi.world.height.RetroExtendedSections extendedSections =
+		com.periut.retroapi.world.height.RetroExtendedSections.create();
 	private boolean dirty = false;
 
 	public boolean hasEntry(int index) {
@@ -133,16 +148,63 @@ public class ChunkExtendedBlocks {
 		return !data.isEmpty();
 	}
 
+	// --- cubic biome cells --------------------------------------------------------------------
+
+	/** The runtime biome id for a cell, or 0 when the cell is unassigned. */
+	public int getCubicBiome(int cellY) {
+		return cubicBiomes.getOrDefault(cellY, 0);
+	}
+
+	/** True when the cell has been assigned a biome (as opposed to reading 0 because it has none). */
+	public boolean hasCubicBiome(int cellY) {
+		return cubicBiomes.containsKey(cellY);
+	}
+
+	/**
+	 * Assigns a cell, or clears it when {@code biomeId} is 0. Clearing is a real operation, not a
+	 * no-op: an unassigned cell must be distinguishable from an assigned one, because the sidecar
+	 * writes no section at all for a chunk whose cells are all unassigned.
+	 */
+	public void setCubicBiome(int cellY, int biomeId) {
+		if (biomeId == 0) {
+			if (cubicBiomes.remove(cellY) == null) {
+				return;
+			}
+		} else {
+			cubicBiomes.put(cellY, biomeId);
+		}
+		dirty = true;
+	}
+
+	/** The whole cell table, keyed by cellY. Read by the sidecar and the sync packet. */
+	public Map<Integer, Integer> getCubicBiomeMap() {
+		return cubicBiomes;
+	}
+
+	/** True when any cell in this chunk carries a biome. */
+	public boolean hasAnyCubicBiome() {
+		return !cubicBiomes.isEmpty();
+	}
+
+	// --- extended (out-of-vanilla-column) blocks ------------------------------------------------
+
+	/** This chunk's blocks above y127 / below y0. Never null; empty unless the dimension is extended. */
+	public com.periut.retroapi.world.height.RetroExtendedSections getExtendedSections() {
+		return extendedSections;
+	}
+
 	public boolean isDirty() {
-		return dirty;
+		return dirty || extendedSections.isDirty();
 	}
 
 	public void clearDirty() {
 		dirty = false;
+		extendedSections.clearDirty();
 	}
 
 	public boolean isEmpty() {
-		return blockIds.isEmpty() && xmeta.isEmpty() && data.isEmpty();
+		return blockIds.isEmpty() && xmeta.isEmpty() && data.isEmpty() && cubicBiomes.isEmpty()
+			&& extendedSections.isEmpty();
 	}
 
 	public Map<Integer, Integer> getBlockIds() {

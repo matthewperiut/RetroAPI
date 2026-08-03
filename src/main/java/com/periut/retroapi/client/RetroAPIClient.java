@@ -139,6 +139,28 @@ public class RetroAPIClient implements ClientModInitializer {
 			}
 		});
 
+		// Cubic (cave) biome cells: a whole chunk's table on chunk send, a single cell on change.
+		// Cells arrive keyed by biome ID STRING, because runtime ids are allocated per side.
+		ClientPlayNetworking.registerListener(RetroAPINetworking.CUBIC_BIOME_CHANNEL, (ctx, buffer) -> {
+			int chunkX = buffer.readInt();
+			int chunkZ = buffer.readInt();
+			int count = buffer.readShort() & 0xFFFF;
+			int[] cellYs = new int[count];
+			String[] biomeIds = new String[count];
+			for (int i = 0; i < count; i++) {
+				cellYs[i] = buffer.readInt();
+				biomeIds[i] = buffer.readString();
+			}
+			ctx.ensureOnMainThread();
+			net.minecraft.world.World world = ctx.minecraft().world;
+			if (world == null) {
+				return;
+			}
+			for (int i = 0; i < count; i++) {
+				com.periut.retroapi.biome.cubic.RetroCubicBiomes.applySynced(world, chunkX, cellYs[i], chunkZ, biomeIds[i]);
+			}
+		});
+
 		// Block entity sync: b1.7.3 has no generic block-entity packet, so the server sends a modded
 		// block entity's NBT over OSL (ChunkMapBlockEntitySyncMixin on change, and
 		// PlayerChunkBlockEntitySyncMixin on chunk send) and we apply it to the client's own copy.

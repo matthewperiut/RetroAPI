@@ -41,6 +41,14 @@ public class RetroAPINetworking {
 	public static final NamespacedIdentifier BLOCK_DATA_CHANNEL =
 		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "block_data"), true, false);
 
+	// Cubic (cave) biome cells (server -> client): chunkX, chunkZ, count, then per cell a cellY and the
+	// biome's id STRING. Deliberately its own channel rather than a section on the chunk packet:
+	// WorldChunkPacketMixin is disabled under StationAPI (StationAPI owns chunk packets there), so a
+	// cbio section riding it would silently stop syncing in exactly the configuration RetroAPI has to
+	// support. Ids are strings because each side allocates runtime ids from its own registration order.
+	public static final NamespacedIdentifier CUBIC_BIOME_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "cubic_biome"), true, false);
+
 	// Block entity sync (server -> client): x, y, z, then the block entity's sync NBT. b1.7.3's protocol
 	// has no generic block-entity packet at all (the only one that carries block-entity data is the sign
 	// packet), so a modded block entity's server-side state could never reach the client except by

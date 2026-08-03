@@ -69,6 +69,24 @@ public class RegionSidecar {
 		}
 	}
 
+	/**
+	 * And the same story again for cubic biome cells: a cell names its biome by string id, and the mod
+	 * that registered that biome may be absent this session. Dropping the cell would silently repaint a
+	 * cavern the first time someone launches without an optional cave-biome add-on, so unresolvable
+	 * cells are parked here and written back out on save.
+	 */
+	private final Map<String, List<DeferredCell>> deferredCells = new HashMap<>();
+
+	private static final class DeferredCell {
+		final int cellY;
+		final String biomeId;
+
+		DeferredCell(int cellY, String biomeId) {
+			this.cellY = cellY;
+			this.biomeId = biomeId;
+		}
+	}
+
 	public RegionSidecar(File file) {
 		this.file = file;
 		this.root = new NbtCompound();
@@ -111,6 +129,7 @@ public class RegionSidecar {
 		// Rebuild this chunk's deferral lists from scratch on every load (re-check semantics).
 		deferred.remove(key);
 		deferredData.remove(key);
+		deferredCells.remove(key);
 
 		if (!root.contains("chunks")) return;
 		NbtCompound chunks = root.getCompound("chunks");
@@ -132,6 +151,13 @@ public class RegionSidecar {
 		// v4: auxiliary per-position data (RetroBlockData). Also loaded before the modded-position
 		// check below - a chunk may carry data for vanilla-stored blocks and nothing else.
 		loadBlockData(key, chunkNbt, extended);
+
+		// v5: cubic biome cells. Also before the modded-position check - a chunk of ordinary vanilla
+		// stone can perfectly well carry cave biome cells and no modded blocks at all.
+		loadCubicBiomes(key, chunkNbt, extended);
+
+		// v5: out-of-vanilla-column terrain (RetroWorldHeight). Same story again.
+		loadExtendedSections(chunkNbt, extended);
 
 		// Positions are encoded as byte array (4 bytes per int, big-endian)
 		byte[] posBytes = chunkNbt.getByteArray("positions");
@@ -350,6 +376,217 @@ public class RegionSidecar {
 		}
 	}
 
+	// --- v5: cubic biome cells ------------------------------------------------------------------
+
+	/**
+	 * Reads a chunk's cubic biome cells. Cells name their biome through a per-chunk string palette, the
+	 * same discipline as modded blocks and block references, because a runtime biome id belongs to the
+	 * installed mod set rather than to the world.
+	 */
+	private void loadCubicBiomes(String chunkKey, NbtCompound chunkNbt, ChunkExtendedBlocks extended) {
+		if (!chunkNbt.contains("cbio")) {
+			return;
+		}
+		NbtCompound section = chunkNbt.getCompound("cbio");
+		int[] cells = bytesToInts(section.getByteArray("cells"));
+		if (cells.length == 0) {
+			return;
+		}
+		String[] palette = section.getString("palette").split("\0");
+		byte[] paletteIdx = section.getByteArray("idx");
+		if (paletteIdx.length != cells.length) {
+			LOGGER.warn("Mismatched cells/idx arrays in cbio section for chunk {}", chunkKey);
+			return;
+		}
+		for (int i = 0; i < cells.length; i++) {
+			int pi = paletteIdx[i] & 0xFF;
+			String biomeId = pi < palette.length ? palette[pi] : "";
+			com.periut.retroapi.biome.cubic.RetroCubicBiome biome =
+				com.periut.retroapi.biome.cubic.RetroCubicBiomes.byId(biomeId);
+			if (biome == null) {
+				// The mod that registered this biome is not here right now. Park the cell so the next
+				// save carries it forward instead of silently repainting the cavern.
+				deferredCells.computeIfAbsent(chunkKey, k -> new ArrayList<>())
+					.add(new DeferredCell(cells[i], biomeId));
+				continue;
+			}
+			extended.setCubicBiome(cells[i], biome.getRuntimeId());
+		}
+	}
+
+	/**
+	 * Writes a chunk's cubic biome cells, merging back any cell that could not be resolved at load.
+	 * Writes nothing at all when the chunk has no cells, so a chunk that never got a cave biome stays
+	 * byte-identical to a v4 file.
+	 */
+	private void writeCubicBiomes(String chunkKey, NbtCompound chunkNbt, ChunkExtendedBlocks extended) {
+		Map<Integer, Integer> live = extended.getCubicBiomeMap();
+		List<DeferredCell> parked = deferredCells.get(chunkKey);
+		if (live.isEmpty() && (parked == null || parked.isEmpty())) {
+			return;
+		}
+
+		List<DeferredCell> kept = new ArrayList<>();
+		if (parked != null) {
+			for (DeferredCell cell : parked) {
+				// A parked cell whose slot was assigned this session has been superseded.
+				if (!live.containsKey(cell.cellY)) {
+					kept.add(cell);
+				}
+			}
+		}
+
+		int total = live.size() + kept.size();
+		if (total == 0) {
+			return;
+		}
+		int[] cells = new int[total];
+		byte[] paletteIdx = new byte[total];
+		Map<String, Integer> palette = new java.util.LinkedHashMap<>();
+		int i = 0;
+		for (Map.Entry<Integer, Integer> entry : live.entrySet()) {
+			com.periut.retroapi.biome.cubic.RetroCubicBiome biome =
+				com.periut.retroapi.biome.cubic.RetroCubicBiomes.byRuntimeId(entry.getValue());
+			if (biome == null) {
+				continue;
+			}
+			cells[i] = entry.getKey();
+			paletteIdx[i] = (byte) paletteIndex(palette, biome.getId().toString(), chunkKey);
+			i++;
+		}
+		for (DeferredCell cell : kept) {
+			cells[i] = cell.cellY;
+			paletteIdx[i] = (byte) paletteIndex(palette, cell.biomeId, chunkKey);
+			i++;
+		}
+		if (i == 0) {
+			return;
+		}
+
+		StringBuilder paletteBuilder = new StringBuilder();
+		for (String id : palette.keySet()) {
+			if (paletteBuilder.length() > 0) paletteBuilder.append('\0');
+			paletteBuilder.append(id);
+		}
+
+		NbtCompound section = new NbtCompound();
+		// i may be below total if a live runtime id went stale mid-session; trim so the arrays agree.
+		section.putByteArray("cells", intsToBytes(java.util.Arrays.copyOf(cells, i)));
+		section.putString("palette", paletteBuilder.toString());
+		section.putByteArray("idx", java.util.Arrays.copyOf(paletteIdx, i));
+		chunkNbt.put("cbio", section);
+	}
+
+	// --- v5: out-of-vanilla-column terrain (RetroWorldHeight) -----------------------------------
+
+	/**
+	 * Reads a chunk's extension sections. Ids are stored numerically for vanilla blocks and through a
+	 * per-section string palette for modded ones, so an extension section survives a change in the
+	 * installed mod set the same way the modded-block section does. A modded id whose mod is missing
+	 * reads back as air <em>in memory</em> but the palette entry is rewritten verbatim on save, so the
+	 * block returns when the mod does.
+	 */
+	private void loadExtendedSections(NbtCompound chunkNbt,
+			ChunkExtendedBlocks extended) {
+		if (!chunkNbt.contains("vext")) {
+			return;
+		}
+		NbtCompound vext = chunkNbt.getCompound("vext");
+		com.periut.retroapi.world.height.RetroExtendedSections sections = extended.getExtendedSections();
+		for (net.minecraft.nbt.NbtElement element : vext.values()) {
+			if (!(element instanceof NbtCompound sectionNbt)) {
+				continue;
+			}
+			int sectionIndex;
+			try {
+				sectionIndex = Integer.parseInt(element.getKey());
+			} catch (NumberFormatException e) {
+				LOGGER.warn("Bad vext section key {}", element.getKey());
+				continue;
+			}
+			byte[] raw = sectionNbt.getByteArray("ids");
+			byte[] meta = sectionNbt.getByteArray("meta");
+			int cells = com.periut.retroapi.world.height.RetroExtendedSections.SECTION_SIZE;
+			if (raw.length != cells * 2) {
+				LOGGER.warn("Bad vext ids length {} in section {}", raw.length, sectionIndex);
+				continue;
+			}
+			short[] ids = new short[cells];
+			for (int i = 0; i < cells; i++) {
+				ids[i] = (short) (((raw[i * 2] & 0xFF) << 8) | (raw[i * 2 + 1] & 0xFF));
+			}
+			// Remap palette-stored modded ids back to this session's runtime ids.
+			if (sectionNbt.contains("palette")) {
+				String[] palette = sectionNbt.getString("palette").split("\0");
+				int[] resolved = new int[palette.length];
+				for (int i = 0; i < palette.length; i++) {
+					resolved[i] = resolveBlockRef(palette[i]);
+				}
+				for (int i = 0; i < cells; i++) {
+					int stored = ids[i] & 0xFFFF;
+					// Palette references are stored as (0x8000 | paletteIndex) so they cannot collide
+					// with a numerically stored vanilla id.
+					if ((stored & 0x8000) != 0) {
+						int pi = stored & 0x7FFF;
+						ids[i] = (short) (pi < resolved.length ? resolved[pi] : 0);
+					}
+				}
+			}
+			sections.putSection(sectionIndex, ids, meta);
+		}
+		// A freshly loaded chunk is not "changed"; only later writes should mark it dirty.
+		sections.clearDirty();
+	}
+
+	/**
+	 * Writes a chunk's extension sections, skipping any that turned out to be entirely air so an
+	 * unextended world keeps writing v4-identical files.
+	 */
+	private void writeExtendedSections(NbtCompound chunkNbt, ChunkExtendedBlocks extended) {
+		com.periut.retroapi.world.height.RetroExtendedSections sections = extended.getExtendedSections();
+		sections.prune();
+		if (sections.isEmpty()) {
+			return;
+		}
+		NbtCompound vext = new NbtCompound();
+		for (Map.Entry<Integer, com.periut.retroapi.world.height.RetroExtendedSections.Section> entry
+				: sections.getSections().entrySet()) {
+			short[] ids = entry.getValue().ids();
+			byte[] meta = entry.getValue().meta();
+			int cells = ids.length;
+			byte[] raw = new byte[cells * 2];
+			Map<String, Integer> palette = new java.util.LinkedHashMap<>();
+			for (int i = 0; i < cells; i++) {
+				int id = ids[i] & 0xFFFF;
+				int stored;
+				if (id >= 256) {
+					// Modded: store a palette reference with bit 15 set as the tag. That bit is free
+					// because RetroIds.BLOCK_ID_CAPACITY is 32000, so every valid runtime id is below
+					// 0x8000 and a tagged value can never be mistaken for one.
+					int pi = palette.computeIfAbsent(blockRefStringId(id), k -> palette.size());
+					stored = 0x8000 | (pi & 0x7FFF);
+				} else {
+					stored = id;
+				}
+				raw[i * 2] = (byte) (stored >> 8);
+				raw[i * 2 + 1] = (byte) stored;
+			}
+			NbtCompound sectionNbt = new NbtCompound();
+			sectionNbt.putByteArray("ids", raw);
+			sectionNbt.putByteArray("meta", meta.clone());
+			if (!palette.isEmpty()) {
+				StringBuilder paletteBuilder = new StringBuilder();
+				for (String id : palette.keySet()) {
+					if (paletteBuilder.length() > 0) paletteBuilder.append('\0');
+					paletteBuilder.append(id);
+				}
+				sectionNbt.putString("palette", paletteBuilder.toString());
+			}
+			vext.put(Integer.toString(entry.getKey()), sectionNbt);
+		}
+		chunkNbt.put("vext", vext);
+	}
+
 	/**
 	 * The world-stable name of a block referenced by data. Vanilla ids are fixed for all time, so they
 	 * are written numerically ({@code "#20"}); modded ids are a per-install allocation and are written
@@ -436,6 +673,8 @@ public class RegionSidecar {
 			empty.putByteArray("metadata", new byte[0]);
 			writeXmeta(empty, extended);
 			writeBlockData(key, empty, extended);
+			writeCubicBiomes(key, empty, extended);
+			writeExtendedSections(empty, extended);
 			chunks.put(key, empty);
 			dirty = true;
 			return;
@@ -474,6 +713,8 @@ public class RegionSidecar {
 		chunkNbt.putByteArray("metadata", metadata);
 		writeXmeta(chunkNbt, extended);
 		writeBlockData(key, chunkNbt, extended);
+		writeCubicBiomes(key, chunkNbt, extended);
+		writeExtendedSections(chunkNbt, extended);
 
 		chunks.put(key, chunkNbt);
 		dirty = true;

@@ -11,6 +11,12 @@ public class ChunkExtendedBlocks {
 	 * position (modded or vanilla-stored); persisted in the sidecar's v3 xmeta section.
 	 */
 	private final Map<Integer, Integer> xmeta = new HashMap<>();
+	/**
+	 * Auxiliary per-position data, keyed by data-type id then position; persisted in the
+	 * sidecar's v4 data section and carried on the chunk packet. See
+	 * {@link com.periut.retroapi.storage.RetroBlockData}.
+	 */
+	private final Map<String, Map<Integer, Integer>> data = new HashMap<>();
 	private boolean dirty = false;
 
 	public boolean hasEntry(int index) {
@@ -44,6 +50,7 @@ public class ChunkExtendedBlocks {
 		blockIds.remove(index);
 		metadata.remove(index);
 		xmeta.remove(index);
+		removeAllData(index);
 		dirty = true;
 	}
 
@@ -65,6 +72,67 @@ public class ChunkExtendedBlocks {
 		return xmeta;
 	}
 
+	// --- auxiliary per-position data (RetroBlockData) ------------------------------------------
+
+	/** The value stored for a data type at a position, or 0 when nothing is stored. */
+	public int getData(String key, int index) {
+		Map<Integer, Integer> byPosition = data.get(key);
+		return byPosition == null ? 0 : byPosition.getOrDefault(index, 0);
+	}
+
+	/** True when a value is present (as opposed to reading 0 because nothing is stored). */
+	public boolean hasData(String key, int index) {
+		Map<Integer, Integer> byPosition = data.get(key);
+		return byPosition != null && byPosition.containsKey(index);
+	}
+
+	/**
+	 * Stores a value, or removes the entry when it is 0. Zero is the "absent" value on purpose:
+	 * the maps are sparse (one entry per position that actually carries data, not one per block
+	 * in the chunk), which is what keeps a chunk of ordinary terrain costing nothing.
+	 */
+	public void setData(String key, int index, int value) {
+		if (value == 0) {
+			Map<Integer, Integer> byPosition = data.get(key);
+			if (byPosition == null || byPosition.remove(index) == null) {
+				return;
+			}
+			if (byPosition.isEmpty()) {
+				data.remove(key);
+			}
+		} else {
+			data.computeIfAbsent(key, k -> new HashMap<>()).put(index, value);
+		}
+		dirty = true;
+	}
+
+	/** Drops every data type's value at one position - what a block change at that position means. */
+	public void removeAllData(int index) {
+		if (data.isEmpty()) {
+			return;
+		}
+		java.util.Iterator<Map.Entry<String, Map<Integer, Integer>>> it = data.entrySet().iterator();
+		while (it.hasNext()) {
+			Map<Integer, Integer> byPosition = it.next().getValue();
+			if (byPosition.remove(index) != null) {
+				dirty = true;
+				if (byPosition.isEmpty()) {
+					it.remove();
+				}
+			}
+		}
+	}
+
+	/** The whole data table, keyed by data-type id then position. Read by the sidecar and the chunk packet. */
+	public Map<String, Map<Integer, Integer>> getDataMap() {
+		return data;
+	}
+
+	/** True when any data type has any entry in this chunk. */
+	public boolean hasAnyData() {
+		return !data.isEmpty();
+	}
+
 	public boolean isDirty() {
 		return dirty;
 	}
@@ -74,7 +142,7 @@ public class ChunkExtendedBlocks {
 	}
 
 	public boolean isEmpty() {
-		return blockIds.isEmpty() && xmeta.isEmpty();
+		return blockIds.isEmpty() && xmeta.isEmpty() && data.isEmpty();
 	}
 
 	public Map<Integer, Integer> getBlockIds() {

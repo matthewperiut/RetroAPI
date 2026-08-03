@@ -30,6 +30,7 @@
 		"network.BlocksUpdatePacketMixin",
 		"network.WorldChunkPacketMixin",
 		"storage.AlphaWorldStorageMixin",
+		"storage.ChunkBlockDataMixin",
 		"storage.ChunkStorageMixin",
 		"storage.RegionWorldStorageSourceAccessor",
 		"storage.WorldAccessor",

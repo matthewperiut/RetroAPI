@@ -1,5 +1,43 @@
 # RetroAPI changelog
 
+## 0.3.6 - Auxiliary per-position block data
+
+One addition, for the storage gap between "a few bits" and "a block entity". RetroAPI already had both
+ends: 12 bits of block state, and vanilla's block entities. Everything that needs more than a nibble and
+less than an object per block fell down the middle.
+
+### Added
+- **`RetroBlockData`: a 32-bit value per block position, per registered type, saved and synced.** State
+  is 12 bits total for every property a block has, which is the right home for a stair's facing and half
+  and cannot also hold "which block is this stair pretending to be" - a block reference alone needs 16.
+  The other option was a block entity, and b1.7.3 walks every loaded block entity every tick and
+  range-checks it against the chunk map before calling `tick()`: fine for the dozens of chests a world
+  has, ruinous for the tens of thousands of blocks a decoration mod places, and paid forever for data
+  that changes when a player right-clicks. This is sparse maps on the chunk instead, one entry per
+  position that actually carries data, no per-tick cost at all, riding the save and sync plumbing the
+  extended block ids already use.
+
+  ```java
+  public static final RetroBlockDataType CAMO = RetroBlockData.registerBlockRef(id("camo"));
+
+  RetroBlockData.set(world, x, y, z, CAMO, RetroBlockData.encodeBlockRef(Block.GLASS.id, 0));
+  int worn = RetroBlockData.get(world, x, y, z, CAMO);
+  ```
+
+  Data persists in the region sidecar (a new v4 section, absent from chunks that carry none, so files
+  stay byte-identical to v3 otherwise), rides the chunk packet on chunk send, and is pushed to the
+  players who can see a position when it changes. Reads work from the chunk-render thread's `WorldRegion`
+  view, because a block's own renderer is exactly the caller that wants this.
+- **`registerBlockRef`: a data type whose values are block references, saved by name.** A runtime block
+  id is a property of the installed mod set, not of the world, so a raw int storing one means the day a
+  mod is added or removed, every stored reference quietly points at a different block. Block-reference
+  types go through a per-chunk string palette, the same way RetroAPI already stores the modded blocks
+  themselves, and a reference whose mod is missing this session is parked and written back out on save
+  rather than erased. Vanilla ids are fixed for all time and are written numerically.
+- **A position's data is dropped when the block there changes.** Metadata and state changes (a door
+  opening, a crop growing) go through `setBlockMeta` and keep their data; a genuine block change does
+  not, so a value can never be inherited by whatever is placed at that position next.
+
 ## 0.3.5 - Right-click behavior, block entity sync, freeform multiblocks
 
 Everything here comes from one modder hitting the same wall three different ways: RetroAPI gave you a

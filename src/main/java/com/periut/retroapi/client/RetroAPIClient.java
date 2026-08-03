@@ -124,6 +124,21 @@ public class RetroAPIClient implements ClientModInitializer {
 			}
 		});
 
+		// Single-position auxiliary data updates (RetroBlockData.set on the server). Whole chunks come
+		// in on the chunk packet; this is the post-load change - a block being re-clad, a counter moving.
+		ClientPlayNetworking.registerListener(RetroAPINetworking.BLOCK_DATA_CHANNEL, (ctx, buffer) -> {
+			int x = buffer.readInt();
+			int y = buffer.readInt();
+			int z = buffer.readInt();
+			String key = buffer.readString();
+			int value = buffer.readInt();
+			ctx.ensureOnMainThread();
+			net.minecraft.world.World world = ctx.minecraft().world;
+			if (world != null) {
+				com.periut.retroapi.storage.RetroBlockData.applySynced(world, x, y, z, key, value);
+			}
+		});
+
 		// Block entity sync: b1.7.3 has no generic block-entity packet, so the server sends a modded
 		// block entity's NBT over OSL (ChunkMapBlockEntitySyncMixin on change, and
 		// PlayerChunkBlockEntitySyncMixin on chunk send) and we apply it to the client's own copy.

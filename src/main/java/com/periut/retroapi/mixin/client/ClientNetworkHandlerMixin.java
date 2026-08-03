@@ -72,7 +72,8 @@ public class ClientNetworkHandlerMixin {
 	private void retroapi$afterHandleWorldChunk(ChunkDataS2CPacket packet, CallbackInfo ci) {
 		WorldChunkPacketAccess access = (WorldChunkPacketAccess) packet;
 		int[] xPositions = access.retroapi$getXmetaPositions();
-		if (access.retroapi$getExtCount() == 0 && xPositions == null) return;
+		java.util.Map<String, java.util.Map<Integer, Integer>> blockData = access.retroapi$getBlockData();
+		if (access.retroapi$getExtCount() == 0 && xPositions == null && blockData == null) return;
 
 		int chunkX = packet.x >> 4;
 		int chunkZ = packet.z >> 4;
@@ -93,6 +94,16 @@ public class ClientNetworkHandlerMixin {
 			int[] xValues = access.retroapi$getXmetaValues();
 			for (int i = 0; i < xPositions.length; i++) {
 				extended.setXmeta(xPositions[i], xValues[i]);
+			}
+		}
+
+		// Auxiliary per-position data (RetroBlockData) rides the same packet.
+		if (blockData != null) {
+			for (java.util.Map.Entry<String, java.util.Map<Integer, Integer>> section : blockData.entrySet()) {
+				String key = section.getKey();
+				for (java.util.Map.Entry<Integer, Integer> entry : section.getValue().entrySet()) {
+					extended.setData(key, entry.getKey(), entry.getValue());
+				}
 			}
 		}
 

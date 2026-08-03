@@ -35,6 +35,12 @@ public class RetroAPINetworking {
 	public static final NamespacedIdentifier STATE_SYNC_CHANNEL =
 		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "state_sync"), true, false);
 
+	// Auxiliary per-position data (server -> client): x, y, z, data-type key, value. Whole-chunk data
+	// rides the chunk packet (WorldChunkPacketMixin); this covers post-load single-position changes
+	// (RetroBlockData.set), and is sent only to players whose view can contain the position.
+	public static final NamespacedIdentifier BLOCK_DATA_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "block_data"), true, false);
+
 	// Block entity sync (server -> client): x, y, z, then the block entity's sync NBT. b1.7.3's protocol
 	// has no generic block-entity packet at all (the only one that carries block-entity data is the sign
 	// packet), so a modded block entity's server-side state could never reach the client except by

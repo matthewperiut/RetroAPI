@@ -23,6 +23,7 @@ public class WorldChunkPacketMixin implements WorldChunkPacketAccess {
 	@Unique private int[] retroapi$extMeta;
 	@Unique private int[] retroapi$xmetaPositions;
 	@Unique private int[] retroapi$xmetaValues;
+	@Unique private Map<String, Map<Integer, Integer>> retroapi$blockData;
 
 	@Override
 	public int retroapi$getExtCount() {
@@ -52,6 +53,11 @@ public class WorldChunkPacketMixin implements WorldChunkPacketAccess {
 	@Override
 	public int[] retroapi$getXmetaValues() {
 		return retroapi$xmetaValues;
+	}
+
+	@Override
+	public Map<String, Map<Integer, Integer>> retroapi$getBlockData() {
+		return retroapi$blockData;
 	}
 
 	@Override
@@ -89,6 +95,16 @@ public class WorldChunkPacketMixin implements WorldChunkPacketAccess {
 				j++;
 			}
 		}
+
+		// Auxiliary per-position data. Snapshotted rather than referenced: the packet may be written
+		// on the network thread while the chunk's live maps keep being mutated by gameplay.
+		if (extended.hasAnyData()) {
+			Map<String, Map<Integer, Integer>> snapshot = new java.util.LinkedHashMap<>();
+			for (Map.Entry<String, Map<Integer, Integer>> section : extended.getDataMap().entrySet()) {
+				snapshot.put(section.getKey(), new java.util.LinkedHashMap<>(section.getValue()));
+			}
+			retroapi$blockData = snapshot;
+		}
 	}
 
 	@Inject(method = "write(Ljava/io/DataOutputStream;)V", at = @At("RETURN"))
@@ -104,6 +120,19 @@ public class WorldChunkPacketMixin implements WorldChunkPacketAccess {
 		for (int i = 0; i < xCount; i++) {
 			output.writeInt(retroapi$xmetaPositions[i]);
 			output.write(retroapi$xmetaValues[i]);
+		}
+		// Auxiliary per-position data: one section per data type, each a key and its position/value pairs.
+		int sections = retroapi$blockData != null ? retroapi$blockData.size() : 0;
+		output.writeShort(sections);
+		if (sections > 0) {
+			for (Map.Entry<String, Map<Integer, Integer>> section : retroapi$blockData.entrySet()) {
+				output.writeUTF(section.getKey());
+				output.writeInt(section.getValue().size());
+				for (Map.Entry<Integer, Integer> entry : section.getValue().entrySet()) {
+					output.writeInt(entry.getKey());
+					output.writeInt(entry.getValue());
+				}
+			}
 		}
 	}
 
@@ -128,6 +157,21 @@ public class WorldChunkPacketMixin implements WorldChunkPacketAccess {
 				retroapi$xmetaPositions[i] = input.readInt();
 				retroapi$xmetaValues[i] = input.read();
 			}
+		}
+		int sections = input.readShort() & 0xFFFF;
+		if (sections > 0) {
+			Map<String, Map<Integer, Integer>> read = new java.util.LinkedHashMap<>();
+			for (int s = 0; s < sections; s++) {
+				String key = input.readUTF();
+				int count = input.readInt();
+				Map<Integer, Integer> byPosition = new java.util.LinkedHashMap<>();
+				for (int i = 0; i < count; i++) {
+					int position = input.readInt();
+					byPosition.put(position, input.readInt());
+				}
+				read.put(key, byPosition);
+			}
+			retroapi$blockData = read;
 		}
 	}
 }

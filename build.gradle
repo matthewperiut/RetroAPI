@@ -3,8 +3,8 @@ import java.time.Duration
 plugins {
 	id 'java'
 	id 'maven-publish'
-	id 'fabric-loom' version '1.15-SNAPSHOT'
-	id 'ploceus' version '1.15-SNAPSHOT'
+	id 'net.fabricmc.fabric-loom-remap' version '1.17.13'
+	id 'ploceus' version '1.17.4'
 	// Emits retroapi-<version>-babric.jar: reverse-converted to babric and bundled with OSL + joptsimple.
 	id 'com.periut.retroconvert' version '1.0.0'
 }
@@ -32,6 +32,13 @@ repositories {
 	}
 	maven { name = 'Jitpack'; url = 'https://jitpack.io' }
 	maven { name = 'Ornithe Releases'; url = 'https://maven.ornithemc.net/releases' } // gen2 OSL for the babric bundle
+	// Loom >= 1.17 claims the whole org.lwjgl group for Mojang's libraries repo, which mirrors LWJGL
+	// 3.4.0 only for the platforms Minecraft itself ships. retrodragon also wants
+	// natives-linux-arm64, which only exists on Central, so claim the group for Central too.
+	exclusiveContent {
+		forRepository { mavenCentral() }
+		filter { includeGroup('org.lwjgl') }
+	}
 	mavenCentral()
 	mavenLocal()
 }
@@ -48,15 +55,22 @@ retroconvert {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${project.biny_mappings}:mergedv2")
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
+	// ORDER MATTERS, and only since ploceus 1.17. These six have to come BEFORE the mappings
+	// dependency: ploceus resolves them when ploceus.mappings(...) is evaluated, so declared after it
+	// they are still empty and the game jar is remapped with NO inner classes, silently. Everything that
+	// should be nested gets flattened into net/minecraft/unmapped/, which splits packages that must stay
+	// whole, and beta's bundled argo library then throws IllegalAccessError in Minecraft.init on any
+	// launch where a stats file exists.
 	clientExceptions ploceus.raven(project.client_raven_build, 'client')
 	serverExceptions ploceus.raven(project.server_raven_build, 'server')
 	clientSignatures ploceus.sparrow(project.client_sparrow_build, 'client')
 	serverSignatures ploceus.sparrow(project.server_sparrow_build, 'server')
 	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${project.client_nests_build}"
 	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${project.server_nests_build}"
+
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${project.biny_mappings}:mergedv2")
 
 	ploceus.dependOsl(project.osl_version)
 
@@ -76,12 +90,17 @@ dependencies {
 	// NOTE: RetroAPI core has NO StationAPI dependency. The optional StationAPI integration lives entirely
 	// in the separate :stationapi module (the retroapi-stationapi mod), so a fresh clone can build, run the
 	// test mod, and develop core without ever downloading StationAPI. See settings.gradle (-Pstationapi).
-	// starac brings LWJGL 3, which would clash with vanilla
-	// Minecraft's LWJGL 2 API, so keep it off the compile classpath.
-	modRuntimeOnly "com.periut:starac:${project.starac_version}"
+	// retrodragon brings LWJGL 3, which would clash with vanilla Minecraft's LWJGL 2 API, so keep it
+	// off the compile classpath. It replaces starac, which used to sit here: starac's MinecraftMixin
+	// redirects a `noCanvas` target that does not exist on Fabric's applet launch path, and a redirect
+	// that finds no target is a HARD mixin failure, so any consumer whose environment launches through
+	// the applet entrypoint (macOS does) crashed before drawing a frame on
+	//   Critical injection failure: Redirector noCanvas(...) failed injection check, (0/1) succeeded
+	// and could not do anything about it, because this dependency reaches consumers transitively.
+	modRuntimeOnly "com.periut:retrodragon:${project.retrodragon_version}"
 }
 
-// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3).
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (retrodragon provides LWJGL 3).
 // It must stay on the compile/minecraft classpath so Condor (Ploceus LVT generator)
 // can resolve org.lwjgl.* classes referenced by b1.7.3 - a blanket exclude here
 // strips LWJGL 2 from minecraftCompileLibraries and crashes LVT generation.

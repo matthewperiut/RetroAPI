@@ -31,7 +31,21 @@ public final class ComponentNbt {
 		NbtCompound components = new NbtCompound();
 		for (java.util.Map.Entry<RetroComponentType<?>, Object> entry : map.entrySet()) {
 			RetroComponentType<Object> type = (RetroComponentType<Object>) entry.getKey();
+			// A null key means someone called RetroComponents.set with a type field that was still null -
+			// a static that its mod had not assigned yet. That is the caller's bug, but it must not be
+			// fatal here: this runs from ItemStack.writeNbt, so an NPE takes down the save of an entire
+			// inventory (and, from a tick, the game) over one bad component. Skip it loudly instead.
+			// read() has always guarded the same case; write() simply never did.
+			if (type == null) {
+				com.periut.retroapi.RetroAPI.LOGGER.error(
+					"Skipping a null component type while writing components - a mod called "
+						+ "RetroComponents.set(..) with an unregistered/null type", new Throwable("trace"));
+				continue;
+			}
 			type.getSerializer().write(components, type.getId().toString(), entry.getValue());
+		}
+		if (components.values().isEmpty()) {
+			return;
 		}
 		nbt.put("retroapi:components", components);
 	}

@@ -61,11 +61,11 @@ dependencies {
 	// StationAPI at runtime, so it is only needed at compile time.
 	compileOnly "com.mojang:datafixerupper:9.1.20"
 
-	// starac brings LWJGL 3, which would clash with vanilla Minecraft's LWJGL 2 API at compile time.
-	modRuntimeOnly "com.periut:starac:${rootProject.starac_version}"
+	// retrodragon brings LWJGL 3, which would clash with vanilla Minecraft's LWJGL 2 API at compile time.
+	modRuntimeOnly "com.periut:retrodragon:${rootProject.retrodragon_version}"
 }
 
-// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3). It must stay on the
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (retrodragon provides LWJGL 3). It must stay on the
 // compile/minecraft classpath so Condor (Ploceus LVT generator) can resolve org.lwjgl.* classes for b1.7.3.
 configurations.matching { it.name.toLowerCase().contains('runtime') }.configureEach {
 	exclude group: 'org.lwjgl.lwjgl'

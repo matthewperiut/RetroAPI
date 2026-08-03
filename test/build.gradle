@@ -13,6 +13,12 @@ ploceus {
 }
 
 repositories {
+	// Loom >= 1.17 claims the whole org.lwjgl group for Mojang's libraries repo, which mirrors LWJGL
+	// 3.4.0 only for the platforms Minecraft ships; retrodragon also needs natives-linux-arm64.
+	exclusiveContent {
+		forRepository { mavenCentral() }
+		filter { includeGroup('org.lwjgl') }
+	}
 	maven { url = "https://matthewperiut.github.io/repository" }
 	exclusiveContent {
 		forRepository {
@@ -48,9 +54,9 @@ dependencies {
 	// round-trip helpers live in the :test:stapi source set, so a fresh clone can run the test mod
 	// (./gradlew :test:runClient) without ever downloading StationAPI.
 
-	// starac brings LWJGL 3, which would clash with vanilla
+	// retrodragon brings LWJGL 3, which would clash with vanilla
 	// Minecraft's LWJGL 2 API, so keep it off the compile classpath.
-	modRuntimeOnly "com.periut:starac:${project.starac_version}"
+	modRuntimeOnly "com.periut:retrodragon:${project.retrodragon_version}"
 }
 
 // Don't fail test task when no tests are discovered (these are mod test classes, not unit tests)
@@ -58,7 +64,7 @@ tasks.withType(Test) {
 	failOnNoDiscoveredTests = false
 }
 
-// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3).
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (retrodragon provides LWJGL 3).
 // It must stay on the compile/minecraft classpath so Condor (Ploceus LVT generator)
 // can resolve org.lwjgl.* classes referenced by b1.7.3 - a blanket exclude here
 // strips LWJGL 2 from minecraftCompileLibraries and crashes LVT generation.

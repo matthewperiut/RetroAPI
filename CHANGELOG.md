@@ -1,5 +1,50 @@
 # RetroAPI changelog
 
+## 0.3.8 - Stop shipping a broken launcher to every consumer
+
+A packaging fix, and it is the kind worth a release of its own because nobody downstream could work around
+it.
+
+### Fixed
+- **`starac` no longer reaches consumers.** It was declared `modRuntimeOnly`, and `maven-publish` exports
+  `runtimeOnly` dependencies into the POM as `scope=runtime`, so every mod that depended on RetroAPI also
+  silently got starac on its runtime classpath. starac's `MinecraftMixin` redirects a `noCanvas` target that
+  does not exist on Fabric's applet launch path, and a redirect that finds no target is a **hard** mixin
+  failure, not a warning:
+
+  ```
+  Critical injection failure: Redirector noCanvas(Lnet/minecraft/client/Minecraft;Ljava/awt/Canvas;)V
+  in starac.mixins.json:MinecraftMixin from mod starac failed injection check, (0/1) succeeded
+  ```
+
+  So on any machine whose environment launches through the applet entrypoint (macOS does), `runClient` in a
+  consumer's project died before drawing a frame, in a mixin belonging to a mod they never asked for and
+  could not remove without knowing to exclude it by hand. RetroAPI's own smoke suites never caught it
+  because they launch through a different path.
+
+  starac is replaced by **retrodragon 0.1.10**, which is the launcher that actually works here. It is still
+  `modRuntimeOnly` and so still exported at runtime scope, which is now a feature rather than a trap: a
+  consumer gets a working LWJGL 3 launcher instead of a broken one.
+- **`ComponentNbt.write` no longer crashes on a null component type.** `read` had always skipped a
+  component whose type could not be resolved; `write` assumed every key was non-null and threw an NPE
+  otherwise. It runs from `ItemStack.writeNbt`, so one bad component took down the save of a whole
+  inventory, and from a tick it took down the game. Unknown types are now skipped with an error naming the
+  cause (a mod calling `RetroComponents.set` with a static its own init had not assigned yet).
+
+### Changed
+- **Toolchain moved up to match, because retrodragon requires it.** Loom `1.15-SNAPSHOT` to `1.17.13`,
+  ploceus to `1.17.4`, the Gradle wrapper to `9.6.1` (Loom 1.17 needs the newer plugin API), and Fabric
+  Loader to `0.19.3` (retrodragon declares a hard dependency on it). Two consequences of the ploceus and
+  Loom bump are worth recording because both fail silently:
+  - the six exception/signature/nest configurations now have to be declared **before**
+    `ploceus.mappings(...)`, which resolves them; declared after, they are still empty and the game jar is
+    remapped with no inner classes at all;
+  - Loom 1.17 claims the whole `org.lwjgl` group for Mojang's libraries repo, which mirrors LWJGL 3.4.0
+    only for the platforms Minecraft itself ships, so `natives-linux-arm64` has to be claimed from Central.
+
+Both launch smoke suites pass, client and server: 57/57 client mixin targets and 46/47 server (one is not on
+that side's classpath) applying cleanly.
+
 ## 0.3.7 - World generation: modern noise, cubic biomes, carvers, and world height
 
 Four additions, all from the same gap. RetroAPI could add a block to a world and could add a feature to

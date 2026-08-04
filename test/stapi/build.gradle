@@ -30,6 +30,13 @@ repositories {
 	maven { name = 'Glass Releases'; url = "https://maven.glass-launcher.net/releases" }
 	maven { name = 'Glass Snapshots'; url = "https://maven.glass-launcher.net/snapshots" }
 	maven { name = 'Glass Babric'; url = "https://maven.glass-launcher.net/babric" }
+	// Loom >= 1.17 claims the whole org.lwjgl group for Mojang's libraries repo, which mirrors LWJGL
+	// 3.4.0 only for the platforms Minecraft ships; retrodragon also needs natives-linux-arm64, which
+	// lives on Central. The same claim the root and test projects make.
+	exclusiveContent {
+		forRepository { mavenCentral() }
+		filter { includeGroup('org.lwjgl') }
+	}
 	mavenCentral()
 }
 
@@ -56,9 +63,11 @@ dependencies {
 
 	// The whole point of this variant: StationAPI present at RUNTIME (not just compile).
 	modImplementation "net.modificationstation:StationAPI:${rootProject.stapi_version}"
-	// starac brings LWJGL 3, which would clash with vanilla
-	// Minecraft's LWJGL 2 API, so keep it off the compile classpath.
-	modRuntimeOnly "com.periut:starac:${project.starac_version}"
+	// retrodragon brings LWJGL 3, which would clash with vanilla Minecraft's LWJGL 2 API, so keep it
+	// off the compile classpath. This was starac until 0.3.7 replaced it everywhere else; the property
+	// it read went with it, so this project could no longer be evaluated and took the StationAPI half
+	// of the smoke suite down with it.
+	modRuntimeOnly "com.periut:retrodragon:${rootProject.retrodragon_version}"
 
 	// Reverse-conversion reaches StationAPI's DataFixerUpper damager; DFU is JIJ'd in StationAPI at
 	// runtime, so it is only a compile-time dependency here.
@@ -70,7 +79,7 @@ tasks.withType(Test) {
 	failOnNoDiscoveredTests = false
 }
 
-// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (starac provides LWJGL 3).
+// Exclude the Legacy Fabric LWJGL 2 wrapper at RUNTIME only (retrodragon provides LWJGL 3).
 // It must stay on the compile/minecraft classpath so Condor (Ploceus LVT generator)
 // can resolve org.lwjgl.* classes referenced by b1.7.3 - a blanket exclude here
 // strips LWJGL 2 from minecraftCompileLibraries and crashes LVT generation.

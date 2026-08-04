@@ -32,6 +32,15 @@ repositories {
 	}
 	maven { name = 'Jitpack'; url = 'https://jitpack.io' } // StationAPI's UnsafeEvents event bus
 	maven { name = 'Ornithe Releases'; url = 'https://maven.ornithemc.net/releases' }
+	// The same claim the root project makes, and for the same reason: Loom >= 1.17 takes the whole
+	// org.lwjgl group for Mojang's libraries repo, which mirrors LWJGL 3.4.0 only for the platforms
+	// Minecraft itself ships. retrodragon also wants natives-linux-arm64, which lives on Central.
+	// Without this the subproject cannot even be CONFIGURED, so `smokeTest -Pstationapi` failed before
+	// it launched anything, which is how the StationAPI half of the suite quietly stopped running.
+	exclusiveContent {
+		forRepository { mavenCentral() }
+		filter { includeGroup('org.lwjgl') }
+	}
 	mavenCentral()
 	mavenLocal()
 }

@@ -31,6 +31,12 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 	);
 
 	private static final Set<String> STATIONAPI_DISABLED_MIXINS = Set.of(
+		// StationAPI's arsenic renderer MERGES ItemRenderer.render, and an injector cannot target a
+		// method another mixin has merged at the same priority: that is a hard InvalidInjectionException
+		// at class load, not a feature quietly not applying, so `require = 0` does not cover it and a
+		// higher priority only means scanning a body the constant has left. The dropped-item scale is
+		// therefore a no-StationAPI feature; StationAPI users get vanilla's sizing.
+		"com.periut.retroapi.mixin.client.render.DroppedItemScaleMixin",
 		"com.periut.retroapi.mixin.dimension.DimensionMixin",
 		"com.periut.retroapi.mixin.dimension.RegionWorldStorageMixin",
 		// NOTE: dimension.PlayerEntityMixin is NOT disabled - it provides RetroAPI's HasTeleportationManager

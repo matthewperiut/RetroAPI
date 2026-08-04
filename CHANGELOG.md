@@ -212,6 +212,20 @@ block, and then applies the answer to a piece of one.
   question. It is per render type rather than per block because that is the only thing `isSideLit` is
   given.
 
+### The StationAPI half of the smoke suite could not run
+
+`smokeTest -Pstationapi` had stopped launching anything, and two of the three reasons came in with the
+toolchain move above. `:stationapi` and `:test:stapi` never got the `org.lwjgl` claim the root project
+took, so neither could be configured at all, and `:test:stapi` still asked for the `starac_version`
+property that went away with starac. A suite that cannot start looks exactly like a suite with nothing
+to report.
+
+With it running again it immediately earned its keep: `DroppedItemScaleMixin` crashed the StationAPI
+client on load. StationAPI's arsenic renderer merges `ItemRenderer.render`, and an injector cannot target
+a method another mixin has merged at the same priority, which is a hard `InvalidInjectionException` at
+class load rather than a hook quietly not applying, so `require = 0` does not cover it. That mixin is
+disabled under StationAPI, and the dropped item scale is a no-StationAPI feature.
+
 ### A block can present as another block
 
 `RetroBlockDisguise` answers, per position, three questions beta only ever answers per block type. All

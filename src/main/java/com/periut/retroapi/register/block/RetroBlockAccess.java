@@ -300,6 +300,10 @@ public interface RetroBlockAccess {
 	 *
 	 * <p>{@link #compactDroppedItem()} is the value later Minecraft versions use for everything.
 	 *
+	 * <p><b>Not available under StationAPI.</b> Its arsenic renderer merges the method this reads, and an
+	 * injector cannot target a merged method, so RetroAPI disables the hook there rather than crash on
+	 * load. A block that declares a scale keeps vanilla's sizing in that configuration.
+	 *
 	 * @param scale the GL scale, or a negative value to go back to beta's rule
 	 */
 	default RetroBlockAccess droppedItemScale(float scale) { throw RetroInjected.missing(); }

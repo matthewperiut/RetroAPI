@@ -221,10 +221,16 @@ property that went away with starac. A suite that cannot start looks exactly lik
 to report.
 
 With it running again it immediately earned its keep: `DroppedItemScaleMixin` crashed the StationAPI
-client on load. StationAPI's arsenic renderer merges `ItemRenderer.render`, and an injector cannot target
-a method another mixin has merged at the same priority, which is a hard `InvalidInjectionException` at
-class load rather than a hook quietly not applying, so `require = 0` does not cover it. That mixin is
-disabled under StationAPI, and the dropped item scale is a no-StationAPI feature.
+client on load. Arsenic merges `ItemRenderer.render`, and an injector cannot target a method another mixin
+has merged at the same priority, which is a hard `InvalidInjectionException` at class load rather than a
+hook quietly not applying, so `require = 0` does not cover it. The native mixin is disabled under
+StationAPI.
+
+The feature itself still works there. Raising the priority until the injection was legal showed both the
+scale constant and the `glScalef` call it guards report `Scanned 0 target(s)`, so arsenic really has
+rewritten that branch, but it kept beta's rule verbatim one class along in
+`ArsenicItemRenderer.renderVanilla`. The StationAPI module corrects it there instead, and the declaration
+a block makes is the same either way.
 
 ### A block can present as another block
 

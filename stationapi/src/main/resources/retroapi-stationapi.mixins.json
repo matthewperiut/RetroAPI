@@ -11,7 +11,8 @@
 	"client": [
 		"ModNioResourcePackMixin",
 		"StationSoundBridgeMixin",
-		"ArsenicHeldItemLayerMixin"
+		"ArsenicHeldItemLayerMixin",
+		"ArsenicDroppedItemScaleMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

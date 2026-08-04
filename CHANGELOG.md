@@ -252,8 +252,14 @@ public class FramedBlock extends Block implements RetroBlockDisguise {
 
 Breaking **speed** comes from the disguise too: `getHardness(PlayerEntity)` returns the fraction broken
 this tick and folds together the block's hardness and how well the held tool bites it, so asking the worn
-block gets both at once. StationAPI replaces that call, so speed follows the frame there; the hook is
-disabled rather than made optional, for the reason below.
+block gets both at once.
+
+StationAPI's flattening module redirects that very call to
+`getBlockState(x, y, z).calcBlockBreakingDelta(player, world, pos)`, so there is nothing left at the
+vanilla site to bind to there. That redirect is the supported extension point rather than an obstacle:
+breaking speed is a property of the block STATE, asked with the position in hand, which is more than
+beta's own hook offers. The StationAPI module answers there instead, so speed follows the cladding in both
+configurations and anything else routing through StationAPI's block states gets the same answer.
 
 Every one of these injections is **required**. The break sound spent a release targeting a method called
 `processWorldEvent`, which does not exist (it is `worldEvent`), and because the injection was optional it

@@ -31,9 +31,10 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 	);
 
 	private static final Set<String> STATIONAPI_DISABLED_MIXINS = Set.of(
-		// StationAPI replaces the Block.getHardness call these redirect, so there is nothing to redirect
-		// there and a required injection would fail at class load. Breaking SPEED therefore follows the
-		// frame rather than the cladding under StationAPI; everything else about a disguise still works.
+		// StationAPI's flattening module redirects the Block.getHardness call these bind to, so there is
+		// nothing left at the vanilla site and a required injection would fail at class load. The feature
+		// is not lost: the StationAPI module answers StationAPI's own hook for it,
+		// AbstractBlockState.calcBlockBreakingDelta, so breaking speed follows the cladding either way.
 		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMixin",
 		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMpMixin",
 		// StationAPI's arsenic renderer MERGES ItemRenderer.render, and an injector cannot target a

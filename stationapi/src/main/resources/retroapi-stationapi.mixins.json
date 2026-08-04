@@ -6,7 +6,8 @@
 	"mixins": [
 		"FlattenedWorldStorageMixin",
 		"CarverWorldMixin",
-		"ItemTooltipBridgeMixin"
+		"ItemTooltipBridgeMixin",
+		"AbstractBlockStateBreakingDeltaMixin"
 	],
 	"client": [
 		"ModNioResourcePackMixin",

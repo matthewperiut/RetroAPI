@@ -300,9 +300,12 @@ public interface RetroBlockAccess {
 	 *
 	 * <p>{@link #compactDroppedItem()} is the value later Minecraft versions use for everything.
 	 *
-	 * <p><b>Not available under StationAPI.</b> Its arsenic renderer merges the method this reads, and an
-	 * injector cannot target a merged method, so RetroAPI disables the hook there rather than crash on
-	 * load. A block that declares a scale keeps vanilla's sizing in that configuration.
+	 * <p><b>Not available under StationAPI.</b> Its arsenic renderer merges the method this reads and
+	 * rewrites the branch: raising this mixin's priority above the merge makes the injection legal, and
+	 * both the scale constant and the {@code glScalef} call it guards are then measurably gone from the
+	 * body that is left ({@code Scanned 0 target(s)} for either). So the hook is disabled there rather
+	 * than left to crash on load, and a block that declares a scale keeps vanilla's sizing under
+	 * StationAPI. Supporting it would mean hooking StationAPI's own renderer, not beta's.
 	 *
 	 * @param scale the GL scale, or a negative value to go back to beta's rule
 	 */

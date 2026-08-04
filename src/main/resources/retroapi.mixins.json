@@ -89,6 +89,8 @@
 		"client.ClientPlayerInteractionManagerMixin",
 		"client.BlockUseClientMixin",
 		"client.BreakTargetClientMixin",
+		"client.BreakTargetSubclassMixin",
+		"client.InteractionManagerAccessor",
 		"client.MinecraftAccessor",
 		"client.MinecraftMixin",
 		"client.PlayerRendererMixin",

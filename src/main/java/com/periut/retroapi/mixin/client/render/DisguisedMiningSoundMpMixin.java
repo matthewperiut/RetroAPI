@@ -33,10 +33,14 @@ public class DisguisedMiningSoundMpMixin {
 		require = 0)
 	private void retroapi$disguisedMiningSound(SoundManager sounds, String sound, float sx, float sy, float sz,
 			float volume, float pitch, Operation<Void> original, int x, int y, int z, int side) {
-		// The world is not reachable from here without shadowing a field declared on a superclass, and
-		// it does not need to be: the player breaking this block has already recorded where they are
-		// breaking, and that record carries the world it belongs to.
-		Block worn = RetroDisguises.atBreakPosition(x, y, z);
+		// The world comes through the accessor, not from a break record: the record is written by a
+		// different mixin on a different class, and depending on one hook to have run before another is
+		// how this ended up playing wooden sounds for a stone-clad block in the first place.
+		net.minecraft.client.Minecraft minecraft =
+			((com.periut.retroapi.mixin.client.InteractionManagerAccessor) this).retroapi$minecraft();
+		Block worn = minecraft == null || minecraft.world == null
+			? null
+			: RetroDisguises.at(minecraft.world, x, y, z);
 		if (worn == null) {
 			original.call(sounds, sound, sx, sy, sz, volume, pitch);
 			return;

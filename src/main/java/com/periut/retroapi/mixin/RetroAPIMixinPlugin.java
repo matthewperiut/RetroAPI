@@ -31,6 +31,11 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 	);
 
 	private static final Set<String> STATIONAPI_DISABLED_MIXINS = Set.of(
+		// StationAPI replaces the Block.getHardness call these redirect, so there is nothing to redirect
+		// there and a required injection would fail at class load. Breaking SPEED therefore follows the
+		// frame rather than the cladding under StationAPI; everything else about a disguise still works.
+		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMixin",
+		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMpMixin",
 		// StationAPI's arsenic renderer MERGES ItemRenderer.render, and an injector cannot target a
 		// method another mixin has merged at the same priority: that is a hard InvalidInjectionException
 		// at class load, not a feature quietly not applying, so `require = 0` does not cover it and a

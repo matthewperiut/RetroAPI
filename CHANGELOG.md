@@ -250,6 +250,16 @@ public class FramedBlock extends Block implements RetroBlockDisguise {
 }
 ```
 
+Breaking **speed** comes from the disguise too: `getHardness(PlayerEntity)` returns the fraction broken
+this tick and folds together the block's hardness and how well the held tool bites it, so asking the worn
+block gets both at once. StationAPI replaces that call, so speed follows the frame there; the hook is
+disabled rather than made optional, for the reason below.
+
+Every one of these injections is **required**. The break sound spent a release targeting a method called
+`processWorldEvent`, which does not exist (it is `worldEvent`), and because the injection was optional it
+simply never ran: the sound stayed wooden and nothing anywhere said so. An optional injection is
+indistinguishable from a working one until someone listens carefully.
+
 Tools are **additive**, deliberately: a wooden frame wearing stone answers to an axe *and* a pickaxe.
 Taking the axe away because of what it is currently wearing would mean a block got harder to break the
 more it had been decorated. The position comes from `RetroBreakTarget`, which validates against the

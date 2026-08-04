@@ -18,18 +18,22 @@ import org.spongepowered.asm.mixin.injection.At;
  * <p>The break sound is world event 2001, which arrives carrying a block id and a position and is handled
  * after the block itself has gone, so the disguise cannot be read from the world any more. It is read
  * from what {@code RetroDisguises} recorded on the way out instead.
+ *
+ * <p>The method is {@code worldEvent}. This targeted {@code processWorldEvent} for a while, which does not
+ * exist, and because the injection was optional it simply never ran: the sound stayed wooden and nothing
+ * anywhere said so. Optional injections hide exactly this, which is why these are required now.
  */
 @Mixin(WorldRenderer.class)
 @Environment(EnvType.CLIENT)
 public class DisguisedBreakSoundMixin {
 
-	@WrapOperation(method = "processWorldEvent",
+	@WrapOperation(method = "worldEvent",
 		at = @At(value = "INVOKE",
 			target = "Lnet/minecraft/client/sound/SoundManager;playSound(Ljava/lang/String;FFFFF)V"),
-		require = 0)
+		require = 1)
 	private void retroapi$disguisedBreakSound(SoundManager sounds, String sound, float x, float y, float z,
 			float volume, float pitch, Operation<Void> original,
-			int event, int px, int py, int pz, int data) {
+			net.minecraft.entity.player.PlayerEntity player, int event, int px, int py, int pz, int data) {
 		Block worn = RetroDisguises.remembered(px, py, pz);
 		if (worn == null) {
 			original.call(sounds, sound, x, y, z, volume, pitch);

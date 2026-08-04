@@ -30,7 +30,7 @@ public class DisguisedStepSoundMixin {
 	@Redirect(method = "move",
 		at = @At(value = "INVOKE",
 			target = "Lnet/minecraft/world/World;playSound(Lnet/minecraft/entity/Entity;Ljava/lang/String;FF)V"),
-		require = 0)
+		require = 1)
 	private void retroapi$disguisedStepSound(World world, Entity entity, String sound, float volume, float pitch) {
 		BlockSoundGroup worn = retroapi$disguisedGroupUnderfoot(world, entity);
 		if (worn == null) {

@@ -31,7 +31,7 @@ public class DisguisedParticleMixin {
 
 	@WrapOperation(method = "addBlockBreakingParticles",
 		at = @At(value = "NEW", target = "(Lnet/minecraft/world/World;DDDDDDLnet/minecraft/block/Block;II)Lnet/minecraft/client/particle/BlockParticle;"),
-		require = 0)
+		require = 1)
 	private BlockParticle retroapi$disguiseBreakingParticle(World world, double px, double py, double pz,
 			double vx, double vy, double vz, Block block, int side, int meta,
 			Operation<BlockParticle> original, int x, int y, int z, int face) {
@@ -45,7 +45,7 @@ public class DisguisedParticleMixin {
 
 	@WrapOperation(method = "addBlockBreakParticles",
 		at = @At(value = "NEW", target = "(Lnet/minecraft/world/World;DDDDDDLnet/minecraft/block/Block;II)Lnet/minecraft/client/particle/BlockParticle;"),
-		require = 0)
+		require = 1)
 	private BlockParticle retroapi$disguiseBreakParticle(World world, double px, double py, double pz,
 			double vx, double vy, double vz, Block block, int side, int meta,
 			Operation<BlockParticle> original, int x, int y, int z, int blockId, int blockMeta) {

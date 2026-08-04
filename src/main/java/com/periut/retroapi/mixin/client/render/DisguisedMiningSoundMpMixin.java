@@ -30,7 +30,7 @@ public class DisguisedMiningSoundMpMixin {
 	@WrapOperation(method = "processBlockBreakingAction",
 		at = @At(value = "INVOKE",
 			target = "Lnet/minecraft/client/sound/SoundManager;playSound(Ljava/lang/String;FFFFF)V"),
-		require = 0)
+		require = 1)
 	private void retroapi$disguisedMiningSound(SoundManager sounds, String sound, float sx, float sy, float sz,
 			float volume, float pitch, Operation<Void> original, int x, int y, int z, int side) {
 		// The world comes through the accessor, not from a break record: the record is written by a

@@ -27,7 +27,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin({SingleplayerInteractionManager.class, MultiplayerInteractionManager.class})
 public class BreakTargetSubclassMixin {
 
-	@Inject(method = "processBlockBreakingAction", at = @At("HEAD"), require = 0)
+	@Inject(method = "processBlockBreakingAction", at = @At("HEAD"), require = 1)
 	private void retroapi$markProgress(int x, int y, int z, int side, CallbackInfo ci) {
 		Minecraft minecraft = ((InteractionManagerAccessor) this).retroapi$minecraft();
 		if (minecraft != null && minecraft.player != null && minecraft.world != null) {

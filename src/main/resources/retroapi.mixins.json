@@ -124,6 +124,8 @@
 		"client.render.DisguisedBreakSoundMixin",
 		"client.render.DisguisedMiningSoundMixin",
 		"client.render.DisguisedMiningSoundMpMixin",
+		"client.render.DisguisedHardnessMixin",
+		"client.render.DisguisedHardnessMpMixin",
 		"client.render.LayeredItemRenderMixin",
 		"client.render.LayeredHeldItemMixin",
 		"client.PlayerArmorTextureMixin"

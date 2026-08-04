@@ -49,10 +49,14 @@ public class DisguisedParticleMixin {
 	private BlockParticle retroapi$disguiseBreakParticle(World world, double px, double py, double pz,
 			double vx, double vy, double vz, Block block, int side, int meta,
 			Operation<BlockParticle> original, int x, int y, int z, int blockId, int blockMeta) {
-		Block worn = RetroDisguises.remembered(x, y, z);
+		// Same as the sound: the debris cloud rides the same event, which in singleplayer is fired
+		// before the block is taken out and from a server may arrive after. Ask the position first.
+		Block worn = RetroDisguises.liveOrRemembered(world, x, y, z);
 		if (worn != null) {
-			return original.call(world, px, py, pz, vx, vy, vz, worn, side,
-				RetroDisguises.rememberedMeta(x, y, z));
+			return original.call(world, px, py, pz, vx, vy, vz, worn,
+				side, RetroDisguises.at(world, x, y, z) != null
+					? RetroDisguises.metaAt(world, x, y, z)
+					: RetroDisguises.rememberedMeta(x, y, z));
 		}
 		return original.call(world, px, py, pz, vx, vy, vz, block, side, meta);
 	}

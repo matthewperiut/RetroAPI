@@ -15,9 +15,11 @@ import org.spongepowered.asm.mixin.injection.At;
  * Makes a disguised block break with the sound of what it was wearing. See
  * {@link com.periut.retroapi.register.block.RetroBlockDisguise}.
  *
- * <p>The break sound is world event 2001, which arrives carrying a block id and a position and is handled
- * after the block itself has gone, so the disguise cannot be read from the world any more. It is read
- * from what {@code RetroDisguises} recorded on the way out instead.
+ * <p>The break sound is world event 2001, and WHEN it arrives depends on who sent it. Playing alone, the
+ * interaction manager fires it immediately before {@code setBlock(x, y, z, 0)}, so the block and its
+ * disguise are both still standing. From a server it is a packet, and the client may well have taken the
+ * block out by the time it lands. So the position is asked first and the record of what left is only the
+ * fallback: reading the record alone found nothing in singleplayer, and the sound stayed wooden.
  *
  * <p>The method is {@code worldEvent}. This targeted {@code processWorldEvent} for a while, which does not
  * exist, and because the injection was optional it simply never ran: the sound stayed wooden and nothing
@@ -27,6 +29,8 @@ import org.spongepowered.asm.mixin.injection.At;
 @Environment(EnvType.CLIENT)
 public class DisguisedBreakSoundMixin {
 
+	@org.spongepowered.asm.mixin.Shadow private net.minecraft.world.World world;
+
 	@WrapOperation(method = "worldEvent",
 		at = @At(value = "INVOKE",
 			target = "Lnet/minecraft/client/sound/SoundManager;playSound(Ljava/lang/String;FFFFF)V"),
@@ -34,7 +38,7 @@ public class DisguisedBreakSoundMixin {
 	private void retroapi$disguisedBreakSound(SoundManager sounds, String sound, float x, float y, float z,
 			float volume, float pitch, Operation<Void> original,
 			net.minecraft.entity.player.PlayerEntity player, int event, int px, int py, int pz, int data) {
-		Block worn = RetroDisguises.remembered(px, py, pz);
+		Block worn = RetroDisguises.liveOrRemembered(this.world, px, py, pz);
 		if (worn == null) {
 			original.call(sounds, sound, x, y, z, volume, pitch);
 			return;

@@ -155,10 +155,16 @@ public class BlockRendererMixin implements RetroBlockRendererAccess {
 		}
 	}
 
+	/**
+	 * Custom render types draw their item form as a little 3D block, like a cube does, unless the type
+	 * declared itself flat ({@code RenderType.setFlatItem}). Vanilla makes the same split, and draws a
+	 * door, a ladder or a pane as a sprite for the same reason: those shapes are unreadable at inventory
+	 * size, and their real look is not six faces of one texture.
+	 */
 	@Inject(method = "isSideLit", at = @At("HEAD"), cancellable = true)
 	private static void retroapi$customIsItem3d(int type, CallbackInfoReturnable<Boolean> cir) {
 		if (RenderType.isCustom(type)) {
-			cir.setReturnValue(true);
+			cir.setReturnValue(!RenderType.isFlatItem(type));
 		}
 	}
 

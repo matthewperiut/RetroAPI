@@ -32,6 +32,7 @@ import java.util.Map;
 public final class RenderType {
 	private static final Map<NamespacedIdentifier, Integer> idMap = new LinkedHashMap<>();
 	private static final Map<Integer, CustomBlockRenderer> renderers = new LinkedHashMap<>();
+	private static final java.util.Set<Integer> flatItems = new java.util.HashSet<>();
 	private static int nextId = 19;
 
 	static {
@@ -100,6 +101,42 @@ public final class RenderType {
 			throw new IllegalArgumentException("Unknown render type: " + id);
 		}
 		return numericId;
+	}
+
+	/**
+	 * Declares that blocks of this render type are drawn as a FLAT SPRITE when they are an item, rather
+	 * than as a little three-dimensional block.
+	 *
+	 * <p>Beta already makes this choice, in {@code BlockRenderManager.isSideLit}: a cube, a slab and a
+	 * few others are drawn in 3D, and a torch, a door, a ladder or a pane of glass are drawn as the item
+	 * sprite instead, because those shapes are unreadable at inventory size and their real look is not
+	 * something you can build out of six faces of one texture anyway. Custom render types default to the
+	 * 3D form, which is right for most of them and wrong for exactly the shapes vanilla also excludes.
+	 *
+	 * <p>Applies to all three places an item is drawn - the inventory slot, the player's hand, and a
+	 * dropped stack on the ground - because all three ask the same question. The sprite comes from the
+	 * item, so give the block's item a texture ({@code Item.setTextureId}, or
+	 * {@code RetroTextures.addItemTexture} and track it); a block id at or above 256 is drawn from
+	 * {@code /gui/items.png}, not the terrain sheet.
+	 */
+	public static void setFlatItem(NamespacedIdentifier id) {
+		Integer numericId = idMap.get(id);
+		if (numericId == null) {
+			throw new IllegalArgumentException("Cannot set flat-item on unregistered render type: " + id);
+		}
+		flatItems.add(numericId);
+	}
+
+	/** {@link #register} plus {@link #setFlatItem}, for a type that is flat-in-inventory from the start. */
+	public static NamespacedIdentifier registerFlatItem(NamespacedIdentifier id, CustomBlockRenderer renderer) {
+		register(id, renderer);
+		setFlatItem(id);
+		return id;
+	}
+
+	/** True when this render type's item form is a flat sprite. Read by the {@code isSideLit} hook. */
+	public static boolean isFlatItem(int numericId) {
+		return flatItems.contains(numericId);
 	}
 
 	public static CustomBlockRenderer getRenderer(int numericId) {

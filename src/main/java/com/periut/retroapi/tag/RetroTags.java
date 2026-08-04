@@ -204,10 +204,40 @@ public final class RetroTags {
 			mineableCache = cache;
 		}
 		Set<RetroTool> tools = mineableCache.get(block);
-		if (tools != null) {
-			return tools;
+		if (tools == null) {
+			tools = defaultMineableTools(block);
 		}
-		return defaultMineableTools(block);
+		return withDisguise(block, tools);
+	}
+
+	/**
+	 * Adds whatever the block is currently DISGUISED as answers to, on top of what it answers to itself.
+	 *
+	 * <p>A block that wears another block should be mined with the tool for what it is wearing, and beta
+	 * has nowhere to say that: mining speed and the harvest check are both handed a {@code Block} and
+	 * nothing else, so every position of a block gets one answer. The position comes from the break the
+	 * player is currently making ({@link RetroBreakTarget}), which is validated against the world, so a
+	 * stale record cannot answer for somewhere else.
+	 *
+	 * <p>Additive, never subtractive. A wooden frame wearing stone answers to an axe AND a pickaxe;
+	 * taking the axe away would mean a block got harder to break the more it had been decorated.
+	 */
+	private static Set<RetroTool> withDisguise(Block block, Set<RetroTool> own) {
+		if (!(block instanceof com.periut.retroapi.register.block.RetroBlockDisguise)) {
+			return own;
+		}
+		Block worn = com.periut.retroapi.register.block.RetroDisguises.atCurrentBreak(block);
+		if (worn == null || worn == block) {
+			return own;
+		}
+		Set<RetroTool> wornTools = mineableTools(worn);
+		if (wornTools.isEmpty()) {
+			return own;
+		}
+		Set<RetroTool> both = EnumSet.noneOf(RetroTool.class);
+		both.addAll(own);
+		both.addAll(wornTools);
+		return both;
 	}
 
 	/**

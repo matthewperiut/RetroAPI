@@ -70,6 +70,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Unique private boolean retroapi$autoFacing = false;
 	@Unique private boolean retroapi$autoFacingVertical = false;
 	@Unique private com.periut.retroapi.register.block.RetroFaceTextures retroapi$faceTextures = null;
+	@Unique private float retroapi$droppedItemScale = -1.0F;
 	@Unique private com.periut.retroapi.client.render.RetroBlockColors.Provider retroapi$tint = null;
 	@Unique private java.util.List<com.periut.retroapi.register.block.RetroBlockLayer.Provider> retroapi$layers = null;
 
@@ -234,6 +235,17 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		this.retroapi$customBounds = new float[]{minX, minY, minZ, maxX, maxY, maxZ};
 		((Block) (Object) this).setBoundingBox(minX, minY, minZ, maxX, maxY, maxZ);
 		return this;
+	}
+
+	@Override
+	public RetroBlockAccess droppedItemScale(float scale) {
+		this.retroapi$droppedItemScale = scale;
+		return this;
+	}
+
+	@Override
+	public float getDroppedItemScale() {
+		return this.retroapi$droppedItemScale;
 	}
 
 	@Override

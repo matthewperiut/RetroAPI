@@ -283,6 +283,37 @@ public interface RetroBlockAccess {
 	default RetroBlockAccess bounds(float minX, float minY, float minZ, float maxX, float maxY, float maxZ) { throw RetroInjected.missing(); }
 
 	/**
+	 * The size this block is drawn at as a dropped item on the ground, overriding beta's own rule.
+	 *
+	 * <p>b1.7.3 draws a dropped block at quarter scale <em>unless</em> it is not a full cube, in which
+	 * case it doubles it:
+	 * <pre>
+	 * float scale = 0.25F;
+	 * if (!block.isFullCube() &amp;&amp; id != Block.SLAB.id &amp;&amp; block.getRenderType() != 16) scale = 0.5F;
+	 * </pre>
+	 * That reads as a rule about small blocks - a torch or a flower is mostly empty space, so drawing it
+	 * bigger makes it visible on the floor. Applied to a block that is <em>nearly</em> a cube it is simply
+	 * wrong: a stair, a cactus or any custom-rendered shape lands twice the size of every other item in
+	 * the pile, and being twice the size, it also clips through the ground. There is no way to opt out,
+	 * because the rule reads only {@code isFullCube()}, which such a block cannot answer true to without
+	 * lying to collision and lighting as well.
+	 *
+	 * <p>{@link #compactDroppedItem()} is the value later Minecraft versions use for everything.
+	 *
+	 * @param scale the GL scale, or a negative value to go back to beta's rule
+	 */
+	default RetroBlockAccess droppedItemScale(float scale) { throw RetroInjected.missing(); }
+
+	/**
+	 * Draws this block's dropped form at the same size as a full cube, which is what every Minecraft
+	 * version after beta does for every block. Sugar for {@code droppedItemScale(0.25F)}.
+	 */
+	default RetroBlockAccess compactDroppedItem() { return droppedItemScale(0.25F); }
+
+	/** The declared dropped-item scale, or a negative value when the block leaves beta's rule alone. */
+	default float getDroppedItemScale() { throw RetroInjected.missing(); }
+
+	/**
 	 * Set the render type for this block using a flattened identifier.
 	 *
 	 * @see RenderType for vanilla and custom render type identifiers

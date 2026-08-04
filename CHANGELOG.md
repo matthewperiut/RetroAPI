@@ -1,57 +1,18 @@
 # RetroAPI changelog
 
-## 0.3.8 - Stop shipping a broken launcher to every consumer
+## 0.3.7 - World generation, a launcher that works, and blocks that are not cubes
 
-A packaging fix, and it is the kind worth a release of its own because nobody downstream could work around
-it.
+Four releases' worth of work going out as one, because none of it shipped: 0.3.6 was the last tag, and
+everything below has been sitting on main since.
 
-### Fixed
-- **`starac` no longer reaches consumers.** It was declared `modRuntimeOnly`, and `maven-publish` exports
-  `runtimeOnly` dependencies into the POM as `scope=runtime`, so every mod that depended on RetroAPI also
-  silently got starac on its runtime classpath. starac's `MinecraftMixin` redirects a `noCanvas` target that
-  does not exist on Fabric's applet launch path, and a redirect that finds no target is a **hard** mixin
-  failure, not a warning:
+### World generation: modern noise, cubic biomes, carvers, and world height
 
-  ```
-  Critical injection failure: Redirector noCanvas(Lnet/minecraft/client/Minecraft;Ljava/awt/Canvas;)V
-  in starac.mixins.json:MinecraftMixin from mod starac failed injection check, (0/1) succeeded
-  ```
-
-  So on any machine whose environment launches through the applet entrypoint (macOS does), `runClient` in a
-  consumer's project died before drawing a frame, in a mixin belonging to a mod they never asked for and
-  could not remove without knowing to exclude it by hand. RetroAPI's own smoke suites never caught it
-  because they launch through a different path.
-
-  starac is replaced by **retrodragon 0.1.10**, which is the launcher that actually works here. It is still
-  `modRuntimeOnly` and so still exported at runtime scope, which is now a feature rather than a trap: a
-  consumer gets a working LWJGL 3 launcher instead of a broken one.
-- **`ComponentNbt.write` no longer crashes on a null component type.** `read` had always skipped a
-  component whose type could not be resolved; `write` assumed every key was non-null and threw an NPE
-  otherwise. It runs from `ItemStack.writeNbt`, so one bad component took down the save of a whole
-  inventory, and from a tick it took down the game. Unknown types are now skipped with an error naming the
-  cause (a mod calling `RetroComponents.set` with a static its own init had not assigned yet).
-
-### Changed
-- **Toolchain moved up to match, because retrodragon requires it.** Loom `1.15-SNAPSHOT` to `1.17.13`,
-  ploceus to `1.17.4`, the Gradle wrapper to `9.6.1` (Loom 1.17 needs the newer plugin API), and Fabric
-  Loader to `0.19.3` (retrodragon declares a hard dependency on it). Two consequences of the ploceus and
-  Loom bump are worth recording because both fail silently:
-  - the six exception/signature/nest configurations now have to be declared **before**
-    `ploceus.mappings(...)`, which resolves them; declared after, they are still empty and the game jar is
-    remapped with no inner classes at all;
-  - Loom 1.17 claims the whole `org.lwjgl` group for Mojang's libraries repo, which mirrors LWJGL 3.4.0
-    only for the platforms Minecraft itself ships, so `natives-linux-arm64` has to be claimed from Central.
-
-Both launch smoke suites pass, client and server: 57/57 client mixin targets and 46/47 server (one is not on
-that side's classpath) applying cleanly.
-
-## 0.3.7 - World generation: modern noise, cubic biomes, carvers, and world height
 
 Four additions, all from the same gap. RetroAPI could add a block to a world and could add a feature to
 decoration, and had nothing at all to say about the two things a world-generation mod actually needs: the
 *shape* of the terrain, and somewhere to record what a place **is**.
 
-### Added
+#### Added
 
 - **`world.noise`: the modern noise stack, ported.** Beta ships `OctavePerlinNoiseSampler`, which takes an
   octave *count* and halves the amplitude each step - one fixed spectrum. Modern worldgen takes a
@@ -134,6 +95,156 @@ decoration, and had nothing at all to say about the two things a world-generatio
   chunk grid over a hardcoded 0-127 column and the light arrays are sized to match, so a block below y0 is
   saved and reloaded correctly and is not drawn or lit. A dimension that never calls `extend` is completely
   unaffected either way.
+
+### Stop shipping a broken launcher to every consumer
+
+
+A packaging fix, and it is the kind worth a release of its own because nobody downstream could work around
+it.
+
+#### Fixed
+- **`starac` no longer reaches consumers.** It was declared `modRuntimeOnly`, and `maven-publish` exports
+  `runtimeOnly` dependencies into the POM as `scope=runtime`, so every mod that depended on RetroAPI also
+  silently got starac on its runtime classpath. starac's `MinecraftMixin` redirects a `noCanvas` target that
+  does not exist on Fabric's applet launch path, and a redirect that finds no target is a **hard** mixin
+  failure, not a warning:
+
+  ```
+  Critical injection failure: Redirector noCanvas(Lnet/minecraft/client/Minecraft;Ljava/awt/Canvas;)V
+  in starac.mixins.json:MinecraftMixin from mod starac failed injection check, (0/1) succeeded
+  ```
+
+  So on any machine whose environment launches through the applet entrypoint (macOS does), `runClient` in a
+  consumer's project died before drawing a frame, in a mixin belonging to a mod they never asked for and
+  could not remove without knowing to exclude it by hand. RetroAPI's own smoke suites never caught it
+  because they launch through a different path.
+
+  starac is replaced by **retrodragon 0.1.10**, which is the launcher that actually works here. It is still
+  `modRuntimeOnly` and so still exported at runtime scope, which is now a feature rather than a trap: a
+  consumer gets a working LWJGL 3 launcher instead of a broken one.
+- **`ComponentNbt.write` no longer crashes on a null component type.** `read` had always skipped a
+  component whose type could not be resolved; `write` assumed every key was non-null and threw an NPE
+  otherwise. It runs from `ItemStack.writeNbt`, so one bad component took down the save of a whole
+  inventory, and from a tick it took down the game. Unknown types are now skipped with an error naming the
+  cause (a mod calling `RetroComponents.set` with a static its own init had not assigned yet).
+
+#### Changed
+- **Toolchain moved up to match, because retrodragon requires it.** Loom `1.15-SNAPSHOT` to `1.17.13`,
+  ploceus to `1.17.4`, the Gradle wrapper to `9.6.1` (Loom 1.17 needs the newer plugin API), and Fabric
+  Loader to `0.19.3` (retrodragon declares a hard dependency on it). Two consequences of the ploceus and
+  Loom bump are worth recording because both fail silently:
+  - the six exception/signature/nest configurations now have to be declared **before**
+    `ploceus.mappings(...)`, which resolves them; declared after, they are still empty and the game jar is
+    remapped with no inner classes at all;
+  - Loom 1.17 claims the whole `org.lwjgl` group for Mojang's libraries repo, which mirrors LWJGL 3.4.0
+    only for the platforms Minecraft itself ships, so `natives-linux-arm64` has to be claimed from Central.
+
+Both launch smoke suites pass, client and server: 57/57 client mixin targets and 46/47 server (one is not on
+that side's classpath) applying cleanly.
+
+### Partial blocks look like partial blocks
+
+
+Two rendering fixes, both from the same shape of assumption: beta decides something once, for a whole
+block, and then applies the answer to a piece of one.
+
+#### Fixed
+- **Smooth lighting on anything smaller than a full cube.** Beta computes ambient occlusion as four
+  brightness values, one per corner of the whole block face, then hands them to the face methods, which
+  draw the quad at the block's current bounding box. For a full cube those are the same four corners and
+  nothing is wrong. For a stair's upper step, which spans half the block, the entire light gradient is
+  stretched across half the distance - and because a stair is two boxes drawn in two passes, the two
+  halves stretch the same gradient over different sub-rectangles and disagree where they meet. That
+  seam down the middle of every beta stair is this, and every partial block has some version of it.
+
+  Those four numbers describe a bilinear field over the face, so the fix is to sample it at the corners
+  the quad actually occupies, which is what modern Minecraft's ambient-occlusion pass does. Hooked on
+  the six face methods rather than the renderer above them, so vanilla stairs and slabs, pressure
+  plates, cake, RetroAPI's own `renderLitFace` and any mod's custom renderer are all corrected without
+  asking for it. A full-size face samples its own corners and gets its own values back, so ordinary
+  blocks render exactly as they did.
+
+#### Added
+- **`RetroBlockAccess.droppedItemScale(float)` / `compactDroppedItem()`.** Beta draws a dropped block at
+  quarter scale unless it is not a full cube, in which case it doubles it:
+
+  ```java
+  float scale = 0.25F;
+  if (!block.isFullCube() && id != Block.SLAB.id && block.getRenderType() != 16) scale = 0.5F;
+  ```
+
+  That is a rule about torches and flowers, which are mostly empty space and want to be visible on the
+  floor. Applied to a block that is *nearly* a cube it is just wrong: a cactus, a stair or any
+  custom-rendered shape lands at twice the size of every other item in the pile and clips through the
+  ground. There was no way to opt out, because the rule reads only `isFullCube()`, which such a block
+  cannot answer true to without lying to collision and lighting as well. `compactDroppedItem()` is the
+  value every Minecraft version after beta uses for everything. A block that never calls it keeps beta's
+  number exactly.
+
+### Partial blocks line up, and can be flat in the inventory
+
+
+#### Fixed
+- **Texture alignment on the two faces beta draws mirrored.** Every face method takes its texture
+  coordinates from the block's bounding box, so a box covering half the block gets half the texture, and
+  on four of the six faces that is also where you would expect it. The other two emit their horizontal
+  coordinate reversed: `renderEastFace` gives the vertex at `maxX` the coordinate computed from `minX`,
+  and `renderSouthFace` gives the vertex at `minZ` the one computed from `maxZ`. On a full cube that only
+  mirrors the tile, which is invisible on a symmetric texture and old enough to count as the intended
+  look. On a partial box it also takes the wrong half: a stair's upper step, spanning x 0.5 to 1, is drawn
+  with texture columns 8 to 16, while a whole block in that same space shows columns 0 to 8 there, because
+  it is mirrored too. The step does not line up with the block beside it, and the seam runs the length of
+  every staircase.
+
+  The mirroring is kept and the sub-rectangle it implies is used instead: a point at `c` across the block
+  shows column `16 - 16c`. Written that way a full face comes out byte-identical to vanilla's, epsilon
+  included, so ordinary blocks do not move. The correction stands down on out-of-range bounds, on an
+  active face rotation and on an explicit `flipTextureHorizontally`, since in each of those it can no
+  longer tell which coordinate it is holding.
+
+#### Added
+- **`RenderType.setFlatItem(id)` / `registerFlatItem(id, renderer)`.** Beta already decides, in
+  `BlockRenderManager.isSideLit`, whether a block's item form is a small 3D block or a flat sprite, and
+  draws its door, ladder, torch and pane flat for a good reason: a three pixel thick panel is unreadable
+  at inventory size, and those shapes are recognised from an outline rather than from a perspective view
+  of an edge. Custom render types were forced to the 3D form. This is the way to say otherwise, and it
+  covers the inventory slot, the hand and a dropped stack together, because all three ask that one
+  question. It is per render type rather than per block because that is the only thing `isSideLit` is
+  given.
+
+### A block can present as another block
+
+`RetroBlockDisguise` answers, per position, three questions beta only ever answers per block type. All
+three had the same shape of problem: the value lives on the block, and a block whose appearance is per
+position has no way to vary it.
+
+| | where beta decides it | why a hook was needed |
+| --- | --- | --- |
+| which tool works | `mineableTools(Block)` | takes a block, no coordinates |
+| what its particles look like | `BlockParticle` reads `block.getTexture(0, meta)` | the block's static sprite |
+| what it sounds like | `Block.soundGroup` | a field on the block type |
+
+```java
+public class FramedBlock extends Block implements RetroBlockDisguise {
+    public Block disguisedBlock(BlockView world, int x, int y, int z) { return whatItWears(world, x, y, z); }
+}
+```
+
+Tools are **additive**, deliberately: a wooden frame wearing stone answers to an axe *and* a pickaxe.
+Taking the axe away because of what it is currently wearing would mean a block got harder to break the
+more it had been decorated. The position comes from `RetroBreakTarget`, which validates against the
+world, so a stale record cannot answer for somewhere else.
+
+Sounds needed two hooks rather than one, and missing the second is the obvious mistake: beta plays a
+tapping sound every four ticks while a block is being mined, from the interaction managers, and a
+separate crunch when it finally gives way, from world event 2001. The tapping is what you hear for
+essentially the whole interaction. Fixing only the crunch leaves a stone-clad block sounding like wood
+for exactly the part you were listening to.
+
+The crunch and the cloud of debris also needed the disguise **written down before the block leaves**.
+Both are produced by an event that arrives after the position is already empty, carrying an id, a
+metadata value and no way to ask the world anything, so `RetroDisguises` records the disguise on removal
+and those two read it back. A sixteen entry ring is enough: the event follows the removal within the tick.
 
 ## 0.3.6 - Auxiliary per-position block data
 

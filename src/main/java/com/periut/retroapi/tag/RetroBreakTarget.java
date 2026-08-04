@@ -86,6 +86,43 @@ public final class RetroBreakTarget {
 		return target.world.getBlockId(target.x, target.y, target.z) == block.id ? target : null;
 	}
 
+	/**
+	 * The break currently in progress on {@code block}, by whichever player is making it.
+	 *
+	 * <p>{@link #current(PlayerEntity, Block)} wants the player, and the mining questions beta asks -
+	 * breaking speed, the correct-tool check - are handed a block and nothing else, no player and no
+	 * coordinates. Only one break can be underway per player and the record is validated against the
+	 * world, so a scan for the one standing on the right block answers correctly for whoever is doing it.
+	 */
+	public static RetroBreakTarget currentAny(Block block) {
+		if (block == null) {
+			return null;
+		}
+		synchronized (CURRENT) {
+			for (RetroBreakTarget target : CURRENT.values()) {
+				if (target != null && target.world.getBlockId(target.x, target.y, target.z) == block.id) {
+					return target;
+				}
+			}
+		}
+		return null;
+	}
+
+	/**
+	 * The break in progress at a position, by whichever player is making it. Lets code that has
+	 * coordinates but no world, which several of beta's client-side break hooks are, still reach one.
+	 */
+	public static RetroBreakTarget currentAt(int x, int y, int z) {
+		synchronized (CURRENT) {
+			for (RetroBreakTarget target : CURRENT.values()) {
+				if (target != null && target.x == x && target.y == y && target.z == z) {
+					return target;
+				}
+			}
+		}
+		return null;
+	}
+
 	public BlockView world() {
 		return world;
 	}

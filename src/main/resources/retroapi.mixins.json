@@ -75,6 +75,7 @@
 		"network.ServerPlayerInteractionManagerMixin",
 		"network.BlockUseServerMixin",
 		"network.BreakTargetServerMixin",
+		"network.DisguisedHardnessServerMixin",
 		"network.ChunkMapBlockEntitySyncMixin",
 		"network.PlayerChunkBlockEntitySyncMixin",
 		"entity.server.ServerEntityTrackerMixin",

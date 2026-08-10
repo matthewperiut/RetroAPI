@@ -66,6 +66,25 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 		int index = ChunkExtendedBlocks.toIndex(x, y, z);
 
 		if (rawId >= 256) {
+			// Re-setting a position to the extended block it already holds is not a change, and must
+			// not be run through the replace path below. That path is destructive in two ways: it
+			// calls remove(), which drops the position's xmeta and block data (its state, and whatever
+			// a mod attached to it - a clad block's cladding among them), and it clears the position
+			// through vanilla first, which every other listener on setBlock reads as the block
+			// becoming air. Neither is recoverable afterwards, and a dedicated server re-sets blocks
+			// at their own id constantly: the clicked position is sent back as a block change on every
+			// single right-click, so applying one must leave the block exactly as it was. The vanilla
+			// byte array already holds 0 here and the block's opacity has not changed, so there is
+			// nothing to clear and no heightmap or lighting work to redo.
+			if (retroapi$extendedBlocks.hasEntry(index)
+					&& retroapi$extendedBlocks.getBlockId(index) == rawId) {
+				retroapi$extendedBlocks.set(index, rawId, 0);
+				this.meta.set(x, y, z, 0);
+				dirty = true;
+				cir.setReturnValue(true);
+				return;
+			}
+
 			// Handle removal of old extended block at this position
 			if (retroapi$extendedBlocks.hasEntry(index)) {
 				int oldExtId = retroapi$extendedBlocks.getBlockId(index);
@@ -128,6 +147,18 @@ public abstract class WorldChunkMixin implements ExtendedBlocksAccess {
 		int index = ChunkExtendedBlocks.toIndex(x, y, z);
 
 		if (rawId >= 256) {
+			// Re-setting the block already here keeps everything attached to the position - see the
+			// note on the no-meta overload. The metadata still has to be written: this overload is
+			// how a state change at an unchanged block arrives.
+			if (retroapi$extendedBlocks.hasEntry(index)
+					&& retroapi$extendedBlocks.getBlockId(index) == rawId) {
+				retroapi$extendedBlocks.set(index, rawId, meta);
+				this.meta.set(x, y, z, meta);
+				dirty = true;
+				cir.setReturnValue(true);
+				return;
+			}
+
 			// Handle removal of old extended block at this position
 			if (retroapi$extendedBlocks.hasEntry(index)) {
 				int oldExtId = retroapi$extendedBlocks.getBlockId(index);

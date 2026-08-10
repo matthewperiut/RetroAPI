@@ -37,6 +37,10 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 		// AbstractBlockState.calcBlockBreakingDelta, so breaking speed follows the cladding either way.
 		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMixin",
 		"com.periut.retroapi.mixin.client.render.DisguisedHardnessMpMixin",
+		// The server-side half of the same feature, off for the same reason: StationAPI's flattening
+		// ServerPlayerInteractionManagerMixin owns that class's getHardness sites too, and its
+		// calcBlockBreakingDelta hook answers for both sides at once, so the two stay in agreement.
+		"com.periut.retroapi.mixin.network.DisguisedHardnessServerMixin",
 		// StationAPI's arsenic renderer MERGES ItemRenderer.render, and an injector cannot target a
 		// method another mixin has merged at the same priority: that is a hard InvalidInjectionException
 		// at class load, not a feature quietly not applying, so `require = 0` does not cover it and a

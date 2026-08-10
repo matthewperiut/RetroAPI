@@ -26,12 +26,10 @@ jobs:
         run: |
           chmod +x ./gradlew
           ./gradlew build -Pstationapi
-      # Boots a dedicated server and forces every RetroAPI mixin to apply, so a mixin that no longer
-      # matches the mappings fails the build here instead of crashing someone's game. The CLIENT smoke
-      # test is the other half and cannot run on a headless runner - run `./gradlew clientSmokeTest`
-      # locally before releasing.
-      - name: Server smoke test (all mixins apply)
-        run: ./gradlew serverSmokeTest stapiServerSmokeTest -Pstationapi
+      # The smoke tests are NOT run here: they boot a game and regularly stall the runner until the job
+      # times out. Run them locally before releasing instead:
+      #   ./gradlew serverSmokeTest stapiServerSmokeTest -Pstationapi
+      #   ./gradlew clientSmokeTest
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:

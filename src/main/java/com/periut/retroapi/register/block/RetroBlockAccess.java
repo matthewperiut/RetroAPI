@@ -319,6 +319,28 @@ public interface RetroBlockAccess {
 	default float getDroppedItemScale() { throw RetroInjected.missing(); }
 
 	/**
+	 * Stop flowing water from destroying this block.
+	 *
+	 * <p>Beta decides what water may flow into by material alone: {@code FlowingLiquidBlock.canSpreadTo}
+	 * accepts any block whose material does not block movement, and {@code spreadTo} then drops that
+	 * block's items and overwrites it. Every passable material - {@link net.minecraft.block.material.Material#PLANT}
+	 * above all - is therefore dissolved by the first splash that reaches it, which is right for wheat and
+	 * wrong for anything meant to live in a wet cave.
+	 *
+	 * <p>This marks the block as one water declines to enter: it is treated as a wall for the purposes of
+	 * spreading, of choosing a flow direction and of looking for a hole to fall into. Modern Minecraft
+	 * expresses the same idea as waterlogging - water and plant occupying one position - which beta has no
+	 * room for in a block id and a nibble of metadata, so "water flows around it" is the nearest available
+	 * behaviour.
+	 *
+	 * <p>Water only. Lava still burns through, which is what it does in modern too.
+	 */
+	default RetroBlockAccess waterTolerant() { throw RetroInjected.missing(); }
+
+	/** True when {@link #waterTolerant()} was called: flowing water treats this block as a wall. */
+	default boolean isWaterTolerant() { throw RetroInjected.missing(); }
+
+	/**
 	 * Set the render type for this block using a flattened identifier.
 	 *
 	 * @see RenderType for vanilla and custom render type identifiers

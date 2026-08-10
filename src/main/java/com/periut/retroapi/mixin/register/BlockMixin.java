@@ -62,6 +62,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Unique private boolean retroapi$solidRenderSet = false;
 	@Unique private boolean retroapi$solidRender = true;
 	@Unique private float[] retroapi$customBounds = null;
+	@Unique private boolean retroapi$waterTolerant = false;
 	@Unique private boolean retroapi$alwaysDrops = false;
 	@Unique private boolean retroapi$alwaysEffectiveTool = false;
 	@Unique private Class<?> retroapi$effectiveTool = null;
@@ -246,6 +247,17 @@ public abstract class BlockMixin implements RetroBlockAccess {
 	@Override
 	public float getDroppedItemScale() {
 		return this.retroapi$droppedItemScale;
+	}
+
+	@Override
+	public RetroBlockAccess waterTolerant() {
+		this.retroapi$waterTolerant = true;
+		return this;
+	}
+
+	@Override
+	public boolean isWaterTolerant() {
+		return this.retroapi$waterTolerant;
 	}
 
 	@Override

@@ -44,14 +44,22 @@ import java.util.Map;
  * the extension unreachable and pointless.
  *
  * <h2>Scope of this release</h2>
- * <b>Storage, addressing and generation are implemented; client rendering and lighting of the extension
- * range are not.</b> What works today: declaring bounds, {@link RetroExtendedSections} storage on every
- * chunk, sidecar persistence (a new {@code vext} section, absent from chunks that have none), and block
- * reads and writes at out-of-range Y through {@link #getBlock} / {@link #setBlock}. What does not: beta's
- * {@code WorldRenderer} builds its chunk grid over a hardcoded 0-127 column and its light arrays are
- * sized to match, so blocks placed in the extension range are stored, saved and reloaded correctly but
- * are not drawn and are not lit. Treat the extension as a data layer until that lands; a dimension that
- * never calls {@link #extend} is completely unaffected either way.
+ * <b>Storage, addressing and world access are implemented; client rendering and lighting are not.</b>
+ *
+ * <p>What works today: declaring bounds, {@link RetroExtendedSections} storage on every chunk, sidecar
+ * persistence (a new {@code vext} section, absent from chunks that have none), and - as of 0.3.8 - the whole
+ * game's own block API at extension Y. {@code World.getBlockId}, {@code getBlockMeta}, {@code setBlock},
+ * {@code isAir}, {@code getMaterial} and {@code isPosLoaded} all answer for a block at y-1 the way they
+ * answer for one at y64; see {@code mixin.world.WorldHeightMixin}. Until 0.3.8 only this class's own
+ * {@link #getBlock} / {@link #setBlock} could see such a block, which meant nothing in the game agreed it
+ * existed.
+ *
+ * <p>What does not: beta's {@code WorldRenderer} builds its chunk grid over a hardcoded 0-127 column, and
+ * its {@code blockLight} / {@code skyLight} arrays are sized {@code 16*128*16} with a one-byte-per-column
+ * heightmap that cannot hold a negative Y at all. So an extension block is stored, saved, reloaded, read,
+ * written and collided with correctly, and is still <em>not drawn and not lit</em>. Rendering is the next
+ * step and is independently testable with light faked to a constant; lighting is the larger half after it.
+ * A dimension that never calls {@link #extend} is completely unaffected either way.
  */
 public final class RetroWorldHeight {
 
@@ -64,6 +72,16 @@ public final class RetroWorldHeight {
 	public static final int SECTION_HEIGHT = 16;
 
 	private static final Map<Integer, Extension> EXTENSIONS = new HashMap<>();
+
+	/**
+	 * True once any dimension has been extended, and the first thing every hot-path hook tests.
+	 *
+	 * <p>{@code World.getBlockId} is called several million times a second, so the routing hook on it cannot
+	 * afford a map lookup - or anything else - in the overwhelmingly common case where the answer is "no". A
+	 * Y inside 0-127 leaves before this is even read; a Y outside it leaves here unless some mod has actually
+	 * asked for an extension. Written once during init, read everywhere after, hence volatile.
+	 */
+	private static volatile boolean anyExtended = false;
 
 	private RetroWorldHeight() {}
 
@@ -88,6 +106,7 @@ public final class RetroWorldHeight {
 		int alignedUp = align(up);
 		if (alignedDown == 0 && alignedUp == 0) {
 			EXTENSIONS.remove(dimensionId);
+			anyExtended = !EXTENSIONS.isEmpty();
 			return;
 		}
 		Extension existing = EXTENSIONS.get(dimensionId);
@@ -100,6 +119,7 @@ public final class RetroWorldHeight {
 				dimensionId, alignedDown, alignedUp);
 		}
 		EXTENSIONS.put(dimensionId, new Extension(alignedDown, alignedUp));
+		anyExtended = true;
 		RetroAPI.LOGGER.info("Dimension {} extended to y {} .. {}", dimensionId,
 			VANILLA_BOTTOM_Y - alignedDown, VANILLA_TOP_Y + alignedUp);
 	}
@@ -109,6 +129,14 @@ public final class RetroWorldHeight {
 	}
 
 	// --- querying -----------------------------------------------------------------------------
+
+	/**
+	 * True when <em>any</em> dimension is extended. A single static read, for hooks on paths hot enough that
+	 * {@link #isExtended(int)}'s map lookup would show up in a profile.
+	 */
+	public static boolean anyExtended() {
+		return anyExtended;
+	}
 
 	/** True when the dimension has any extension at all. The fast path everything else checks first. */
 	public static boolean isExtended(int dimensionId) {

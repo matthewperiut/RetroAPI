@@ -39,6 +39,8 @@
 		"storage.WorldMixin",
 		"storage.WorldStorageAccessor",
 		"world.WorldSetBlockMixin",
+		"world.FluidSpreadMixin",
+		"world.WorldHeightMixin",
 		"world.ChunkCacheDecorateMixin",
 		"world.CarverMixin",
 		"client.LanguageAccessor",

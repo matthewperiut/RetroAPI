@@ -1,5 +1,6 @@
 package com.periut.retroapi.mixin.client;
 
+import com.periut.retroapi.register.block.RetroTextures;
 import net.minecraft.block.Block;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -21,6 +22,9 @@ import org.spongepowered.asm.mixin.Shadow;
  * updates {@code block.textureId}), and follows ID remaps ({@code IdAssigner}
  * updates {@code blockId}). Vanilla blocks (id &lt; 256) keep the snapshot
  * behavior bit-for-bit.
+ * <p>
+ * A block item that has been given an icon of its own with
+ * {@link RetroTextures#setItemSprite} keeps it: see {@code getTextureId} below.
  */
 @Mixin(BlockItem.class)
 public abstract class BlockItemTextureMixin extends Item {
@@ -33,6 +37,14 @@ public abstract class BlockItemTextureMixin extends Item {
 
 	@Override
 	public int getTextureId(int damage) {
+		// Unless the item was given a sprite of its own. Following the block is a repair for a snapshot
+		// taken too early, not a rule that a block item may not have its own icon, and it has to yield to
+		// someone who has actually said what they want. Without this, setTextureId on a modded block item
+		// is silently ignored: the icon follows the block no matter what anyone sets, which is a hard
+		// thing to see, because the sprite it falls back to is a real one that draws perfectly.
+		if (RetroTextures.hasOwnItemSprite(this.id)) {
+			return super.getTextureId(damage);
+		}
 		if (blockId >= 256 && blockId < Block.BLOCKS.length) {
 			Block block = Block.BLOCKS[blockId];
 			if (block != null) {

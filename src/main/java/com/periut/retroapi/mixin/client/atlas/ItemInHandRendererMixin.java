@@ -1,6 +1,6 @@
 package com.periut.retroapi.mixin.client.atlas;
 
-import com.periut.retroapi.RetroAPI;
+import com.periut.retroapi.register.block.RetroTextures;
 import com.periut.retroapi.client.texture.AtlasExpander;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -40,7 +40,7 @@ public class ItemInHandRendererMixin {
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/entity/LivingEntity;getItemStackTextureId(Lnet/minecraft/item/ItemStack;)I")
 	)
 	private void retroapi$setAtlasSizeForRender(LivingEntity mob, ItemStack itemInHand, CallbackInfo ci) {
-		retroapi$atlasSize = RetroAPI.isBlock(itemInHand.itemId) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
+		retroapi$atlasSize = RetroTextures.drawsFromTerrainAtlas(itemInHand.itemId) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
 	}
 
 	@ModifyConstant(
@@ -48,7 +48,7 @@ public class ItemInHandRendererMixin {
 		constant = @Constant(intValue = 256)
 	)
 	private int retroapi$fixBlockCheck(int original) {
-		if (RetroAPI.isBlock(retroapi$currentItemId)) {
+		if (RetroTextures.drawsFromTerrainAtlas(retroapi$currentItemId)) {
 			return retroapi$currentItemId + 1;
 		}
 		return original;

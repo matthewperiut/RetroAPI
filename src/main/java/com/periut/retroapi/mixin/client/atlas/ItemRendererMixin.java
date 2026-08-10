@@ -1,6 +1,6 @@
 package com.periut.retroapi.mixin.client.atlas;
 
-import com.periut.retroapi.RetroAPI;
+import com.periut.retroapi.register.block.RetroTextures;
 import com.periut.retroapi.client.texture.AtlasExpander;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -14,6 +14,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyConstant;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+/**
+ * Draws items off the expanded atlases: which one to bind, and the divisor to normalise against.
+ *
+ * <p>Both questions come down to beta's {@code id < 256} test, which sorts vanilla blocks from vanilla
+ * items and means nothing for a modded id, since all of those are above 256. The answer is
+ * {@link RetroTextures#drawsFromTerrainAtlas}: a modded block reads from terrain like a vanilla one,
+ * unless it has declared an item icon of its own with {@link RetroTextures#setItemSprite}.
+ *
+ * <p>Worth knowing when reading {@code renderGuiItem}: that test appears TWICE in it, once to pick a 3D
+ * block over a flat sprite and once to pick the atlas, and the constant edit below applies to both. A
+ * block sent down the flat path by {@code isSideLit} still meets the second one.
+ */
 @Mixin(ItemRenderer.class)
 @Environment(EnvType.CLIENT)
 public class ItemRendererMixin {
@@ -40,7 +52,7 @@ public class ItemRendererMixin {
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/item/ItemStack;getTextureId()I")
 	)
 	private void retroapi$setAtlasSizeForRender(ItemEntity itemEntity, double d, double e, double f, float g, float h, CallbackInfo ci) {
-		retroapi$atlasSize = RetroAPI.isBlock(itemEntity.stack.itemId) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
+		retroapi$atlasSize = RetroTextures.drawsFromTerrainAtlas(itemEntity.stack.itemId) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
 	}
 
 	@ModifyConstant(
@@ -48,7 +60,7 @@ public class ItemRendererMixin {
 		constant = @Constant(intValue = 256)
 	)
 	private int retroapi$fixBlockCheckInRender(int original) {
-		if (RetroAPI.isBlock(retroapi$currentItemId)) {
+		if (RetroTextures.drawsFromTerrainAtlas(retroapi$currentItemId)) {
 			return retroapi$currentItemId + 1;
 		}
 		return original;
@@ -77,6 +89,7 @@ public class ItemRendererMixin {
 		retroapi$currentItemId = item;
 	}
 
+
 	@Inject(
 		method = "renderGuiItem(Lnet/minecraft/client/font/TextRenderer;Lnet/minecraft/client/texture/TextureManager;IIIII)V",
 		at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/item/ItemRenderer;drawTexture(IIIIII)V")
@@ -87,7 +100,7 @@ public class ItemRendererMixin {
 		int item, int metadata, int sprite, int x, int y,
 		CallbackInfo ci
 	) {
-		retroapi$atlasSize = RetroAPI.isBlock(item) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
+		retroapi$atlasSize = RetroTextures.drawsFromTerrainAtlas(item) ? AtlasExpander.terrainAtlasSize : AtlasExpander.itemAtlasSize;
 	}
 
 	@ModifyConstant(
@@ -95,7 +108,7 @@ public class ItemRendererMixin {
 		constant = @Constant(intValue = 256)
 	)
 	private int retroapi$fixBlockCheckInGui(int original) {
-		if (RetroAPI.isBlock(retroapi$currentItemId)) {
+		if (RetroTextures.drawsFromTerrainAtlas(retroapi$currentItemId)) {
 			return retroapi$currentItemId + 1;
 		}
 		return original;

@@ -160,6 +160,55 @@ public class RetroTextures {
 		trackedItems.add(new ItemEntry(item, texture));
 	}
 
+	// --- which atlas a block's flat icon comes from ---------------------------------------------
+
+	private static final java.util.Set<Integer> itemAtlasSprites = new java.util.HashSet<>();
+
+	/**
+	 * Gives a BLOCK's item a flat icon drawn from the item atlas, and registers it there.
+	 *
+	 * <p>Only blocks need this. Beta decides which atlas an icon comes from by asking whether the id is
+	 * below 256, which sorts vanilla blocks from vanilla items and says nothing useful about a modded
+	 * one, since every modded id is above 256. RetroAPI answers that question with "is it a block"
+	 * instead, so a modded block behaves like a vanilla one and reads from terrain, which is what a
+	 * modded torch or ladder wants.
+	 *
+	 * <p>Some do not. A door, a sign or anything whose icon is a drawing of the thing rather than a
+	 * sprite off its side wants an ordinary item texture, in {@code textures/item/}, editable on its own
+	 * and stitched with the other item sprites. Registering one on the item atlas without saying so left
+	 * the sprite index pointing into one atlas while the other was bound, and drew whatever happened to
+	 * sit at that index. This is how a block says so.
+	 *
+	 * @param item    the block's item, from {@code Item.ITEMS[block.id]}
+	 * @param texture an item texture, from {@link #getOrAddItemTexture}
+	 */
+	public static void setItemSprite(Item item, RetroTexture texture) {
+		if (item == null || texture == null) {
+			return;
+		}
+		item.setTextureId(texture.id);
+		itemAtlasSprites.add(item.id);
+		trackItem(item, texture);
+	}
+
+	/**
+	 * Whether an item's flat icon is drawn from the terrain atlas rather than the item atlas. True for a
+	 * modded block by default, and false once it has declared an icon with {@link #setItemSprite}.
+	 *
+	 * <p>Read by the renderers on every icon drawn, so it is a set lookup and not a scan.
+	 */
+	public static boolean drawsFromTerrainAtlas(int itemId) {
+		return com.periut.retroapi.RetroAPI.isBlock(itemId) && !itemAtlasSprites.contains(itemId);
+	}
+
+	/**
+	 * Whether an item has been given an icon of its own through {@link #setItemSprite}, and so should be
+	 * left to report it rather than being pointed back at its block's sprite.
+	 */
+	public static boolean hasOwnItemSprite(int itemId) {
+		return itemAtlasSprites.contains(itemId);
+	}
+
 	/**
 	 * Called during StationAPI's TextureRegisterEvent.
 	 * Registers all textures with StationAPI's atlas and updates RetroTexture.id values.

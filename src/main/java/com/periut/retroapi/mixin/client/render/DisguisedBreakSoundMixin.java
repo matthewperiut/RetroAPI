@@ -21,9 +21,17 @@ import org.spongepowered.asm.mixin.injection.At;
  * block out by the time it lands. So the position is asked first and the record of what left is only the
  * fallback: reading the record alone found nothing in singleplayer, and the sound stayed wooden.
  *
- * <p>The method is {@code worldEvent}. This targeted {@code processWorldEvent} for a while, which does not
- * exist, and because the injection was optional it simply never ran: the sound stayed wooden and nothing
- * anywhere said so. Optional injections hide exactly this, which is why these are required now.
+ * <p>This is the fallback path, and usually does nothing.
+ * {@link com.periut.retroapi.mixin.client.WorldRendererMixin} replaces the whole of case 2001 at the head
+ * of the same method, in order to widen vanilla's eight bit block id, and cancels; when it applies, the
+ * call wrapped here is never reached and the disguise is handled there. This one covers the case where it
+ * does not apply, since that injection is optional.
+ *
+ * <p>Both of those are worth stating plainly, because both cost real time to find. The method is
+ * {@code worldEvent}: this targeted {@code processWorldEvent} for a while, which does not exist, and
+ * because the injection was optional it simply never ran. Made required, it then applied cleanly and still
+ * never ran, because the code around it had been cancelled. An injection applying and an injection
+ * running are two different claims, and only the first of them is ever checked for you.
  */
 @Mixin(WorldRenderer.class)
 @Environment(EnvType.CLIENT)

@@ -26,6 +26,7 @@ public abstract class ItemMixin implements RetroItemAccess {
 
 	@Shadow public int maxCount;
 	@Shadow protected boolean handheld;
+	@Shadow protected int textureId;
 	@Shadow public abstract Item setTextureId(int sprite);
 
 	/**
@@ -332,7 +333,23 @@ public abstract class ItemMixin implements RetroItemAccess {
 			: RetroTextures.getTrackedTexture(self);
 		this.retroapi$declaredLayers.add(base != null
 			? com.periut.retroapi.component.RetroTextureLayer.plain(base)
-			: com.periut.retroapi.component.RetroTextureLayer.plain(self.getTextureId(0)));
+			: com.periut.retroapi.component.RetroTextureLayer.plain(retroapi$baseSprite(self)));
+	}
+
+	/**
+	 * The item's own sprite index, without asking a client-only question on a server.
+	 *
+	 * <p>{@code Item.getTextureId(int)} does not exist in the server jar, and this runs during
+	 * registration on both sides, so calling it there is a {@link NoSuchMethodError} that takes the
+	 * server down. The getter is worth keeping on the client - subclasses override it to vary the sprite
+	 * by metadata - but on a server nothing is ever drawn, and the plain field is what the default
+	 * implementation would have returned anyway.
+	 */
+	@org.spongepowered.asm.mixin.Unique
+	private int retroapi$baseSprite(Item self) {
+		return FabricLoader.getInstance().getEnvironmentType() == net.fabricmc.api.EnvType.SERVER
+			? this.textureId
+			: self.getTextureId(0);
 	}
 
 	@Override

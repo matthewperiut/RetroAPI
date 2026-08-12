@@ -105,7 +105,6 @@ jobs:
           fi
 
       # --- Modrinth (last: non-idempotent - rejects a duplicate version on re-runs) ---
-      # Ornithe build: Fabric loader, OSL required.
       - name: Publish Ornithe to Modrinth
         uses: Kir-Antipov/mc-publish@v3.3
         with:
@@ -123,8 +122,6 @@ jobs:
           # min-minor) drops it, leaving an empty list -> "At least one game version should be
           # specified". `any` keeps beta/alpha versions so b1.7.3 survives.
           game-version-filter: any
-          dependencies: |
-            osl(required)
 
       # Babric bundle: Babric loader ONLY, self-contained - no OSL dependency.
       - name: Publish Babric to Modrinth

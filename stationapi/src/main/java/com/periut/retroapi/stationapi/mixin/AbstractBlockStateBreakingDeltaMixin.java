@@ -41,12 +41,17 @@ public class AbstractBlockStateBreakingDeltaMixin {
 			return;
 		}
 		Block worn = RetroDisguises.at(world, pos.x, pos.y, pos.z);
-		if (worn == null) {
+		if (worn == null || worn == ((AbstractBlockState) (Object) this).getBlock()) {
 			return;
 		}
 		// The worn block's own state answers the same question. Reached through StationFlatteningBlock,
-		// which is where flattening puts getDefaultState and which every Block implements there. It
-		// cannot recurse: a block that wears another is never itself wearable.
+		// which is where flattening puts getDefaultState and which every Block implements there.
+		//
+		// That call comes straight back here, because the disguise is looked up from the POSITION and the
+		// position still holds the frame - so without the guard above every disguised block overflows the
+		// stack the moment someone starts breaking it. The state being asked is what tells the two apart:
+		// the frame's state is the real question, the worn block's state is our own answer coming round
+		// again and has to fall through to the vanilla one.
 		cir.setReturnValue(((StationFlatteningBlock) worn).getDefaultState()
 			.calcBlockBreakingDelta(player, world, pos));
 	}

@@ -453,7 +453,7 @@ public abstract class BlockMixin implements RetroBlockAccess {
 		RetroRegistry.registerBlock(new BlockRegistration(id, self, blockItem));
 
 		if (hasStationAPI) {
-			StationBridges.get().registerBlock(id.namespace(), id.identifier(), self);
+			StationBridges.get().registerBlock(id.namespace(), id.identifier(), self, itemFactory);
 		}
 
 		return self;

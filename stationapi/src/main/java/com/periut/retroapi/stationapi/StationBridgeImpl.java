@@ -32,14 +32,19 @@ public final class StationBridgeImpl implements StationBridge {
 	private static final Logger LOGGER = LogManager.getLogger("RetroAPI/StationAPI");
 
 	@Override
-	public void registerBlock(String namespace, String path, Block block) {
+	public void registerBlock(String namespace, String path, Block block,
+			java.util.function.IntFunction<BlockItem> itemFactory) {
 		Identifier id = Identifier.of(namespace + ":" + path);
 		Registry.register(BlockRegistry.INSTANCE, id, block);
 
 		// Also create and register a BlockItem so ItemStack(Block) works.
 		// StationAPI looks up block items via its BLOCK_ITEMS map, which gets
 		// populated by BlockItemTracker when a BlockItem is registered in ItemRegistry.
-		BlockItem blockItem = new BlockItem(block.id - 256);
+		//
+		// Built by the block's own factory, not `new BlockItem(...)`: a block that registered a BlockItem
+		// subclass keeps its placement rules under StationAPI, which is where they matter most, since
+		// StationAPI has no equivalent of them to fall back on.
+		BlockItem blockItem = itemFactory.apply(block.id - 256);
 		Registry.register(ItemRegistry.INSTANCE, id, blockItem);
 
 		LOGGER.info("Registered block {} with StationAPI", id);

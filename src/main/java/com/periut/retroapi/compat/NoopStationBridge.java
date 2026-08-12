@@ -14,7 +14,8 @@ import net.minecraft.item.ItemStack;
  * that gate passes. This exists only so {@link StationBridges#get()} never returns {@code null}.
  */
 final class NoopStationBridge implements StationBridge {
-	@Override public void registerBlock(String namespace, String path, Block block) {}
+	@Override public void registerBlock(String namespace, String path, Block block,
+		java.util.function.IntFunction<net.minecraft.item.BlockItem> itemFactory) {}
 	@Override public void registerItem(String namespace, String path, Item item) {}
 	@Override public void registerLangPath() {}
 	@Override public void bindAchievement(Achievement achievement, String namespace, String path) {}

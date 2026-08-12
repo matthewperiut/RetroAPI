@@ -18,7 +18,14 @@ import net.minecraft.item.ItemStack;
  */
 public interface StationBridge {
 
-	void registerBlock(String namespace, String path, Block block);
+	/**
+	 * @param itemFactory the block's own item form, built from the item id. A block that asked for a
+	 *                    subclass of {@link net.minecraft.item.BlockItem} needs that subclass here too:
+	 *                    placement rules, custom use behaviour and inventory rendering all live on it, and
+	 *                    substituting a plain BlockItem silently drops every one of them.
+	 */
+	void registerBlock(String namespace, String path, Block block,
+		java.util.function.IntFunction<net.minecraft.item.BlockItem> itemFactory);
 
 	void registerItem(String namespace, String path, Item item);
 

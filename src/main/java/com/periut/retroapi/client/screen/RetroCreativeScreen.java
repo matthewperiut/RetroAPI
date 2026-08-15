@@ -553,15 +553,39 @@ public class RetroCreativeScreen extends HandledScreen {
         drawTabIcon(groups.get(groupIndex).getIcon(), x + 13 - 8, y + 16 - 8 + (top ? 1 : -1));
     }
 
-    /** The tab icons are not slots, so they are the one place this screen draws an item itself. */
+    /**
+     * The tab icons are not slots, so they are the one place this screen draws an item itself - which
+     * means setting the state up itself too, and doing it exactly as {@code HandledScreen} does before
+     * it draws the items in the slots.
+     *
+     * <p>Two things it used to skip. The lights were never aimed - {@code GL_LIGHTING} was switched on
+     * but {@code Lighting.turnOn()} was not called, so an icon was lit by whatever the last caller left
+     * configured. And {@code GL_RESCALE_NORMAL} was never enabled: an item is drawn scaled, so without it
+     * the normals come out scaled too and every lit face is darker than it should be. That is the dim.
+     *
+     * <p>Both were invisible without StationAPI, where something earlier in the frame happened to leave
+     * the state RetroAPI wanted. Setting it here rather than inheriting it is what makes the icons match
+     * the slots in either build.
+     */
     private void drawTabIcon(final ItemStack stack, final int x, final int y) {
         if (stack == null) {
             return;
         }
-        GL11.glEnable(GL11.GL_LIGHTING);
+
+        // Aiming the lights: the rotate is for them, not for the item, which is why it is popped again.
+        GL11.glPushMatrix();
+        GL11.glRotatef(120.0F, 1.0F, 0.0F, 0.0F);
+        Lighting.turnOn();
+        GL11.glPopMatrix();
+
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        GL11.glEnable(GL12.GL_RESCALE_NORMAL);
         GL11.glEnable(GL11.GL_DEPTH_TEST);
+
         tabIconRenderer.renderGuiItem(textRenderer, minecraft.textureManager, stack, x, y);
-        GL11.glDisable(GL11.GL_LIGHTING);
+
+        GL11.glDisable(GL12.GL_RESCALE_NORMAL);
+        Lighting.turnOff();
         GL11.glDisable(GL11.GL_DEPTH_TEST);
     }
 

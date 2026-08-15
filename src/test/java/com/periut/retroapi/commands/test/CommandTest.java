@@ -10,6 +10,7 @@ import com.periut.retroapi.commands.RetroCommandSource;
 import com.periut.retroapi.commands.argument.CoordinateArgument;
 import com.periut.retroapi.commands.argument.DefaultPosArgument;
 import com.periut.retroapi.commands.argument.GameModeArgumentType;
+import com.periut.retroapi.gamemode.RetroGameMode;
 import com.periut.retroapi.commands.argument.ItemIds;
 import com.periut.retroapi.commands.argument.TimeArgumentType;
 import com.periut.retroapi.commands.argument.VanillaIds;
@@ -407,11 +408,15 @@ public final class CommandTest {
         Tests.throwsError("an unknown unit is rejected", CommandSyntaxException.class,
             () -> TimeArgumentType.time().parse(new StringReader("5y")));
 
-        Tests.eq("game modes parse by name", GameModeArgumentType.CREATIVE, parseGameMode("creative"));
-        Tests.eq("game modes parse by initial", GameModeArgumentType.SURVIVAL, parseGameMode("s"));
-        Tests.eq("game modes parse by number", GameModeArgumentType.CREATIVE, parseGameMode("1"));
+        // The argument answers with the mode itself, and adventure and spectator are modes now, so
+        // "adventure" is a valid answer rather than the rejection this used to check for.
+        Tests.eq("game modes parse by name", RetroGameMode.CREATIVE, parseGameMode("creative"));
+        Tests.eq("game modes parse by initial", RetroGameMode.SURVIVAL, parseGameMode("s"));
+        Tests.eq("game modes parse by number", RetroGameMode.CREATIVE, parseGameMode("1"));
+        Tests.eq("game modes parse adventure", RetroGameMode.ADVENTURE, parseGameMode("adventure"));
+        Tests.eq("game modes parse spectator by initial", RetroGameMode.SPECTATOR, parseGameMode("sp"));
         Tests.throwsError("an unknown game mode is rejected", CommandSyntaxException.class,
-            () -> GameModeArgumentType.gameMode().parse(new StringReader("adventure")));
+            () -> GameModeArgumentType.gameMode().parse(new StringReader("wandering")));
     }
 
     /** The tree a server sends has to come back the same shape, or completions would drift from it. */
@@ -462,11 +467,11 @@ public final class CommandTest {
         }
     }
 
-    private static int parseGameMode(final String input) {
+    private static RetroGameMode parseGameMode(final String input) {
         try {
             return GameModeArgumentType.gameMode().parse(new StringReader(input));
         } catch (final CommandSyntaxException ex) {
-            return -1;
+            return null;
         }
     }
 }

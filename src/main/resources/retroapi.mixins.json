@@ -35,6 +35,8 @@
 		"storage.PlayerLifeDataMixin",
 		"gamemode.CreativeBreakSpeedMixin",
 		"gamemode.CreativeInstantBreakMixin",
+		"gamemode.CreativeNoDurabilityMixin",
+		"gamemode.CreativeNotTargetedMixin",
 		"gamemode.FlightFallDamageMixin",
 		"gamemode.LivingEntityJumpInvoker",
 		"gamemode.CreativeNoDropsMixin",

@@ -41,6 +41,13 @@ public class AbstractBlockStateBreakingDeltaMixin {
 		if (world == null || pos == null) {
 			return;
 		}
+		// Creative is instant whatever it is wearing, and CreativeBreakingDeltaMixin says so at this same
+		// hook. Checked here as well so the answer does not depend on which of the two injectors mixin
+		// happens to run first.
+		if (com.periut.retroapi.gamemode.RetroGameModes.get(player)
+				== com.periut.retroapi.gamemode.RetroGameMode.CREATIVE) {
+			return;
+		}
 		Block worn = RetroDisguises.at(world, pos.x, pos.y, pos.z);
 		if (worn == null) {
 			return;

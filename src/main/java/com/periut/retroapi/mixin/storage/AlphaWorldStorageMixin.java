@@ -26,11 +26,17 @@ public class AlphaWorldStorageMixin {
 
 		File worldDir = ((WorldStorageAccessor) (Object) this).retroapi$getDir();
 
+		// Both worlds get a sidecar. Under StationAPI it holds no block IDS - those are StationAPI's, in
+		// its own chunk sections - but everything else a position carries still has nowhere else to live:
+		// RetroBlockData, the state bits above the vanilla nibble, cubic biome cells. Leaving the sidecar
+		// unopened there meant all of it was written nowhere and read back as absent, so a clad block came
+		// back from a rejoin wearing nothing.
+		SidecarManager.setWorldDir(worldDir);
+
 		if (FabricLoader.getInstance().isModLoaded("stationapi")) {
 			LOGGER.debug("StationAPI present, saving current ID map for world: {}", worldDir);
 			IdAssigner.saveCurrentIds(worldDir);
 		} else {
-			SidecarManager.setWorldDir(worldDir);
 			LOGGER.debug("Assigning IDs for world: {}", worldDir);
 			IdAssigner.assignIds(worldDir);
 		}

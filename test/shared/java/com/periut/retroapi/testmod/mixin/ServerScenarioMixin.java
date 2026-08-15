@@ -45,8 +45,25 @@ public abstract class ServerScenarioMixin {
 
 		// The smoke scenario is world-independent: sweep the mixins, write its own verdict, stop.
 		if (smoke) {
-			com.periut.retroapi.testmod.smoke.SmokeTest.runServer();
+			boolean ok;
+			try {
+				ok = com.periut.retroapi.testmod.smoke.SmokeTest.runServer();
+			} catch (Throwable t) {
+				// A throw out here is a check that could not even be reached - a class that refuses to
+				// load on this side, most often. Record it as the failure it is rather than letting it
+				// escape into the tick loop, where it leaves a half-dead server sitting there until the
+				// build times out.
+				com.periut.retroapi.testmod.TestMod.LOGGER.error("[smoke] the server scenario threw", t);
+				com.periut.retroapi.testmod.smoke.SmokeTest.writeCrashResult("server", t);
+				ok = false;
+			}
+
 			((ServerControlAccessor) server).retroapi_test$setRunning(false);
+			if (!ok) {
+				// halt, not exit: the verdict is already on disk, and a graceful shutdown is exactly
+				// what hangs when the thing that failed was the world or a mod's own thread.
+				Runtime.getRuntime().halt(1);
+			}
 			return;
 		}
 

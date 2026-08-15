@@ -26,4 +26,11 @@ final class NoopStationBridge implements StationBridge {
 	@Override public void addShapelessRecipe(ItemStack output, Object... ingredients) {}
 	@Override public void addSmeltingRecipe(int inputId, ItemStack output) {}
 	@Override public void attachPortal(PlayerEntity player, TeleportationManager retroManager) {}
+	@Override public java.util.List<String> dimensionIds() { return java.util.List.of(); }
+	@Override public boolean switchDimension(PlayerEntity player, String identifier) { return false; }
+	@Override public String dimensionIdentifier(int serialId) { return null; }
+	@Override public java.util.List<String> itemIdentifiers() { return java.util.List.of(); }
+	@Override public int itemId(String identifier) { return -1; }
+	@Override public String itemIdentifier(Item item) { return null; }
+	@Override public int sprintKeyCode() { return -1; }
 }

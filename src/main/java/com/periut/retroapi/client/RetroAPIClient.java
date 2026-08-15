@@ -40,6 +40,43 @@ public class RetroAPIClient implements ClientModInitializer {
 			LangLoader.loadTranslations();
 		});
 
+		// The commands API's client half: the translation resolver, and the listeners for the tree,
+		// completions and rich messages a server sends.
+		com.periut.retroapi.commands.util.NetworkingUtil.registerClient();
+
+		// Game modes as the server has them (every player's, not just this client's).
+		com.periut.retroapi.gamemode.GameModeNetworking.registerClient();
+
+		// The creative screen's way back to the server. Registered here so the container - which is
+		// common code a dedicated server loads - never names a client-only class itself.
+		com.periut.retroapi.gamemode.CreativeSync.Holder.set(new com.periut.retroapi.gamemode.CreativeSync() {
+			@Override
+			public void give(net.minecraft.item.ItemStack stack) {
+				com.periut.retroapi.gamemode.GameModeNetworking.requestCreativeItem(stack);
+			}
+
+			@Override
+			public void setSlot(int slot, net.minecraft.item.ItemStack stack) {
+				com.periut.retroapi.gamemode.GameModeNetworking.setCreativeSlot(slot, stack);
+			}
+		});
+
+		// Game rules as the server has them. Arrives as a full set on join and as single changes
+		// after that; either way it replaces what this client believed.
+		ClientPlayNetworking.registerListener(RetroAPINetworking.GAMERULE_CHANNEL, (ctx, buffer) -> {
+			int count = buffer.readVarInt();
+			java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
+			for (int i = 0; i < count; i++) {
+				values.put(buffer.readString(), buffer.readString());
+			}
+			ctx.ensureOnMainThread();
+			if (count == 1) {
+				values.forEach(com.periut.retroapi.gamerule.RetroGameRules::applyFromServer);
+			} else {
+				com.periut.retroapi.gamerule.RetroGameRules.applyFromServer(values);
+			}
+		});
+
 		if (!hasStationAPI) {
 			ClientPlayNetworking.registerListener(RetroAPINetworking.ID_SYNC_CHANNEL, (ctx, buffer) -> {
 				// Do NOT use ensureOnMainThread() here - the ID remap must complete
@@ -176,7 +213,10 @@ public class RetroAPIClient implements ClientModInitializer {
 			}
 			net.minecraft.block.entity.BlockEntity blockEntity = world.getBlockEntity(x, y, z);
 			if (blockEntity == null) {
-				return; // the chunk is not loaded here yet; the chunk-send pass will carry it
+				// The chunk has not landed yet. This IS the chunk-send pass, so nothing will send it
+				// again - hold it and apply it as soon as the block entity exists.
+				com.periut.retroapi.register.blockentity.PendingBlockEntitySync.stash(x, y, z, data);
+				return;
 			}
 			com.periut.retroapi.register.blockentity.BlockEntitySyncCodec.decode(blockEntity, data);
 			world.setBlocksDirty(x, y, z, x, y, z);

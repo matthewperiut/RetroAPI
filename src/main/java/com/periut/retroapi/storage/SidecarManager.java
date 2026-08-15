@@ -74,6 +74,7 @@ public class SidecarManager {
 		for (InventorySidecar inv : inventoryCache.values()) {
 			inv.save();
 		}
+		RetroDataSidecar.save();
 	}
 
 	public static void flush() {
@@ -86,6 +87,7 @@ public class SidecarManager {
 		InventorySidecar.clearPending();
 		PlayerDimensionSidecar.reset();
 		PlayerItemSidecar.reset();
+		RetroDataSidecar.reset();
 		worldDir = null;
 	}
 }

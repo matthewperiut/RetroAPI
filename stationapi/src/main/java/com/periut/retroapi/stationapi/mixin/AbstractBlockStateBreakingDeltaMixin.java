@@ -7,7 +7,8 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.BlockView;
 import net.modificationstation.stationapi.api.block.AbstractBlockState;
-import net.modificationstation.stationapi.api.block.StationFlatteningBlock;
+import net.modificationstation.stationapi.api.block.BlockState;
+import net.modificationstation.stationapi.api.entity.player.StationFlatteningPlayerEntity;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,9 +28,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * disguise needs and more than beta's own hook offers. Answering here rather than at the vanilla call
  * also means anything else routing through StationAPI's block states gets the same answer.
  *
- * <p>The delta folds together the block's hardness and how well the held tool bites it, so handing the
- * question to the worn block's state gets both: a frame clad in stone takes as long as stone and rewards
- * a pickaxe for it.
+ * <p>Same split as {@link RetroDisguises#breakingDelta}, which is the no-StationAPI half of this: the worn
+ * block decides the hardness, the frame is asked everything else. Asked through StationAPI's own
+ * position-aware calls, so its tool events still fire and RetroAPI's rules reach them the usual way.
  */
 @Mixin(AbstractBlockState.class)
 public class AbstractBlockStateBreakingDeltaMixin {
@@ -41,18 +42,18 @@ public class AbstractBlockStateBreakingDeltaMixin {
 			return;
 		}
 		Block worn = RetroDisguises.at(world, pos.x, pos.y, pos.z);
-		if (worn == null || worn == ((AbstractBlockState) (Object) this).getBlock()) {
+		if (worn == null) {
 			return;
 		}
-		// The worn block's own state answers the same question. Reached through StationFlatteningBlock,
-		// which is where flattening puts getDefaultState and which every Block implements there.
-		//
-		// That call comes straight back here, because the disguise is looked up from the POSITION and the
-		// position still holds the frame - so without the guard above every disguised block overflows the
-		// stack the moment someone starts breaking it. The state being asked is what tells the two apart:
-		// the frame's state is the real question, the worn block's state is our own answer coming round
-		// again and has to fall through to the vanilla one.
-		cir.setReturnValue(((StationFlatteningBlock) worn).getDefaultState()
-			.calcBlockBreakingDelta(player, world, pos));
+		float hardness = worn.getHardness();
+		if (hardness < 0.0F) {
+			cir.setReturnValue(0.0F);
+			return;
+		}
+		BlockState frame = (BlockState) (Object) this;
+		StationFlatteningPlayerEntity miner = (StationFlatteningPlayerEntity) player;
+		cir.setReturnValue(miner.canHarvest(world, pos, frame)
+			? miner.getBlockBreakingSpeed(world, pos, frame) / hardness / 30.0F
+			: 1.0F / hardness / 100.0F);
 	}
 }

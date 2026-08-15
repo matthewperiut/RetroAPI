@@ -1,19 +1,18 @@
 package com.periut.retroapi.stationapi;
 
 import com.periut.retroapi.entity.client.RetroEntityRenderers;
-import com.periut.retroapi.register.block.RetroBlockAccess;
 import com.periut.retroapi.register.block.RetroTextures;
 import com.periut.retroapi.register.recipe.event.RecipeRegistrationCallback;
-import com.periut.retroapi.registry.RetroRegistry;
+import com.periut.retroapi.storage.RetroBlockData;
+import com.periut.retroapi.tag.RetroMining;
 import net.mine_diver.unsafeevents.listener.EventListener;
 import net.minecraft.block.Block;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.*;
 import com.periut.retroapi.dimension.DimensionRegistration;
 import com.periut.retroapi.dimension.RetroDimensionRegistry;
 import net.modificationstation.stationapi.api.client.event.render.entity.EntityRendererRegisterEvent;
 import net.modificationstation.stationapi.api.client.event.texture.TextureRegisterEvent;
 import net.modificationstation.stationapi.api.event.registry.DimensionRegistryEvent;
+import net.modificationstation.stationapi.api.event.world.BlockSetEvent;
 import net.modificationstation.stationapi.api.registry.DimensionContainer;
 import net.modificationstation.stationapi.api.util.Identifier;
 import net.modificationstation.stationapi.api.event.entity.player.IsPlayerUsingEffectiveToolEvent;
@@ -79,46 +78,51 @@ public class StationAPIRegistryForwarder {
 		}
 	}
 
+	/**
+	 * The two mining questions, answered by RetroAPI core's {@link RetroMining} - the same class beta's own
+	 * {@code PlayerEntity} hooks call, because these must agree.
+	 *
+	 * <p>Not gated on the block being RetroAPI-registered. The rules are about TAGS, and a tag holds
+	 * whatever a mod put in it: a modded pickaxe on vanilla stone is the same question as a vanilla
+	 * pickaxe on a modded ore. Gating on registration is what left the whole tag system, and with it every
+	 * {@code .mineable(...)} declaration, doing nothing at all under StationAPI.
+	 *
+	 * <p>The result providers wrap rather than replace, so the answer already assembled - vanilla's, plus
+	 * anything another mod contributed ahead of this - is what RetroAPI's rules are applied on top of.
+	 */
 	@EventListener
 	public void onIsPlayerUsingEffectiveTool(IsPlayerUsingEffectiveToolEvent event) {
-		Block block = event.blockState.getBlock();
-		if (RetroRegistry.getBlockRegistration(block) == null) return;
+		Boolean harvests = RetroMining.canHarvest(event.player, event.blockState.getBlock());
+		if (harvests == null) return;
+		boolean result = harvests;
+		event.resultProvider = () -> result;
+	}
 
-		RetroBlockAccess access = (RetroBlockAccess) block;
-		if (access.isAlwaysDrops()) {
-			event.resultProvider = () -> true;
-		} else {
-			// Fall back to vanilla canMineBlock for RetroAPI blocks
-			PlayerInventory inventory = event.player.inventory;
-			event.resultProvider = () -> inventory.isUsingEffectiveTool(block);
+	/**
+	 * Drops a position's {@link com.periut.retroapi.storage.RetroBlockData} when the block there changes.
+	 *
+	 * <p>RetroAPI does this from {@code Chunk.setBlock}, which StationAPI's {@code FlattenedChunk} does not
+	 * go through - it writes states into its own sections and announces it here instead. Without this the
+	 * data outlives the block it described: break a clad block, put a plain one back, and it stands there
+	 * wearing the dead block's cladding.
+	 *
+	 * <p>The event is posted before the write, which is what the check needs: the id it compares against is
+	 * the one still standing.
+	 */
+	@EventListener
+	public void onBlockSet(BlockSetEvent event) {
+		if (event.chunk == null || event.blockState == null) {
+			return;
 		}
+		RetroBlockData.onBlockChanged(event.chunk, event.x & 15, event.y, event.z & 15,
+			event.blockState.getBlock().id);
 	}
 
 	@EventListener
 	public void onPlayerStrengthOnBlock(PlayerStrengthOnBlockEvent event) {
 		Block block = event.blockState.getBlock();
-		if (RetroRegistry.getBlockRegistration(block) == null) return;
-
-		RetroBlockAccess access = (RetroBlockAccess) block;
-		boolean alwaysEffective = access.isAlwaysEffectiveTool();
-		Class<? extends Item> effectiveTool = access.getEffectiveTool();
-
-		// Fall back to vanilla getMiningSpeed for RetroAPI blocks, then apply tool overrides
-		PlayerInventory inventory = event.player.inventory;
-		event.resultProvider = () -> {
-			float speed = inventory.getStrengthOnBlock(block);
-
-			if (speed > 1.0f) return speed;
-
-			ItemStack held = inventory.getSelectedItem();
-			if (held == null) return speed;
-			Item item = held.getItem();
-
-			if (alwaysEffective || (effectiveTool != null && effectiveTool.isInstance(item))) {
-				return getToolSpeed(item, inventory);
-			}
-			return speed;
-		};
+		PlayerStrengthOnBlockEvent.ResultProvider inner = event.resultProvider;
+		event.resultProvider = () -> RetroMining.breakingSpeed(event.player, block, inner.getAsFloat());
 	}
 
 	/**
@@ -133,11 +137,4 @@ public class StationAPIRegistryForwarder {
 		RetroEntityRenderers.forEach(event::register);
 	}
 
-	private static float getToolSpeed(Item item, PlayerInventory inventory) {
-		if (item instanceof PickaxeItem) return inventory.getStrengthOnBlock(Block.STONE);
-		if (item instanceof AxeItem) return inventory.getStrengthOnBlock(Block.PLANKS);
-		if (item instanceof ShovelItem) return inventory.getStrengthOnBlock(Block.DIRT);
-		if (item instanceof SwordItem) return 1.5f;
-		return 1.0f;
-	}
 }

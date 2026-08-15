@@ -29,6 +29,85 @@ public class RetroAPIServer implements ServerModInitializer {
 		// The server's container-GUI opener (window sync id + open_gui packet). Referenced only here.
 		com.periut.retroapi.gui.RetroGuis.setServerOpener(new com.periut.retroapi.gui.server.ServerGuiOpener());
 
+		// Game rules are the server's to decide; a client needs the values because some of them
+		// (sprinting, swimming, the death screen) are acted on before the server ever sees the move.
+		ServerConnectionEvents.PLAY_READY.register((server, player) ->
+			com.periut.retroapi.gamerule.GameRuleSync.sendAll(player));
+
+		// Game modes: every client is told about every player, because whether to draw somebody is a
+		// decision each client makes about somebody else.
+		ServerConnectionEvents.PLAY_READY.register((server, player) ->
+			com.periut.retroapi.gamemode.GameModeSync.sendAll(player));
+
+		// Synced block entities within sight, and the command tree, resent HERE rather than trusted to
+		// the join itself. Both are first sent while the player is still logging in, and OSL drops -
+		// not queues - a send to a player whose channel handshake has not finished, so both were being
+		// thrown away: a spawner came back as a pig on every rejoin, and the client parsed commands
+		// against its own guess of a tree instead of the server's.
+		ServerConnectionEvents.PLAY_READY.register((server, player) -> {
+			com.periut.retroapi.register.blockentity.BlockEntitySyncServer.sendNearby(player);
+			com.periut.retroapi.commands.network.ServerCommandNetworking.sendTree(player);
+			com.periut.retroapi.commands.util.ServerUtil.informPlayerOpStatus(player.name);
+		});
+
+		// "I have this chunk now, what is in it?" - the client asks as each chunk lands, which is the one
+		// moment it is certainly ready to receive and certainly holds the chunk being described.
+		ServerPlayNetworking.registerListener(RetroAPINetworking.BLOCK_ENTITY_SYNC_CHANNEL, (context, buffer) -> {
+			int chunkX = buffer.readInt();
+			int chunkZ = buffer.readInt();
+			context.ensureOnMainThread();
+			com.periut.retroapi.register.blockentity.BlockEntitySyncServer.sendChunk(context.player(), chunkX, chunkZ);
+		});
+
+		// The two things a client may ask for. Both are re-checked here against the player's actual
+		// mode - a client that says it is in creative is not evidence that it is.
+		ServerPlayNetworking.registerListener(RetroAPINetworking.FLIGHT_CHANNEL, (context, buffer) -> {
+			buffer.readBoolean();
+			context.ensureOnMainThread();
+			com.periut.retroapi.gamemode.RetroGameModes.toggleFlying(context.player().name);
+			// Answer with what the server decided: the client asked, and it is the client's own
+			// movement code that has to act on it.
+			com.periut.retroapi.gamemode.GameModeSync.sendFlight(context.player());
+		});
+
+		ServerPlayNetworking.registerListener(RetroAPINetworking.COMMAND_BLOCK_CHANNEL, (context, buffer) -> {
+			int x = buffer.readInt();
+			int y = buffer.readInt();
+			int z = buffer.readInt();
+			String command = buffer.readString();
+			int mode = buffer.readVarInt();
+			boolean conditional = buffer.readBoolean();
+			boolean automatic = buffer.readBoolean();
+			boolean trackOutput = buffer.readBoolean();
+			context.ensureOnMainThread();
+			com.periut.retroapi.commandblock.CommandBlockNetworking.apply(context.player().world, context.player(),
+				x, y, z, command,
+				com.periut.retroapi.commandblock.CommandBlockMode.values()[
+					Math.max(0, Math.min(com.periut.retroapi.commandblock.CommandBlockMode.values().length - 1, mode))],
+				conditional, automatic, trackOutput);
+		});
+
+		ServerPlayNetworking.registerListener(RetroAPINetworking.CREATIVE_GIVE_CHANNEL, (context, buffer) -> {
+			int kind = buffer.readVarInt();
+			if (kind == com.periut.retroapi.gamemode.GameModeNetworking.SET_SLOT) {
+				int slot = buffer.readVarInt();
+				int itemId = buffer.readVarInt();
+				int damage = buffer.readVarInt();
+				int count = buffer.readVarInt();
+				context.ensureOnMainThread();
+				com.periut.retroapi.gamemode.CreativeGive.setSlot(context.player(), slot,
+					count <= 0 || itemId <= 0 ? null : new net.minecraft.item.ItemStack(itemId, count, damage));
+				return;
+			}
+
+			int itemId = buffer.readVarInt();
+			int damage = buffer.readVarInt();
+			int count = buffer.readVarInt();
+			context.ensureOnMainThread();
+			com.periut.retroapi.gamemode.CreativeGive.give(context.player(),
+				new net.minecraft.item.ItemStack(itemId, count, damage));
+		});
+
 		if (!hasStationAPI) {
 			ServerConnectionEvents.PLAY_READY.register((server, player) -> {
 				RetroAPI.LOGGER.debug("Sending ID sync packet to player");

@@ -175,6 +175,30 @@ public final class DimensionHelper {
 		return SERVER_PLAYER_CLASS_NAME.equals(player.getClass().getName());
 	}
 
+	/**
+	 * Move a player to an explicit dimension serial id - a vanilla one ({@code -1}/{@code 0}/{@code 1})
+	 * or a registered modded one.
+	 *
+	 * <p>Unlike {@link #switchDimension}, which reproduces vanilla's portal behaviour of flipping
+	 * between a destination and the overworld, this goes exactly where it is told. That is what a
+	 * command needs: {@code /teleport ... minecraft:overworld} run from the overworld must stay put,
+	 * not bounce to the nether.
+	 */
+	public static void switchToDimensionId(PlayerEntity player, int target, double scale, PortalForcer travelAgent) {
+		if (player.dimensionId == target) {
+			return;
+		}
+		DimensionTeleporter teleporter = selectTeleporter(player);
+		if (teleporter == null) {
+			RetroAPI.LOGGER.warn("switchToDimensionId: no DimensionTeleporter registered for this environment");
+			return;
+		}
+		if (scale <= 0.0) scale = 1.0;
+		// Same convention as switchDimension: leaving the overworld divides, returning to it multiplies.
+		double coordFactor = (target == RetroDimensionRegistry.OVERWORLD_ID) ? scale : (1.0 / scale);
+		teleporter.teleport(player, target, target, coordFactor, travelAgent);
+	}
+
 	public static void switchDimension(PlayerEntity player, NamespacedIdentifier destination, double scale, PortalForcer travelAgent) {
 		DimensionRegistration reg = RetroDimensionRegistry.getByIdentifier(destination);
 		if (reg == null) {

@@ -109,6 +109,33 @@ public class RegionSidecar {
 		}
 	}
 
+	/**
+	 * A chunk's arbitrary mod data, live: write into it and it is saved with the region.
+	 *
+	 * <p>Deliberately its own top-level section rather than a corner of the chunk's entry under
+	 * {@code chunks}. That entry is rebuilt from scratch every time the chunk saves - from the live
+	 * extended-block map, and replaced wholesale with an empty compound for a chunk that has no modded
+	 * blocks - so anything parked inside it would be dropped by the next save of an ordinary chunk.
+	 * Here nothing else writes, and the region file carries it.
+	 *
+	 * <p>Marks the region dirty on the way out, because a caller writing into the returned compound has
+	 * no way to say so afterwards. The cost is a region file rewritten after a read that changed
+	 * nothing; the alternative is data that silently does not save.
+	 */
+	public NbtCompound customChunkData(int chunkX, int chunkZ) {
+		if (!root.contains("custom")) {
+			root.put("custom", new NbtCompound());
+		}
+		NbtCompound custom = root.getCompound("custom");
+		String key = chunkX + "," + chunkZ;
+
+		if (!custom.contains(key)) {
+			custom.put(key, new NbtCompound());
+		}
+		dirty = true;
+		return custom.getCompound(key);
+	}
+
 	public void save() {
 		if (!dirty) return;
 		try {
@@ -123,6 +150,26 @@ public class RegionSidecar {
 	}
 
 	public void loadChunkData(Chunk chunk, ChunkExtendedBlocks extended) {
+		NbtCompound chunkNbt = loadAuxSections(chunk, extended);
+		if (chunkNbt == null) {
+			return;
+		}
+		loadBlockIds(chunk, extended, chunkNbt);
+	}
+
+	/**
+	 * Everything a position carries that is not a block id: secondary meta, {@link RetroBlockData}, cubic
+	 * biome cells, out-of-column terrain.
+	 *
+	 * <p>All of it under StationAPI, which owns block ids and stores them in its own chunk sections - so
+	 * the id restore below has nothing to do there, and no vanilla byte array to read while doing it.
+	 */
+	public void loadChunkAuxData(Chunk chunk, ChunkExtendedBlocks extended) {
+		loadAuxSections(chunk, extended);
+	}
+
+	/** @return the chunk's saved NBT, or null when it has none. */
+	private NbtCompound loadAuxSections(Chunk chunk, ChunkExtendedBlocks extended) {
 		int chunkX = chunk.x;
 		int chunkZ = chunk.z;
 		String key = chunkX + "," + chunkZ;
@@ -131,10 +178,10 @@ public class RegionSidecar {
 		deferredData.remove(key);
 		deferredCells.remove(key);
 
-		if (!root.contains("chunks")) return;
+		if (!root.contains("chunks")) return null;
 		NbtCompound chunks = root.getCompound("chunks");
 
-		if (!chunks.contains(key)) return;
+		if (!chunks.contains(key)) return null;
 		NbtCompound chunkNbt = chunks.getCompound(key);
 
 		// v3: secondary meta (state index bits 4-11), for modded AND vanilla-stored positions.
@@ -158,6 +205,15 @@ public class RegionSidecar {
 
 		// v5: out-of-vanilla-column terrain (RetroWorldHeight). Same story again.
 		loadExtendedSections(chunkNbt, extended);
+
+		return chunkNbt;
+	}
+
+	/** The modded block ids themselves, restored into the chunk's vanilla arrays. */
+	private void loadBlockIds(Chunk chunk, ChunkExtendedBlocks extended, NbtCompound chunkNbt) {
+		int chunkX = chunk.x;
+		int chunkZ = chunk.z;
+		String key = chunkX + "," + chunkZ;
 
 		// Positions are encoded as byte array (4 bytes per int, big-endian)
 		byte[] posBytes = chunkNbt.getByteArray("positions");

@@ -1,7 +1,6 @@
 package com.periut.retroapi.mixin.storage;
 
-import com.periut.retroapi.storage.ChunkExtendedBlocks;
-import com.periut.retroapi.storage.ExtendedBlocksAccess;
+import com.periut.retroapi.storage.RetroBlockData;
 import net.minecraft.world.chunk.Chunk;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -38,21 +37,6 @@ public abstract class ChunkBlockDataMixin {
 	}
 
 	private void retroapi$clearIfBlockChanged(int x, int y, int z, int rawId) {
-		ChunkExtendedBlocks extended = ((ExtendedBlocksAccess) this).retroapi$getExtendedBlocks();
-		if (!extended.hasAnyData()) {
-			return;
-		}
-		Chunk chunk = (Chunk) (Object) this;
-		if (chunk.getBlockId(x, y, z) == rawId) {
-			return;
-		}
-		// The block's break sound and its cloud of debris are produced by a world event that arrives
-		// after this point, when there is nothing left at the position to ask. Write down what it was
-		// wearing while it is still here. See RetroDisguises.
-		if (chunk.world != null) {
-			com.periut.retroapi.register.block.RetroDisguises.remember(chunk.world,
-				chunk.x * 16 + x, y, chunk.z * 16 + z);
-		}
-		extended.removeAllData(ChunkExtendedBlocks.toIndex(x, y, z));
+		RetroBlockData.onBlockChanged((Chunk) (Object) this, x, y, z, rawId);
 	}
 }

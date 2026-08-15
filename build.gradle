@@ -113,6 +113,24 @@ tasks.withType(Test) {
 	failOnNoDiscoveredTests = false
 }
 
+// The commands API's offline suite: plain Java with a `main` rather than JUnit, because b1.7.3
+// development is frequently offline and a test framework would be one more artifact to resolve
+// before anything can be checked. Nothing in it may touch a Minecraft class that needs a running game.
+sourceSets {
+	test {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
+def commandsTest = tasks.register('commandsTest', JavaExec) {
+	group = 'verification'
+	description = 'Offline commands-API suite: brigadier, text components, argument parsing, tree sync.'
+	classpath = sourceSets.test.runtimeClasspath
+	mainClass = 'com.periut.retroapi.commands.test.TestRunner'
+}
+tasks.named('check') { dependsOn commandsTest }
+
 loom {
 	accessWidenerPath = file("src/main/resources/retroapi.accesswidener")
 	mods {
@@ -313,7 +331,10 @@ smokeRuns.each { key, cfg ->
 	def resultPath = "${runDir}/retroapi_smoke_${side}.txt"
 
 	tasks.register("smoke${cap}Clean", Delete) {
-		delete resultPath
+		// The stats folder goes too: b1.7.3's bundled argo parser is package-private, and once a stats
+		// file exists the next launch reads it and dies with IllegalAccessError on argo.jdom before it
+		// reaches the check. A smoke run that can only be run once is not a smoke test.
+		delete resultPath, "${runDir}/stats"
 	}
 
 	tasks.register("smoke${cap}Gate") {
@@ -357,10 +378,11 @@ gradle.projectsEvaluated {
 		if (run instanceof JavaExec) {
 			run.ignoreExitValue = true
 		}
-		// A client that dies inside an entrypoint does not necessarily exit: the exception lands on the
-		// AWT thread, the window stays up, and the build blocks forever. Cap it - the gate then reports
-		// a missing result file, which is the truth.
-		run.timeout = Duration.ofMinutes(5)
+		// A run that dies does not necessarily exit: a client exception lands on the AWT thread and the
+		// window stays up, a crashed server can sit in its shutdown hook. Cap it - the gate then reports
+		// a missing result file, which is the truth. Ninety seconds because a passing run takes about
+		// five; the old five-minute cap meant every failure cost five minutes before saying so.
+		run.timeout = Duration.ofSeconds(90)
 		tasks.named("smoke${cap}Gate").configure { mustRunAfter run }
 	}
 	// One launcher at a time: two dev clients sharing a run directory (and a display) is a coin flip.

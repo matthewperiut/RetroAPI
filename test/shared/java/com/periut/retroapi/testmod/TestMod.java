@@ -44,6 +44,8 @@ public class TestMod implements RetroModInitializer {
 	public static Block TEST_PORTAL;
 	public static Block CRATE;
 	public static Item TEST_ITEM;
+	/** 0.4.0: the mod's own creative tab, built with the same builder a consumer mod would use. */
+	public static com.periut.retroapi.itemgroup.RetroItemGroup TEST_GROUP;
 	public static DimensionRegistration TEST_DIMENSION;
 	public static EntityRegistration ZEVE;
 
@@ -163,6 +165,31 @@ public class TestMod implements RetroModInitializer {
 		// Register recipes through the RetroAPI callback (fires after vanilla recipes are
 		// registered; the list is then re-sorted). Bridged from StationAPI's recipe event
 		// when StationAPI is present, so this listener works in both worlds.
+		// 0.4.0: a creative tab, registered through the public API. Built last so every block and item
+		// it lists already exists - `entries` is re-run each time the screen opens, but the icon
+		// supplier and the tab itself are wanted before then.
+		TEST_GROUP = com.periut.retroapi.itemgroup.RetroItemGroup.builder(id("test_group"))
+			.displayName(com.periut.retroapi.text.Text.literal("RetroAPI Test"))
+			.icon(() -> new net.minecraft.item.ItemStack(TEST_BLOCK))
+			.entries(entries -> {
+				entries.add(TEST_BLOCK);
+				entries.add(COLOR_BLOCK);
+				entries.add(PIPE_BLOCK);
+				entries.add(CRATE);
+				entries.add(LAMP);
+				entries.add(TAGGED_ORE);
+				entries.add(TEST_ITEM);
+				entries.add(ANIM_ITEM);
+				entries.add(LAYER_ITEM);
+				entries.add(DEF_ITEM);
+			})
+			.build();
+
+		// ...and an addition to somebody else's tab, which is the other half of the API.
+		com.periut.retroapi.itemgroup.RetroItemGroups.modifyEntries(
+			com.periut.retroapi.itemgroup.VanillaItemGroups.INGREDIENTS,
+			entries -> entries.add(TEST_ITEM));
+
 		RecipeRegistrationCallback.EVENT.register(TestMod::registerRecipes);
 
 		// Register a test dimension (direct registration, like the blocks above - no callback ordering
@@ -309,7 +336,9 @@ public class TestMod implements RetroModInitializer {
 			.strength(1.5f)
 			.facingAll()
 			.states(TestLampBlock.LIT)
-			.sided(id("layer_base"), id("layer_overlay"), id("tagged_ore"))
+			// Block faces need BLOCK textures: these ids used to name the item-layer sprites, which live
+			// under textures/item/, so all three faces resolved to nothing and drew empty.
+			.sided(id("lamp_off"), id("lamp_on"), id("tagged_ore"))
 			.tag(com.periut.retroapi.tag.RetroTagKey.block("retroapi_test/machines"))
 			.register(id("six_way"));
 

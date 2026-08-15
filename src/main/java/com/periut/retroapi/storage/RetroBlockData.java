@@ -181,6 +181,39 @@ public final class RetroBlockData {
 		world.setBlocksDirty(x, y, z, x, y, z);
 	}
 
+	/**
+	 * Drops a position's data because the block there is being replaced, and records what it was wearing
+	 * on the way out. Call from wherever a chunk actually writes a block, BEFORE the write: this reads the
+	 * id that is still standing to decide whether anything is changing at all.
+	 *
+	 * <p>Only a change of block <em>id</em> counts. Metadata and state changes (a door opening, a crop
+	 * growing) keep their data.
+	 *
+	 * <p>Beta writes blocks through {@code Chunk.setBlock} and StationAPI through
+	 * {@code FlattenedChunk.setBlockState}, which does not call it. Both routes end up here, because a
+	 * position that keeps its old data is not a cosmetic bug: place a plain block where a clad one was and
+	 * it comes up wearing the dead block's cladding.
+	 *
+	 * @param localX chunk-local x (0-15), {@code localZ} likewise
+	 */
+	public static void onBlockChanged(Chunk chunk, int localX, int y, int localZ, int newBlockId) {
+		ChunkExtendedBlocks extended = ((ExtendedBlocksAccess) chunk).retroapi$getExtendedBlocks();
+		if (!extended.hasAnyData()) {
+			return;
+		}
+		if (chunk.getBlockId(localX, y, localZ) == newBlockId) {
+			return;
+		}
+		// The block's break sound and its cloud of debris are produced by a world event that arrives
+		// after this point, when there is nothing left at the position to ask. Write down what it was
+		// wearing while it is still here. See RetroDisguises.
+		if (chunk.world != null) {
+			com.periut.retroapi.register.block.RetroDisguises.remember(chunk.world,
+				chunk.x * 16 + localX, y, chunk.z * 16 + localZ);
+		}
+		extended.removeAllData(ChunkExtendedBlocks.toIndex(localX, y, localZ));
+	}
+
 	private static ChunkExtendedBlocks extendedAt(BlockView view, int x, int z) {
 		// Chunk rendering hands the renderer a WorldRegion wrapper rather than the World, and a
 		// block's own renderer is exactly the caller that needs this data - unwrap so reads keep

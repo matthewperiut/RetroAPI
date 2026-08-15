@@ -1,5 +1,6 @@
 package com.periut.retroapi.mixin.voxelshapes;
 
+import com.periut.retroapi.gamemode.RetroFlight;
 import com.periut.retroapi.voxelshapes.HasCollisionVoxelShape;
 import com.periut.retroapi.voxelshapes.HasVoxelShape;
 import com.periut.retroapi.voxelshapes.VoxelShape;
@@ -26,6 +27,18 @@ public abstract class VoxelMoveCheckMixin {
 
     @Redirect(method = "onPlayerMove", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayNetworkHandler;teleport(DDDFF)V", ordinal = 0))
     private void retroapi$verifyBlockIntersectionForBlockVoxelShapes(ServerPlayNetworkHandler instance, double e, double f, double g, float h, float v) {
+        // A player who passes through terrain is INSIDE blocks on purpose. The server re-simulates their move and drags
+        // them back out of anything they collide with, and that check is a plain block-box query which
+        // never consults the entity's noClip flag - so the one rubber-band correction that has to be
+        // suppressed is this one, and only while they are actually flying.
+        //
+        // This gate lives here rather than in the commands mixin because both are @Redirect on the SAME
+        // teleport() call: two redirects on one call site is a hard conflict, and mixin resolves it by
+        // silently dropping one of them (which one is load order). One redirect, both concerns.
+        if (RetroFlight.ignoresBlocks(this.player.name)) {
+            return;
+        }
+
         ServerWorld world = this.server.getWorld(this.player.dimensionId);
         Box originalPlayerBox = player.boundingBox;
         Box playerBox = Box.create(originalPlayerBox.minX, originalPlayerBox.minY, originalPlayerBox.minZ,

@@ -145,6 +145,11 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 		if (ATLAS_MIXINS.contains(mixinClassName) || STATIONAPI_DISABLED_MIXINS.contains(mixinClassName)) {
 			return !stationAPIPresent;
 		}
+		// Custom Player Models replaces the chat screen wholesale; enabling the commands chat screen on
+		// top of it leaves the player with neither.
+		if (mixinClassName.equals("com.periut.retroapi.mixin.commands.client.MinecraftMixinChatEnabler")) {
+			return !FabricLoader.getInstance().isModLoaded("cpm");
+		}
 		return true;
 	}
 

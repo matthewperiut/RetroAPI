@@ -117,4 +117,45 @@ public final class StationBridgeImpl implements StationBridge {
 	public void attachPortal(PlayerEntity player, TeleportationManager retroManager) {
 		StationPortalBridge.attach(player, retroManager);
 	}
+
+	@Override
+	public java.util.List<String> dimensionIds() {
+		return StationDimensionBridge.ids();
+	}
+
+	@Override
+	public boolean switchDimension(PlayerEntity player, String identifier) {
+		return StationDimensionBridge.switchTo(player, identifier);
+	}
+
+	@Override
+	public String dimensionIdentifier(int serialId) {
+		return StationDimensionBridge.identifierOf(serialId);
+	}
+
+	@Override
+	public java.util.List<String> itemIdentifiers() {
+		java.util.List<String> ids = new java.util.ArrayList<>();
+		for (Identifier id : ItemRegistry.INSTANCE.getIds()) {
+			ids.add(id.namespace.toString() + ":" + id.path);
+		}
+		return ids;
+	}
+
+	@Override
+	public int itemId(String identifier) {
+		Identifier id = Identifier.tryParse(identifier);
+		return id == null ? -1 : ItemRegistry.INSTANCE.getOrEmpty(id).map(item -> item.id).orElse(-1);
+	}
+
+	@Override
+	public int sprintKeyCode() {
+		return SprintKeybindListener.keyCode();
+	}
+
+	@Override
+	public String itemIdentifier(Item item) {
+		Identifier id = ItemRegistry.INSTANCE.getId(item);
+		return id == null ? null : id.namespace.toString() + ":" + id.path;
+	}
 }

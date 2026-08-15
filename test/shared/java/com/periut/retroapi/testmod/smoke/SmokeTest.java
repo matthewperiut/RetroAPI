@@ -30,14 +30,41 @@ public final class SmokeTest {
 
 	// --- entry points -------------------------------------------------------------------------------
 
+	/**
+	 * Writes a FAIL verdict for a run that threw before it could produce one.
+	 *
+	 * <p>Without this the gate finds no result file and can only say "the game never reached the
+	 * check", which is true and useless; with it, the reason is in the report.
+	 */
+	public static void writeCrashResult(String side, Throwable cause) {
+		List<String> log = new ArrayList<>();
+		log.add("scenario crashed before finishing: " + cause);
+		finish(side, false, log);
+	}
+
 	/** Client side: sweep the mixins, check the client-only hooks, write the verdict and exit. */
 	public static void runClient() {
+		try {
+			runClientChecks();
+		} catch (Throwable t) {
+			// The client's exceptions land on the AWT thread, where nothing stops the window: without
+			// this the run sits at the title screen until the build's timeout kills it.
+			TestMod.LOGGER.error("[smoke] the client scenario threw", t);
+			writeCrashResult("client", t);
+			Runtime.getRuntime().halt(1);
+		}
+	}
+
+	private static void runClientChecks() {
 		List<String> log = new ArrayList<>();
 		boolean ok = sweep(log, "client");
 		ok &= check(log, "particleRegistry", SmokeTest::particleRegistryCheck);
 		ok &= check(log, "particleHookLive", SmokeTest::particleHookCheck);
 		ok &= check(log, "entityRenderer", SmokeTest::entityRendererCheck);
 		ok &= check(log, "staticItemTintDraws", SmokeTest::staticTintDrawCheck);
+		ok &= check(log, "creativeScreen", CreativeScreenSmoke::run);
+		ok &= check(log, "spectatorHooks", CreativeScreenSmoke::spectatorHooks);
+		ok &= check(log, "itemSprites", CreativeScreenSmoke::itemSprites);
 		ok &= shared(log);
 		ok &= check(log, "blockUseHookLive",
 			() -> hookApplied(net.minecraft.client.InteractionManager.class, "retroapi$blockUse"));
@@ -54,6 +81,9 @@ public final class SmokeTest {
 			net.minecraft.server.network.ServerPlayerInteractionManager.class, "retroapi$blockUse"));
 		ok &= check(log, "blockEntitySyncHookLive", () -> hookApplied(
 			net.minecraft.entity.player.ServerPlayerEntity.class, "retroapi$syncBlockEntity"));
+		ok &= check(log, "worldCommands", WorldCommandSmoke::commands);
+		ok &= check(log, "giveResolution", WorldCommandSmoke::giveResolution);
+		ok &= check(log, "commandBlocks", WorldCommandSmoke::commandBlocks);
 		finish("server", ok, log);
 		return ok;
 	}
@@ -67,10 +97,186 @@ public final class SmokeTest {
 		ok &= check(log, "multiblockAnywhere", SmokeTest::multiblockAnywhereCheck);
 		ok &= check(log, "customToolTier", SmokeTest::customToolTierCheck);
 		ok &= check(log, "positionalToolTier", SmokeTest::positionalToolTierCheck);
+		ok &= check(log, "retroData", SmokeTest::retroDataCheck);
+		ok &= check(log, "gameRules", SmokeTest::gameRulesCheck);
+		ok &= check(log, "gameModes", SmokeTest::gameModesCheck);
+		ok &= check(log, "itemGroups", SmokeTest::itemGroupsCheck);
 		return ok;
 	}
 
 	// --- checks -------------------------------------------------------------------------------------
+
+	/** A mode is remembered per player, and decides flight and whether the world may be changed. */
+	private static void gameModesCheck() {
+		final String player = "SmokeModePlayer";
+
+		if (com.periut.retroapi.gamemode.RetroGameModes.get(player)
+			!= com.periut.retroapi.gamemode.RetroGameMode.SURVIVAL) {
+			throw new IllegalStateException("a player nobody has touched must be in survival");
+		}
+
+		com.periut.retroapi.gamemode.RetroGameModes.set(player,
+			com.periut.retroapi.gamemode.RetroGameMode.CREATIVE);
+		if (com.periut.retroapi.gamemode.RetroGameModes.get(player)
+			!= com.periut.retroapi.gamemode.RetroGameMode.CREATIVE) {
+			throw new IllegalStateException("the mode did not stick");
+		}
+		if (com.periut.retroapi.gamemode.RetroFlight.isFlying(player)) {
+			throw new IllegalStateException("creative must not start airborne");
+		}
+		if (!com.periut.retroapi.gamemode.RetroGameModes.toggleFlying(player)
+			|| !com.periut.retroapi.gamemode.RetroFlight.isFlying(player)) {
+			throw new IllegalStateException("creative flight would not turn on");
+		}
+		if (com.periut.retroapi.gamemode.RetroFlight.ignoresBlocks(player)) {
+			throw new IllegalStateException("creative flight must still collide with the world");
+		}
+
+		com.periut.retroapi.gamemode.RetroGameModes.set(player,
+			com.periut.retroapi.gamemode.RetroGameMode.SPECTATOR);
+		if (!com.periut.retroapi.gamemode.RetroFlight.isFlying(player)
+			|| !com.periut.retroapi.gamemode.RetroFlight.ignoresBlocks(player)) {
+			throw new IllegalStateException("a spectator must fly and pass through blocks");
+		}
+
+		com.periut.retroapi.gamemode.RetroGameModes.set(player,
+			com.periut.retroapi.gamemode.RetroGameMode.SURVIVAL);
+		if (com.periut.retroapi.gamemode.RetroFlight.isFlying(player)) {
+			throw new IllegalStateException("leaving a flying mode must put the player back on the ground");
+		}
+		if (!com.periut.retroapi.gamemode.RetroGameMode.ADVENTURE.isReadOnly()
+			|| com.periut.retroapi.gamemode.RetroGameMode.CREATIVE.isReadOnly()) {
+			throw new IllegalStateException("read-only is the wrong way round");
+		}
+	}
+
+	/** The vanilla tabs exist, have contents, and another mod can add to one. */
+	private static void itemGroupsCheck() {
+		java.util.List<com.periut.retroapi.itemgroup.RetroItemGroup> groups =
+			com.periut.retroapi.itemgroup.RetroItemGroups.all();
+		if (groups.isEmpty()) {
+			throw new IllegalStateException("no creative tabs were registered at all");
+		}
+
+		com.periut.retroapi.itemgroup.RetroItemGroup building =
+			com.periut.retroapi.itemgroup.VanillaItemGroups.BUILDING_BLOCKS;
+		if (building == null || building.collect().isEmpty()) {
+			throw new IllegalStateException("the building blocks tab is empty");
+		}
+		if (building.getIcon() == null) {
+			throw new IllegalStateException("a tab with no icon cannot be drawn");
+		}
+
+		// The test mod's own tab, registered through the public builder, must be in the list.
+		if (com.periut.retroapi.itemgroup.RetroItemGroups.get(TestMod.TEST_GROUP.getId()) == null) {
+			throw new IllegalStateException("a mod's own tab did not register");
+		}
+		if (TestMod.TEST_GROUP.collect().size() < 5) {
+			throw new IllegalStateException("the test mod's tab is missing its entries");
+		}
+		boolean addedElsewhere = false;
+		for (net.minecraft.item.ItemStack stack
+				: com.periut.retroapi.itemgroup.VanillaItemGroups.INGREDIENTS.collect()) {
+			if (TestMod.TEST_ITEM != null && stack.itemId == TestMod.TEST_ITEM.id) {
+				addedElsewhere = true;
+				break;
+			}
+		}
+		if (!addedElsewhere) {
+			throw new IllegalStateException("modifyEntries did not reach a vanilla tab");
+		}
+
+		int before = building.collect().size();
+		com.periut.retroapi.itemgroup.RetroItemGroups.modifyEntries(building,
+			entries -> entries.add(net.minecraft.block.Block.SPONGE));
+		if (building.collect().size() != before + 1) {
+			throw new IllegalStateException("modifyEntries did not add to the tab");
+		}
+
+		// The search tab is built from the registries, so a modded block has to appear in it.
+		boolean foundModded = false;
+		for (net.minecraft.item.ItemStack stack
+				: com.periut.retroapi.itemgroup.VanillaItemGroups.SEARCH.collect()) {
+			if (TestMod.AUTO_ID_BLOCK != null && stack.itemId == TestMod.AUTO_ID_BLOCK.id) {
+				foundModded = true;
+				break;
+			}
+		}
+		if (!foundModded) {
+			throw new IllegalStateException("the search tab does not list modded content");
+		}
+	}
+
+	/** A rule reads back what was set, refuses nonsense, and the two new ones are off out of the box. */
+	private static void gameRulesCheck() {
+		if (com.periut.retroapi.gamerule.RetroGameRules.getBoolean(
+				com.periut.retroapi.gamerule.RetroGameRules.SPRINTING)
+			|| com.periut.retroapi.gamerule.RetroGameRules.getBoolean(
+				com.periut.retroapi.gamerule.RetroGameRules.SWIMMING)) {
+			throw new IllegalStateException("sprinting/swimming must be off in a world that never set them");
+		}
+		if (!com.periut.retroapi.gamerule.RetroGameRules.getBoolean(
+				com.periut.retroapi.gamerule.RetroGameRules.DO_FIRE_TICK)) {
+			throw new IllegalStateException("doFireTick must default to on, as it does in vanilla");
+		}
+
+		if (!com.periut.retroapi.gamerule.RetroGameRules.set("keepInventory", "true")) {
+			throw new IllegalStateException("setting a known boolean rule was refused");
+		}
+		if (!com.periut.retroapi.gamerule.RetroGameRules.getBoolean(
+				com.periut.retroapi.gamerule.RetroGameRules.KEEP_INVENTORY)) {
+			throw new IllegalStateException("keepInventory did not read back as set");
+		}
+		// Normalised on the way in, so a query never reports what the player typed verbatim.
+		com.periut.retroapi.gamerule.RetroGameRules.set("keepInventory", "FALSE");
+		if (!"false".equals(com.periut.retroapi.gamerule.RetroGameRules.getString(
+				com.periut.retroapi.gamerule.RetroGameRules.KEEP_INVENTORY))) {
+			throw new IllegalStateException("boolean values are not normalised");
+		}
+
+		if (com.periut.retroapi.gamerule.RetroGameRules.set("keepInventory", "yes")
+			|| com.periut.retroapi.gamerule.RetroGameRules.set("randomTickSpeed", "quickly")
+			|| com.periut.retroapi.gamerule.RetroGameRules.set("noSuchRule", "true")) {
+			throw new IllegalStateException("a bad rule or value was accepted");
+		}
+
+		if (!com.periut.retroapi.gamerule.RetroGameRules.snapshot()
+				.containsKey("doMobSpawning")) {
+			throw new IllegalStateException("the snapshot sent to clients is missing a registered rule");
+		}
+	}
+
+	/**
+	 * World data, permanent player data and one-life player data are three separate compounds, and a
+	 * death drops only the third.
+	 */
+	private static void retroDataCheck() {
+		final String player = "SmokeTestPlayer";
+
+		com.periut.retroapi.storage.RetroData.world().putInt("retroapi:smoke_world", 7);
+		com.periut.retroapi.storage.RetroData.player(player).putString("retroapi:smoke_kept", "yes");
+		com.periut.retroapi.storage.RetroData.life(player).putInt("retroapi:smoke_life", 3);
+
+		if (com.periut.retroapi.storage.RetroData.world().getInt("retroapi:smoke_world") != 7) {
+			throw new IllegalStateException("world data did not survive being written");
+		}
+		if (com.periut.retroapi.storage.RetroData.life(player).getInt("retroapi:smoke_life") != 3) {
+			throw new IllegalStateException("life data did not survive being written");
+		}
+		// Different sections, so a key written into one must not be visible in the others.
+		if (com.periut.retroapi.storage.RetroData.player(player).contains("retroapi:smoke_life")
+			|| com.periut.retroapi.storage.RetroData.world().contains("retroapi:smoke_kept")) {
+			throw new IllegalStateException("the three data sections are not separate");
+		}
+
+		com.periut.retroapi.storage.RetroData.clearLife(player);
+		if (com.periut.retroapi.storage.RetroData.life(player).contains("retroapi:smoke_life")) {
+			throw new IllegalStateException("one-life data outlived the life it belongs to");
+		}
+		if (!"yes".equals(com.periut.retroapi.storage.RetroData.player(player).getString("retroapi:smoke_kept"))) {
+			throw new IllegalStateException("permanent player data was cleared along with the life data");
+		}
+	}
 
 	private static boolean sweep(List<String> log, String side) {
 		MixinSweep.Report report = MixinSweep.run(MixinSweep.RETROAPI_MODS);

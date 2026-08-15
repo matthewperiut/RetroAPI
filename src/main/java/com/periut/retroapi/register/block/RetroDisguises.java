@@ -53,6 +53,26 @@ public final class RetroDisguises {
 		return block instanceof RetroBlockDisguise disguise ? disguise.disguisedMeta(world, x, y, z) : 0;
 	}
 
+	/**
+	 * How fast a disguised block gives way: the frame's own mining answer, over the worn block's hardness.
+	 *
+	 * <p>Beta's formula is {@code speed / hardness / (canHarvest ? 30 : 100)}, and a disguise wants a
+	 * different term from each of the two blocks. The hardness is the worn block's, because that is what
+	 * "takes as long as stone" means. Everything else is asked of the FRAME, because that is the block
+	 * whose tags {@link com.periut.retroapi.tag.RetroTags#mineableTools} merges the worn block's into: ask
+	 * the worn block instead and the frame's own tool is thrown away, so cladding a wooden frame in stone
+	 * stops an axe working on it. Additive is the rule everywhere else in the disguise system, and this is
+	 * the one place it was not.
+	 */
+	public static float breakingDelta(net.minecraft.entity.player.PlayerEntity player, Block frame, Block worn) {
+		float hardness = worn.getHardness();
+		if (hardness < 0.0F) {
+			return 0.0F;
+		}
+		float speed = player.getBlockBreakingSpeed(frame);
+		return player.canHarvest(frame) ? speed / hardness / 30.0F : speed / hardness / 100.0F;
+	}
+
 	/** The sound group a position should use: the disguise's when it has one, otherwise the block's own. */
 	public static BlockSoundGroup soundsAt(BlockView world, int x, int y, int z, Block fallback) {
 		Block worn = at(world, x, y, z);

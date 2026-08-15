@@ -47,15 +47,19 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
-	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-
+	// ORDER MATTERS: these must precede `mappings`, or the game jar is remapped with no inner
+	// classes and beta's bundled argo throws IllegalAccessError once a stats file exists.
+	// See the long explanation in the root build.gradle.
 	clientExceptions ploceus.raven(rootProject.client_raven_build, 'client')
 	serverExceptions ploceus.raven(rootProject.server_raven_build, 'server')
 	clientSignatures ploceus.sparrow(rootProject.client_sparrow_build, 'client')
 	serverSignatures ploceus.sparrow(rootProject.server_sparrow_build, 'server')
 	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${rootProject.client_nests_build}"
 	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${rootProject.server_nests_build}"
+
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
+	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+
 
 	ploceus.dependOsl(rootProject.osl_version)
 

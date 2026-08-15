@@ -35,16 +35,24 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:b1.7.3"
-	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
-
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
 
+	// ORDER MATTERS: these six MUST come before `mappings`, for the reason spelled out at length in
+	// the root build.gradle. Ploceus resolves them when ploceus.mappings(...) is evaluated; declared
+	// after it they are still empty and the game jar is remapped with NO inner classes, silently.
+	// Everything that should be nested is flattened into net/minecraft/unmapped/, which splits
+	// packages that must stay whole - and beta's bundled argo library then throws
+	//   IllegalAccessError: failed to access class argo.jdom.JsonFieldBuilder
+	// on any launch where a stats file already exists. This project had them the wrong way round,
+	// which is why `runClient` crashed on the second launch but a fresh run directory was fine.
 	clientExceptions ploceus.raven('2', 'client')
 	serverExceptions ploceus.raven('2', 'server')
 	clientSignatures ploceus.sparrow('2', 'client')
 	serverSignatures ploceus.sparrow('2', 'server')
 	clientNests "net.glasslauncher:biny-nests:b1.7.3-client+build.${rootProject.client_nests_build}"
 	serverNests "net.glasslauncher:biny-nests:b1.7.3-server+build.${rootProject.server_nests_build}"
+
+	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${rootProject.biny_mappings}:mergedv2")
 
 	ploceus.dependOsl(rootProject.osl_version)
 

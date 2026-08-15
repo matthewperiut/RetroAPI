@@ -47,6 +47,16 @@ public final class RetroBlockEntities {
 			return;
 		}
 		blockEntity.markDirty();
+
+		// blockUpdateEvent, NOT setBlockDirty. They look interchangeable and are not: on a server
+		// ServerWorldEventListener.setBlocksDirty is an EMPTY method - it exists for the client, which
+		// uses it to re-mesh a chunk - so a change announced that way reached nobody at all. blockUpdate
+		// is the callback the server implements, and it ends in PlayerManager.markDirty, which queues the
+		// position on every tracked chunk that holds it; the tracker then calls sendBlockEntityUpdate,
+		// where RetroAPI's own sync hook is waiting.
+		blockEntity.world.blockUpdateEvent(blockEntity.x, blockEntity.y, blockEntity.z);
+		// And the client's own re-render, for singleplayer and for a listening client: harmless on a
+		// dedicated server, where this is the empty method above.
 		blockEntity.world.setBlockDirty(blockEntity.x, blockEntity.y, blockEntity.z);
 	}
 }

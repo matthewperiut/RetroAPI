@@ -106,3 +106,11 @@ transitive-accessible field net/minecraft/client/particle/Particle xOffset D
 transitive-accessible field net/minecraft/client/particle/Particle yOffset D
 transitive-accessible field net/minecraft/client/particle/Particle zOffset D
 transitive-accessible method net/minecraft/client/particle/Particle getGroup ()I
+
+# Commands API. Not transitive: these are RetroAPI's own needs (naming a mob for /summon, the
+# entity-id tables behind entity selectors, and character widths for the chat suggestion box),
+# not part of what a consuming mod compiles against.
+accessible method net/minecraft/entity/Entity getRegistryEntry ()Ljava/lang/String;
+accessible field net/minecraft/entity/EntityRegistry idToClass Ljava/util/Map;
+accessible field net/minecraft/entity/EntityRegistry classToId Ljava/util/Map;
+accessible field net/minecraft/client/font/TextRenderer characterWidths [I

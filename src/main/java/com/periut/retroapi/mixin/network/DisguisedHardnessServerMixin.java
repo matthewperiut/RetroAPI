@@ -63,6 +63,6 @@ public class DisguisedHardnessServerMixin {
 	@Unique
 	private float retroapi$hardness(Block block, PlayerEntity player, int x, int y, int z) {
 		Block worn = this.world == null ? null : RetroDisguises.at(this.world, x, y, z);
-		return worn == null ? block.getHardness(player) : worn.getHardness(player);
+		return worn == null ? block.getHardness(player) : RetroDisguises.breakingDelta(player, block, worn);
 	}
 }

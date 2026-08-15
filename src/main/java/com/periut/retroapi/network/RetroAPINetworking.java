@@ -54,8 +54,43 @@ public class RetroAPINetworking {
 	// packet), so a modded block entity's server-side state could never reach the client except by
 	// masquerading as a container. Sent on chunk send and on every setBlockDirty for block entities that
 	// implement RetroSyncedBlockEntity. See RetroBlockEntities.sync.
+	// Also client -> server, as a two-int chunk position: "I have this chunk now, what is in it?".
+	// Volunteering the state as the chunk goes out cannot stand on its own - at join the client's
+	// channels are not up yet and OSL discards the send, and later it can beat the chunk it describes -
+	// so the client asks once the chunk is actually in its world.
 	public static final NamespacedIdentifier BLOCK_ENTITY_SYNC_CHANNEL =
-		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "block_entity_sync"), true, false);
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "block_entity_sync"), true, true);
+
+	// Game rules (server -> client): a count, then that many key/value pairs. Sent in full on join and
+	// as a single pair when one changes. A client needs its own copy because some rules are decided
+	// client-side before the server ever sees the move (sprinting, swimming, the death screen).
+	public static final NamespacedIdentifier GAMERULE_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "gamerules"), true, false);
+
+	// Game modes (server -> client): a count, then that many player-name/mode-id pairs. Every client is
+	// told about every player because rendering a spectator as invisible is a decision each client makes
+	// about somebody else.
+	public static final NamespacedIdentifier GAMEMODE_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "gamemode"), true, false);
+
+	// Creative flight, both ways. Client -> server: the double-tap of the jump key is only visible on
+	// the client, so the client asks and the server decides - it checks the player's mode before
+	// agreeing. Server -> client: a single boolean saying whether that player is now flying, sent back
+	// after a toggle and again when they join, because a client's own physics is what actually holds it
+	// in the air and it cannot guess a state the server has been keeping since their last session.
+	public static final NamespacedIdentifier FLIGHT_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "flight"), true, true);
+
+	// Creative inventory pick (client -> server): item id, damage and count. The server checks the
+	// player is actually in creative before handing anything over - a client may not simply assert it.
+	public static final NamespacedIdentifier CREATIVE_GIVE_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "creative_give"), false, true);
+
+	// Command block edits (client -> server): position, command, mode, conditional, always-active and
+	// track-output. Modern's ServerboundSetCommandBlockPacket, and re-checked the same way: the server
+	// confirms the sender may use game-master blocks before believing any of it.
+	public static final NamespacedIdentifier COMMAND_BLOCK_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "command_block"), false, true);
 
 	// World sound bridge (server -> client): b1.7.3's protocol has NO sound packet - vanilla's
 	// ServerWorldEventListener.playSound is an empty method, so every world.playSound on a dedicated

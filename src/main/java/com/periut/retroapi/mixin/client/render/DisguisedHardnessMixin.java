@@ -37,6 +37,6 @@ public class DisguisedHardnessMixin {
 		Block worn = minecraft == null || minecraft.world == null
 			? null
 			: RetroDisguises.at(minecraft.world, x, y, z);
-		return worn == null ? block.getHardness(player) : worn.getHardness(player);
+		return worn == null ? block.getHardness(player) : RetroDisguises.breakingDelta(player, block, worn);
 	}
 }

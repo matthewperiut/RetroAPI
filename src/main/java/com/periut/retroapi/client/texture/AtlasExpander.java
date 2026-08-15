@@ -27,6 +27,19 @@ public class AtlasExpander {
 	public static int itemSpriteSize = 16;
 
 	/** Live animators, rebuilt on every composite (initial load, reload, pack switch). */
+	/**
+	 * Sprites whose image could not be loaded, by identifier.
+	 *
+	 * <p>A sprite with no image used to be skipped in silence, leaving its atlas slot transparent -
+	 * which in game is an item that draws as an empty or garbled square with nothing in any log to say
+	 * why. Recording them turns "why is my item blue" into a list of names.
+	 */
+	public static final List<String> missingTextures = new ArrayList<>();
+
+	/** The last composited atlases, kept for diagnostics: what was drawn, before anything uploaded it. */
+	public static BufferedImage lastTerrainAtlas;
+	public static BufferedImage lastItemAtlas;
+
 	public static final List<RetroAnimatedTexture> terrainAnimators = new ArrayList<>();
 	public static final List<RetroAnimatedTexture> itemAnimators = new ArrayList<>();
 
@@ -47,6 +60,7 @@ public class AtlasExpander {
 			String folder, boolean isTerrain) {
 		List<RetroAnimatedTexture> animators = isTerrain ? terrainAnimators : itemAnimators;
 		animators.clear();
+		missingTextures.removeIf(name -> name.startsWith(folder + "/"));
 		if (textures.isEmpty()) {
 			return original;
 		}
@@ -92,6 +106,11 @@ public class AtlasExpander {
 			String texturePath = folder + "/" + tex.getIdentifier().identifier();
 			BufferedImage texture = loadTexture(tex.getIdentifier().namespace(), texturePath);
 			if (texture == null) {
+				// Loud, not silent: the slot stays empty either way, but now it is diagnosable.
+				missingTextures.add(folder + "/" + tex.getIdentifier());
+				LOGGER.warn("No image for {} texture {} (looked for assets/{}/textures/{}.png); "
+					+ "its atlas slot {} will draw empty",
+					folder, tex.getIdentifier(), tex.getIdentifier().namespace(), texturePath, tex.id);
 				continue;
 			}
 
@@ -128,6 +147,11 @@ public class AtlasExpander {
 			}
 		}
 
+		if (isTerrain) {
+			lastTerrainAtlas = atlas;
+		} else {
+			lastItemAtlas = atlas;
+		}
 		return atlas;
 	}
 

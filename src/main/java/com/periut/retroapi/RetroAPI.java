@@ -55,6 +55,11 @@ public class RetroAPI implements ModInitializer {
 			// (it needs the registries populated and is display-only).
 			LangLoader.loadModLangFiles();
 
+			// Creative tabs BEFORE the entrypoint: a mod's init is exactly where it would call
+			// RetroItemGroups.modifyEntries(VanillaItemGroups.INGREDIENTS, ...), and a lazily-created
+			// group is null at that moment, so the call did nothing at all and said nothing about it.
+			com.periut.retroapi.itemgroup.VanillaItemGroups.ensureRegistered();
+
 			// The `retroapi` entrypoint: mods register their content here, in an order RetroAPI
 			// guarantees (platform ready, before the registration events, before recipes are sorted,
 			// before any world assigns ids). See RetroModInitializer for why `init` is not enough.
@@ -78,6 +83,7 @@ public class RetroAPI implements ModInitializer {
 			// When StationAPI is present, it handles ID management and textures.
 			// Register our lang path so StationAPI scans lang/ directories.
 			StationBridges.get().registerLangPath();
+			com.periut.retroapi.itemgroup.VanillaItemGroups.ensureRegistered();
 			LOGGER.info("RetroAPI: StationAPI detected, delegating registration, ID management and textures to it");
 
 			// The `retroapi` entrypoint fires in BOTH worlds. RetroAPI's own block/item/achievement
@@ -99,6 +105,20 @@ public class RetroAPI implements ModInitializer {
 		// conversion can read it. Biomes are plain vanilla Biome objects held by a dimension's BiomeSource.
 		DimensionRegistrationCallback.EVENT.invoker().run();
 		BiomeRegistrationCallback.EVENT.invoker().run();
+		// Command blocks are RetroAPI's own vanilla content: registered before commands so the tree can
+		// name them, and under minecraft: because that is what they are.
+		com.periut.retroapi.commandblock.CommandBlocks.register();
+		// Spawn eggs are the same kind of content, and register after the entity events above so an
+		// egg can be given to a mob that was only registered a moment ago.
+		com.periut.retroapi.entity.spawnegg.SpawnEggs.register();
+		// And one for every mob a mod registered, unless it opted out - after the entity event above,
+		// so every mob is known, and after the vanilla eggs so a mod cannot be beaten to a name.
+		com.periut.retroapi.entity.spawnegg.RetroSpawnEggs.registerAll();
+
+		// Commands come last: the tree a dedicated server builds here describes the entities, items and
+		// dimensions registered above, so every registration event has to have fired first.
+		com.periut.retroapi.commands.RetroCommands.init();
+
 		LOGGER.info("RetroAPI ready: {} blocks, {} items, {} entities, {} dimensions",
 			RetroRegistry.getBlocks().size(), RetroRegistry.getItems().size(),
 			RetroRegistry.getEntities().size(),

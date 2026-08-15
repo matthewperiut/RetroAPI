@@ -10,6 +10,9 @@
 	"entrypoints": {
 		"stationapi:event_bus": [
 			"com.periut.retroapi.stationapi.StationAPIRegistryForwarder"
+		],
+		"stationapi:event_bus_client": [
+			"com.periut.retroapi.stationapi.SprintKeybindListener"
 		]
 	},
 	"accessWidener": "retroapi-stationapi.accesswidener",

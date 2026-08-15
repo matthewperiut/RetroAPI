@@ -3,6 +3,7 @@ package com.periut.retroapi.mixin.gamemode.client;
 import com.periut.retroapi.gamemode.GameModeNetworking;
 import com.periut.retroapi.gamemode.RetroGameMode;
 import com.periut.retroapi.gamemode.RetroGameModes;
+import com.periut.retroapi.register.item.ObtainableItems;
 import net.minecraft.block.Block;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.ClientPlayerEntity;
@@ -43,20 +44,25 @@ public class CreativePickBlockMixin {
 			return;
 		}
 
-		int id = world.getBlockId(crosshairTarget.blockX, crosshairTarget.blockY, crosshairTarget.blockZ);
-		// The one substitution modern also makes: a double slab is two slabs and has no item of its
-		// own. Grass and bedrock are NOT swapped out here - beta only did that because survival could
-		// not hold them, and creative can.
-		if (id == Block.DOUBLE_SLAB.id) {
-			id = Block.SLAB.id;
-		}
+		final int targeted = world.getBlockId(crosshairTarget.blockX, crosshairTarget.blockY, crosshairTarget.blockZ);
+
+		// What that block is HELD as, which is not always the block itself: a lit furnace picks as a
+		// furnace, a door block as its door item, redstone wire as redstone dust, a double slab as the
+		// slab it is made of. Same table the give command filters with, so what can be picked and what
+		// can be given are one answer rather than two that drift.
+		//
+		// Grass and bedrock are NOT swapped out - beta only did that because survival could not hold
+		// them, and creative can.
+		final int id = ObtainableItems.pickedItemId(targeted);
 		if (id <= 0 || id >= Item.ITEMS.length || Item.ITEMS[id] == null) {
 			ci.cancel();
 			return;
 		}
 
 		// Metadata only where the game itself says it means a variant, so wool comes back the right
-		// colour while a leaf block's decay bits do not turn into a damage value nothing can use.
+		// colour while a leaf block's decay bits do not turn into a damage value nothing can use. A
+		// substituted item keeps the meta too, which is what makes a double slab pick as its own kind
+		// of slab.
 		final int meta = Item.ITEMS[id].hasSubtypes()
 			? world.getBlockMeta(crosshairTarget.blockX, crosshairTarget.blockY, crosshairTarget.blockZ)
 			: 0;

@@ -1,5 +1,6 @@
 package com.periut.retroapi.tag;
 
+import com.periut.retroapi.registry.VanillaIds;
 import net.minecraft.item.Item;
 
 import java.util.HashMap;
@@ -154,6 +155,16 @@ public final class VanillaItemNames {
 		if (colon >= 0) {
 			name = name.substring(colon + 1);
 		}
-		return BY_NAME.get(name);
+
+		final Item known = BY_NAME.get(name);
+		if (known != null) {
+			return known;
+		}
+
+		// StationAPI's flattening names, same fall-through as VanillaBlockNames and for the same
+		// reason: an item tag written for StationAPI names things its way, and reading that name is
+		// a lookup, not a registration.
+		final int id = VanillaIds.itemId("minecraft:" + name);
+		return id > 0 && id < Item.ITEMS.length ? Item.ITEMS[id] : null;
 	}
 }

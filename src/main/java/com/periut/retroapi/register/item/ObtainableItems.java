@@ -52,6 +52,65 @@ public final class ObtainableItems {
             || blockId == Block.REDSTONE_WIRE.id;
     }
 
+    /**
+     * The item id a block hands over when it is picked, or {@code -1} for a block with no held form
+     * at all.
+     *
+     * <p>{@link #isObtainable} answers whether an id may be handed over; this answers what to hand over
+     * INSTEAD, which is the half pick-block needs. Both halves of a lit/unlit pair give the form that
+     * can be placed, a block whose item is a separate id gives that item, and the fluids and piston
+     * innards give nothing, because nothing is what a player could hold.
+     *
+     * <p>Metadata is the caller's business: a double slab picks as the slab it is made of, so the meta
+     * carries across unchanged.
+     */
+    public static int pickedItemId(final int blockId) {
+        if (blockId == Block.LIT_FURNACE.id) {
+            return Block.FURNACE.id;
+        }
+        if (blockId == Block.LIT_REDSTONE_ORE.id) {
+            return Block.REDSTONE_ORE.id;
+        }
+        if (blockId == Block.REDSTONE_TORCH.id) {
+            return Block.LIT_REDSTONE_TORCH.id;   // the unlit copy is the state; the lit one is the item
+        }
+        if (blockId == Block.DOUBLE_SLAB.id) {
+            return Block.SLAB.id;
+        }
+        if (blockId == Block.FARMLAND.id) {
+            return Block.DIRT.id;
+        }
+        if (blockId == Block.REDSTONE_WIRE.id) {
+            return Item.REDSTONE.id;
+        }
+        if (blockId == Block.DOOR.id) {
+            return Item.WOODEN_DOOR.id;
+        }
+        if (blockId == Block.IRON_DOOR.id) {
+            return Item.IRON_DOOR.id;
+        }
+        if (blockId == Block.BED.id) {
+            return Item.BED.id;
+        }
+        if (blockId == Block.SIGN.id || blockId == Block.WALL_SIGN.id) {
+            return Item.SIGN.id;
+        }
+        if (blockId == Block.CAKE.id) {
+            return Item.CAKE.id;
+        }
+        if (blockId == Block.SUGAR_CANE.id) {
+            return Item.SUGAR_CANE.id;
+        }
+        if (blockId == Block.REPEATER.id || blockId == Block.POWERED_REPEATER.id) {
+            return Item.REPEATER.id;
+        }
+        if (blockId == Block.WHEAT.id) {
+            return Item.SEEDS == null ? -1 : Item.SEEDS.id;   // a crop picks as what plants it
+        }
+
+        return isObtainable(blockId) ? blockId : -1;
+    }
+
     /** Whether this id can be given to a player: an item, or a block that has one. */
     public static boolean isObtainable(final int id) {
         if (id <= 0 || id >= Item.ITEMS.length || Item.ITEMS[id] == null) {

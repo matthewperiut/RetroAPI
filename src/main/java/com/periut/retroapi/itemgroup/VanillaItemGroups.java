@@ -43,6 +43,11 @@ public final class VanillaItemGroups {
     /** Everything beta has, unsorted - modern's search tab, which is also the "did I forget one" tab. */
     public static RetroItemGroup SEARCH;
 
+    /** One number per (id, metadata) pair, so the same stack listed by two tabs is offered once. */
+    private static long key(final int id, final int meta) {
+        return ((long) id << 32) | (meta & 0xFFFFFFFFL);
+    }
+
     private static NamespacedIdentifier id(final String path) {
         return NamespacedIdentifiers.from("minecraft", path);
     }
@@ -181,7 +186,9 @@ public final class VanillaItemGroups {
                 entries.add(Block.TRAPDOOR);
                 entries.add(Block.FENCE);
                 entries.add(Item.BED);
-                entries.add(Block.CAKE);
+                // The item, not the block - same as the bed and the doors around it. The block is what
+                // a placed cake IS; the item is what anyone can hold, and Food and Drinks lists it too.
+                entries.add(Item.CAKE);
                 entries.add(Item.PAINTING);
                 entries.add(Block.JACK_O_LANTERN);
                 entries.add(Block.TNT);
@@ -245,8 +252,12 @@ public final class VanillaItemGroups {
                 entries.add(Item.LAVA_BUCKET);
                 entries.add(Item.MILK_BUCKET);
                 entries.add(Item.FISHING_ROD);
+                // Modern's own order for the two of them: shears just after the fishing rod, and the
+                // map at the end of the compass/clock run of things you read rather than swing.
+                entries.add(Item.SHEARS);
                 entries.add(Item.COMPASS);
                 entries.add(Item.CLOCK);
+                entries.add(Item.MAP);
                 entries.add(Item.BOAT);
                 entries.add(Item.SADDLE);
                 entries.add(Item.RECORD_THIRTEEN);
@@ -385,34 +396,56 @@ public final class VanillaItemGroups {
             .displayName(Text.literal("Search Items"))
             .icon(() -> new ItemStack(Item.COMPASS))
             .entries(entries -> {
-                // Built from the registries rather than by hand, because this tab exists to be
-                // complete - a mod's content included - and a hand-written list would drift. What it
-                // does NOT list is the blocks you cannot hold: see TECHNICAL_BLOCKS.
-                final java.util.Set<Integer> listed = new java.util.HashSet<>();
-                for (final Block block : Block.BLOCKS) {
-                    if (block == null) {
-                        continue;
+                // Everything every OTHER tab lists, then everything no tab lists at all.
+                //
+                // Built from the tabs rather than by walking the registries alone, because the tabs are
+                // where the subtypes are known: beta has no way to ask a block how many kinds of it
+                // there are, so "logs 0..2, leaves 0..2, saplings 0..2, wool 0..15" is knowledge that
+                // lives in the addRange calls above. Walking the registries listed each block once, at
+                // metadata zero, which is why searching for birch, or for a blue wool, found nothing.
+                //
+                // A mod's own tab is included on the same terms, so its variants are searchable without
+                // it registering them twice - and anything with no tab at all is still swept up below,
+                // which is what keeps this the "did I forget one" tab.
+                final java.util.Set<Long> listed = new java.util.LinkedHashSet<>();
+
+                // A tab this world hides is walked but not listed: its ids still go into `listed`, so
+                // the sweep below leaves them alone too. Otherwise hiding Operator Utilities would have
+                // moved the command blocks to the end of the search tab rather than out of it, and
+                // "hidden behind a gamerule" would have meant nothing at all.
+                final boolean operatorHidden =
+                    !com.periut.retroapi.gamerule.RetroGameRules.getBoolean(
+                        com.periut.retroapi.gamerule.RetroGameRules.OPERATOR_ITEMS_TAB);
+
+                for (final RetroItemGroup group : RetroItemGroups.all()) {
+                    if (group == SEARCH || group == INVENTORY) {
+                        continue;   // itself, and the tab that shows the player rather than a list
                     }
-                    // Decided here whether it is listed or deliberately left out - either way the item
-                    // pass below must not offer it a second time.
-                    listed.add(block.id);
-                    if (isTechnical(block.id) || hasSeparateItem(block.id)) {
-                        continue;
-                    }
-                    if (block.id < Item.ITEMS.length && Item.ITEMS[block.id] != null) {
-                        entries.add(block);
+                    final boolean hidden = group == OPERATOR && operatorHidden;
+                    for (final ItemStack stack : group.collect()) {
+                        if (stack != null && listed.add(key(stack.itemId, stack.getDamage())) && !hidden) {
+                            entries.add(stack.copy());
+                        }
                     }
                 }
 
-                // Then everything the block pass did not already cover.
+                // The sweep: every obtainable id NO tab mentioned at all, at metadata zero.
                 //
-                // Which is NOT "every item whose id is past the end of the block array": RetroAPI
-                // grows Block.BLOCKS to make room for modded blocks, so that boundary moves out past
-                // every vanilla item id and this loop quietly stopped listing apples, buckets, tools -
-                // everything that is not a block. Tracking what the first pass added says exactly the
-                // same thing and cannot drift when the array grows again.
+                // "At all" is the important part. Asking only whether metadata zero was listed added a
+                // fourth tall grass to the end of the tab - Natural Blocks lists grass 1..2 deliberately,
+                // because 0 is the dead shrub nobody can obtain, and the sweep helpfully put it back.
+                final java.util.Set<Integer> anyMeta = new java.util.HashSet<>();
+                for (final long entry : listed) {
+                    anyMeta.add((int) (entry >> 32));
+                }
+
+                for (final Block block : Block.BLOCKS) {
+                    if (block != null && ObtainableItems.isObtainable(block.id) && anyMeta.add(block.id)) {
+                        entries.add(block);
+                    }
+                }
                 for (final Item item : Item.ITEMS) {
-                    if (item != null && !listed.contains(item.id)) {
+                    if (item != null && ObtainableItems.isObtainable(item.id) && anyMeta.add(item.id)) {
                         entries.add(item);
                     }
                 }

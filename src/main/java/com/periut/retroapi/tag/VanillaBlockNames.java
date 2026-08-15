@@ -1,5 +1,6 @@
 package com.periut.retroapi.tag;
 
+import com.periut.retroapi.registry.VanillaIds;
 import net.minecraft.block.Block;
 
 import java.util.HashMap;
@@ -131,12 +132,30 @@ public final class VanillaBlockNames {
 	 * Resolves a {@code minecraft:<name>} (with or without the namespace) to its beta block,
 	 * or null if the name has no beta equivalent (post-beta blocks fall in here, which is
 	 * exactly what makes modern tag files copy across safely: unknown entries just skip).
+	 *
+	 * <p>Two vocabularies answer here, because two are in circulation. The table above is modern
+	 * Minecraft's, which is what a tag file copied from a modern version speaks. StationAPI's
+	 * flattening schema names some of the same blocks differently - {@code furnace_lit} where modern
+	 * says {@code lit_furnace}, {@code slab} where modern says {@code smooth_stone_slab} - and a tag
+	 * file written for StationAPI speaks that one. Falling through to {@link VanillaIds}, which is
+	 * already a verbatim copy of that schema, makes both readable without a second table to keep in
+	 * step with the first.
+	 *
+	 * <p>Nothing is registered anywhere to make this work: it is a lookup that runs after the first
+	 * one misses. The block registry - vanilla's array, or StationAPI's own view of it - is only read.
 	 */
 	public static Block resolve(String name) {
 		int colon = name.indexOf(':');
 		if (colon >= 0) {
 			name = name.substring(colon + 1);
 		}
-		return BY_NAME.get(name);
+
+		final Block known = BY_NAME.get(name);
+		if (known != null) {
+			return known;
+		}
+
+		final int id = VanillaIds.blockId("minecraft:" + name);
+		return id > 0 && id < Block.BLOCKS.length ? Block.BLOCKS[id] : null;
 	}
 }

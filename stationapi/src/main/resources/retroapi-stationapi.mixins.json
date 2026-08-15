@@ -15,7 +15,9 @@
 		"ModNioResourcePackMixin",
 		"StationSoundBridgeMixin",
 		"ArsenicHeldItemLayerMixin",
-		"ArsenicDroppedItemScaleMixin"
+		"ArsenicDroppedItemScaleMixin",
+		"ArsenicDroppedItemTintMixin",
+		"AchievementsScreenPagesMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

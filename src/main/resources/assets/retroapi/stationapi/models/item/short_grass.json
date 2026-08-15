@@ -1,0 +1,12 @@
+{
+  "_comment": [
+    "Meta 1 of block 31, selected by the override in minecraft:item/grass. The sprite is the terrain",
+    "atlas one StationAPI unstitches under the name block/grass (assets/minecraft/stationapi/atlases/",
+    "game.json), which is the same greyscale tall-grass texture the world uses - so it needs the same",
+    "tint the world gives it, supplied by StationApiItemColors through item/generated's tintindex 0."
+  ],
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "minecraft:block/grass"
+  }
+}

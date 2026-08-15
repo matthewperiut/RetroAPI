@@ -58,6 +58,14 @@ public class RetroAPIMixinPlugin implements IMixinConfigPlugin {
 		"com.periut.retroapi.mixin.dimension.server.PlayerManagerMixin",
 		"com.periut.retroapi.mixin.dimension.server.ServerPlayerEntityMixin",
 		"com.periut.retroapi.mixin.dimension.client.ClientPlayerEntityMixin",
+		// StationAPI owns the achievements screen, and the two cannot share it. This mixin filters a
+		// page by swapping the static Achievements.ACHIEVEMENTS list for the duration of renderIcons -
+		// harmless on vanilla's own loop, but station-achievements walks that same list from injectors
+		// whose local indices and ordinals were computed against the ORIGINAL one. Handing them a
+		// shorter list mid-method desynchronised them: icons drew white, and the damage outlived the
+		// screen, so the ordinary achievements screen was broken afterwards too. Tried enabling it,
+		// measured, put it back. Multi-page achievements under StationAPI need RetroAPI's pages
+		// forwarded into StationAPI's OWN page registry, not a second implementation racing it.
 		"com.periut.retroapi.mixin.client.achievement.AchievementsPageScreenMixin",
 		// register.ItemStackMixin is ONLY the numeric-id flattening half (clashes with StationAPI's
 		// stationapi:id). The data-component half lives in component.ItemStackComponentMixin, which is

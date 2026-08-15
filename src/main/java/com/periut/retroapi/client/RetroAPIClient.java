@@ -47,6 +47,9 @@ public class RetroAPIClient implements ClientModInitializer {
 		// Game modes as the server has them (every player's, not just this client's).
 		com.periut.retroapi.gamemode.GameModeNetworking.registerClient();
 
+		// A server's world-scoped config values, and whether this player is allowed to change them.
+		com.periut.retroapi.config.ConfigNetworking.registerClient();
+
 		// The creative screen's way back to the server. Registered here so the container - which is
 		// common code a dedicated server loads - never names a client-only class itself.
 		com.periut.retroapi.gamemode.CreativeSync.Holder.set(new com.periut.retroapi.gamemode.CreativeSync() {

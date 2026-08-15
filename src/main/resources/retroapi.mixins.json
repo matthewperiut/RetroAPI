@@ -120,6 +120,8 @@
 		"commands.intercept.ServerPlayerPacketHandlerMixin"
 	],
 	"client": [
+		"client.PickupParticleReadyMixin",
+		"client.achievement.AchievementsScreenViewerResetMixin",
 		"client.BlockItemTextureMixin",
 		"client.BlockRendererMixin",
 		"client.BlockRenderManagerAccessor",

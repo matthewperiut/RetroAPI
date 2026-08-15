@@ -19,9 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Adds StationAPI-style multi-page navigation to the vanilla achievements screen for the
- * non-StationAPI path. Disabled by {@link com.periut.retroapi.mixin.RetroAPIMixinPlugin}
- * when StationAPI is present (StationAPI owns the screen then).
+ * Adds StationAPI-style multi-page navigation to the vanilla achievements screen, for RetroAPI's own
+ * {@link AchievementPage} registry.
+ *
+ * <p>Applies with or without StationAPI. It used to be disabled when StationAPI was present, on the
+ * grounds that StationAPI owns that screen - but StationAPI's navigation only appears once ITS page
+ * registry holds more than one page, and a RetroAPI page never enters that registry, so a mod's pages
+ * were simply unreachable on any install that had both. The two sit side by side instead: StationAPI's
+ * buttons and title stay dormant at its single page while these drive RetroAPI's.
  *
  * <p>This mixin is intentionally SEPARATE from the atlas {@code AchievementsScreenMixin}'s
  * {@code drawTexture @Redirect} and uses only COARSE injection points (method HEAD/TAIL),
@@ -62,14 +67,29 @@ public abstract class AchievementsPageScreenMixin extends Screen {
 		else if (button.id == RETROAPI$NEXT_BUTTON_ID) AchievementPage.nextPage();
 	}
 
+	/**
+	 * The page's own name, under the {@code </>} buttons - on every page, the implicit vanilla one
+	 * included, which reads "Minecraft".
+	 *
+	 * <p>Black, and no exception for the default page: this is exactly what StationAPI's own copy of
+	 * this screen does, and a player who moves between the two installs should not find the label
+	 * appearing, disappearing or changing colour underneath them. It also reads better on the
+	 * parchment background than the white it used to be, which is the reason StationAPI picked black.
+	 *
+	 * <p>An untranslated page falls back to its bare name rather than drawing the raw
+	 * {@code gui.retroapi.achievementPage.*} key at a player - beta's {@code I18n} hands the key back
+	 * when it knows nothing about it.
+	 */
 	@Inject(method = "setTitle", at = @At("TAIL"))
 	private void retroapi$drawPageTitle(CallbackInfo ci) {
 		if (AchievementPage.getPageCount() <= 1) return;
-		// Keep the vanilla "Achievements" header on the implicit default page.
-		if (AchievementPage.isCurrentPageDefault()) return;
-		String key = "gui.retroapi.achievementPage." + AchievementPage.getCurrentPageName();
+		String name = AchievementPage.getCurrentPageName();
+		String key = "gui.retroapi.achievementPage." + name;
 		String text = I18n.getTranslation(key);
-		this.textRenderer.draw(text, this.width / 2 - 69, this.height / 2 + 80, 0xFFFFFF);
+		if (text == null || text.equals(key)) {
+			text = name;
+		}
+		this.textRenderer.draw(text, this.width / 2 - 69, this.height / 2 + 80, 0x000000);
 	}
 
 	// --- Per-page filtering: swap the static list renderIcons reads, then restore. ---

@@ -31,6 +31,7 @@ final class NoopStationBridge implements StationBridge {
 	@Override public String dimensionIdentifier(int serialId) { return null; }
 	@Override public java.util.List<String> itemIdentifiers() { return java.util.List.of(); }
 	@Override public int itemId(String identifier) { return -1; }
+	@Override public int blockId(String identifier) { return -1; }
 	@Override public String itemIdentifier(Item item) { return null; }
 	@Override public int sprintKeyCode() { return -1; }
 }

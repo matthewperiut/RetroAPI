@@ -280,6 +280,11 @@ public final class VanillaIds {
         alias("monster_spawner", 52, 0);
         alias("web", 30, 0);
         alias("tall_grass", 31, 1);
+        // Block 31's three metas, which vanilla never named apart. "dead_shrub" and not "dead_bush":
+        // block 32 is a separate block that draws with the same sprite and already owns that name.
+        alias("dead_shrub", 31, 0);
+        alias("short_grass", 31, 1);
+        alias("fern", 31, 2);
 
         // Wool: beta stores the colour as damage, modern gives each its own id.
         final String[] colors = {"white", "orange", "magenta", "light_blue", "yellow", "lime", "pink", "gray",

@@ -69,7 +69,7 @@ public class RetroAPI implements ModInitializer {
 			BlockRegistrationCallback.EVENT.invoker().run();
 			ItemRegistrationCallback.EVENT.invoker().run();
 			// Achievements register AFTER blocks/items so icons can reference registered content.
-			AchievementRegistrationCallback.EVENT.invoker().run();
+			AchievementRegistrationCallback.fire();
 
 			// Fire recipe registration. Calling RetroRecipes lazily constructs (and registers
 			// all vanilla recipes for) CraftingRecipeManager, so our recipes land after vanilla.

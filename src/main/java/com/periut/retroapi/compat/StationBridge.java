@@ -76,6 +76,16 @@ public interface StationBridge {
 	/** Numeric item id StationAPI resolves an identifier to, or {@code -1}. */
 	int itemId(String identifier);
 
+	/**
+	 * Numeric block id StationAPI resolves an identifier to, or {@code -1}.
+	 *
+	 * <p>Under StationAPI a mod registers its blocks THERE, not in RetroAPI's registry, so anything
+	 * resolving a namespaced block name has to ask both or it will decide a perfectly real block does
+	 * not exist. That is what happened to the tool tags: every {@code #mineable/*} entry naming another
+	 * mod's block was dropped with a warning, and those blocks were left with no tool behaviour at all.
+	 */
+	int blockId(String identifier);
+
 	/** The identifier StationAPI registered an item under, or null. */
 	String itemIdentifier(Item item);
 

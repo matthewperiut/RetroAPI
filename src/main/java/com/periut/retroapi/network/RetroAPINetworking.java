@@ -67,6 +67,14 @@ public class RetroAPINetworking {
 	public static final NamespacedIdentifier GAMERULE_CHANNEL =
 		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "gamerules"), true, false);
 
+	// Mod configs, both ways (see com.periut.retroapi.config.ConfigSync). Server -> client: whether this
+	// player may edit the server's settings, then every Scope.WORLD option as a key/value pair, sent on
+	// join and again whenever an operator changes one. Client -> server: one key/value pair, an
+	// operator's edit - which the server re-checks against its own op list before applying, because the
+	// "may edit" flag it sent is for drawing the screen and never for deciding anything.
+	public static final NamespacedIdentifier CONFIG_CHANNEL =
+		ChannelRegistry.register(ChannelIdentifiers.from("retroapi", "config"), true, true);
+
 	// Game modes (server -> client): a count, then that many player-name/mode-id pairs. Every client is
 	// told about every player because rendering a spectator as invisible is a decision each client makes
 	// about somebody else.

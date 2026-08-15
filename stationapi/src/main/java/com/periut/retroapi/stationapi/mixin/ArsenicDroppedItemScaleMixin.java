@@ -1,8 +1,8 @@
 package com.periut.retroapi.stationapi.mixin;
 
+import com.periut.retroapi.client.render.DroppedItemScale;
 import com.periut.retroapi.register.block.RetroBlockAccess;
 
-import net.minecraft.block.Block;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.item.ItemStack;
 import net.modificationstation.stationapi.api.client.texture.SpriteAtlasTexture;
@@ -46,23 +46,16 @@ public class ArsenicDroppedItemScaleMixin {
 	private void retroapi$droppedItemScale(float x, float y, float z,
 			ItemEntity entity, float tickDelta, float rotation, float bob, float brightness,
 			ItemStack stack, float red, float green, byte count, SpriteAtlasTexture atlas) {
-		float declared = retroapi$declaredScale(stack);
-		if (declared > 0.0F) {
-			GL11.glScalef(declared, declared, declared);
+		// The same answer the non-StationAPI path gives, from the same place: a block's declared size
+		// first, then the "Dropped Item Size" tweak, then whatever arsenic was about to use. Asking
+		// DroppedItemScale rather than re-deriving it here is what stops the two renderers drifting -
+		// and the tweak's own mixin cannot reach this install at all (arsenic @Overwrites the method it
+		// targets), so before this it simply did not apply under StationAPI.
+		float scale = DroppedItemScale.override(stack);
+		if (scale > 0.0F) {
+			GL11.glScalef(scale, scale, scale);
 			return;
 		}
 		GL11.glScalef(x, y, z);
-	}
-
-	private float retroapi$declaredScale(ItemStack stack) {
-		if (stack == null) {
-			return -1.0F;
-		}
-		int id = stack.itemId;
-		if (id <= 0 || id >= Block.BLOCKS.length) {
-			return -1.0F;
-		}
-		Block block = Block.BLOCKS[id];
-		return block == null ? -1.0F : ((RetroBlockAccess) block).getDroppedItemScale();
 	}
 }

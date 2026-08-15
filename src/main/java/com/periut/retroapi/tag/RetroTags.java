@@ -1,6 +1,7 @@
 package com.periut.retroapi.tag;
 
 import com.periut.retroapi.RetroAPI;
+import com.periut.retroapi.compat.StationBridges;
 import com.periut.retroapi.registry.BlockRegistration;
 import com.periut.retroapi.registry.ItemRegistration;
 import com.periut.retroapi.registry.RetroRegistry;
@@ -466,7 +467,23 @@ public final class RetroTags {
 			return VanillaBlockNames.resolve(id);
 		}
 		BlockRegistration reg = RetroRegistry.getBlockById(NamespacedIdentifiers.from(ns, id));
-		return reg != null ? reg.getBlock() : null;
+		if (reg != null) {
+			return reg.getBlock();
+		}
+		// Under StationAPI a mod registers its blocks in ITS registry, not RetroAPI's, so a tag naming
+		// another mod's block found nothing here and was dropped with a warning - taking that block's
+		// tool behaviour with it. Same seam ItemIds already uses, so nothing here links against
+		// StationAPI. See StationBridge#blockId.
+		return stationBlock(ns + ":" + id);
+	}
+
+	/** A block from StationAPI's registry, or null when it is absent or does not know the name. */
+	private static Block stationBlock(String identifier) {
+		if (!FabricLoader.getInstance().isModLoaded("stationapi")) {
+			return null;
+		}
+		int id = StationBridges.get().blockId(identifier);
+		return id > 0 && id < Block.BLOCKS.length ? Block.BLOCKS[id] : null;
 	}
 
 	private static Item resolveItem(String name) {
@@ -483,6 +500,25 @@ public final class RetroTags {
 			return block != null && block.id < Item.ITEMS.length ? Item.ITEMS[block.id] : null;
 		}
 		ItemRegistration reg = RetroRegistry.getItemById(NamespacedIdentifiers.from(ns, id));
-		return reg != null ? reg.getItem() : null;
+		if (reg != null) {
+			return reg.getItem();
+		}
+		// StationAPI's registry, for the same reason resolveBlock asks it: under StationAPI another
+		// mod's items are registered there and nowhere else.
+		return stationItem(ns + ":" + id);
+	}
+
+	/** An item from StationAPI's registry, or null when it is absent or does not know the name. */
+	private static Item stationItem(String identifier) {
+		if (!FabricLoader.getInstance().isModLoaded("stationapi")) {
+			return null;
+		}
+		int id = StationBridges.get().itemId(identifier);
+		if (id > 0 && id < Item.ITEMS.length) {
+			return Item.ITEMS[id];
+		}
+		// A block name in an item tag resolves to that block's item, as it does for vanilla above.
+		int blockId = StationBridges.get().blockId(identifier);
+		return blockId > 0 && blockId < Item.ITEMS.length ? Item.ITEMS[blockId] : null;
 	}
 }

@@ -1,0 +1,10 @@
+{
+  "_comment": [
+    "Meta 2 of block 31, selected by the override in minecraft:item/grass. Same story as short_grass:",
+    "block/fern is greyscale on the atlas and takes its green from StationApiItemColors."
+  ],
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "minecraft:block/fern"
+  }
+}

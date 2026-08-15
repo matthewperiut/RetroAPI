@@ -377,6 +377,19 @@ public class CreativeScreenHandler extends ScreenHandler {
     }
 
     /** The bin: takes anything, keeps nothing. */
+    /**
+     * True for a slot this screen owns outright: a bottomless picker template, or the bin.
+     *
+     * <p>For anything else that patches container screens generically. The player's own inventory is
+     * on this screen too, and behaves exactly as it does anywhere else - dragging a stack across it,
+     * splitting one, shift-clicking it - so a tweak that stands down on the whole screen loses those
+     * for no reason. These two are the slots where the usual rules genuinely do not apply: taking from
+     * a picker MINTS a stack rather than moving one, and the bin destroys whatever it is given.
+     */
+    public static boolean isCreativeSlot(final Slot slot) {
+        return slot instanceof PickerSlot || slot instanceof DestroySlot;
+    }
+
     private static final class DestroySlot extends Slot {
         private DestroySlot(final Inventory inventory, final int index, final int x, final int y) {
             super(inventory, index, x, y);

@@ -43,15 +43,14 @@ repositories {
 	mavenLocal()
 }
 
-// The -babric jar bundles these OSL gen2 modules (reverse-converted) + joptsimple under
-// META-INF/jars/, matching the standalone retroapi bundle. Versions track OSL 0.18.0.
-retroconvert {
-	bundle "net.ornithemc.osl-gen2:core:0.7.1"
-	bundle "net.ornithemc.osl-gen2:entrypoints:0.6.0+mca1.0.1_01-mc1.5.2"
-	bundle "net.ornithemc.osl-gen2:lifecycle-events:0.6.0+mcb1.3-mcb1.7.3"
-	bundle "net.ornithemc.osl-gen2:networking:0.9.0+mcb1.0-mc13w39b"
-	bundle "net.ornithemc.osl-gen2:networking-impl:0.1.1+mcb1.5-mc11w48a"
-}
+// No retroconvert `bundle` list any more. The OSL modules it used to name are `include`d in the
+// dependencies block below, so BOTH jars carry them from one list: the babric conversion recurses
+// into this jar's nested jars and reverse-converts each one, exactly as it already does for the
+// StationAPI compat module. Naming them in both places would nest them twice.
+//
+// There is no `bundle` list at all now, and joptsimple does not need one: the bundler adds it to the
+// babric jar itself as a fixed runtime dependency. Naming it here as well produced two copies of it
+// under META-INF/jars.
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -73,6 +72,28 @@ dependencies {
 	mappings ploceus.mappings("net.glasslauncher:biny-ornithe:b1.7.3+build.${project.biny_mappings}:mergedv2")
 
 	ploceus.dependOsl(project.osl_version)
+
+	// The five OSL gen2 modules RetroAPI's fabric.mod.json requires, bundled into the jar itself.
+	// OSL ships with the Ornithe launcher profile, so on a normal install these are redundant - but
+	// "normal install" is not the only way anyone gets here, and a missing dependency is a refusal to
+	// load rather than a degraded feature. The babric jar has always carried them; this is the same
+	// set, for the other toolchain.
+	//
+	// Declared here rather than in the retroconvert block below, so both jars get them from one list:
+	// the babric conversion recurses into this jar's nested jars and reverse-converts what it finds,
+	// which is how the StationAPI compat module already reaches babric users.
+	include "net.ornithemc.osl-gen2:core:0.7.1"
+	include "net.ornithemc.osl-gen2:entrypoints:0.6.0+mca1.0.1_01-mc1.5.2"
+	include "net.ornithemc.osl-gen2:lifecycle-events:0.6.0+mcb1.3-mcb1.7.3"
+	include "net.ornithemc.osl-gen2:networking:0.9.0+mcb1.0-mc13w39b"
+	include "net.ornithemc.osl-gen2:networking-impl:0.1.1+mcb1.5-mc11w48a"
+
+	// Babric does not ship joptsimple and the dedicated server needs it. It used to arrive as the
+	// bundler's own runtime dependency, which it only adds when there is a `bundle` list to process -
+	// so removing that list silently took it away. Here instead, from the same one list: an extra copy
+	// in the Ornithe jar, whose profile already provides it, is a few tens of kilobytes against a
+	// server that will not start.
+	include "net.sf.jopt-simple:jopt-simple:5.0.4"
 
 	include "io.netty:netty-buffer:4.1.77.Final"
 	include "io.netty:netty-common:4.1.77.Final"
@@ -107,6 +128,42 @@ dependencies {
 configurations.matching { it.name.toLowerCase().contains('runtime') }.configureEach {
 	exclude group: 'org.lwjgl.lwjgl'
 }
+
+// ---------------------------------------------------------------------------------------------
+// StationAPI compile stubs (src/stapiStub)
+//
+// The tweaks half of the mod reaches StationAPI through two entrypoint keys a loader without
+// StationAPI never asks for, so those classes need a handful of StationAPI/UnsafeEvents signatures
+// to COMPILE and nothing at runtime. They cannot live in the :stationapi module: that module only
+// exists under -Pstationapi, and these have to work in the default jar as well.
+//
+// A separate source set precisely so they cannot leak: the output goes on main's COMPILE classpath
+// and nowhere else - not the runtime classpath, not the jar, where a stub would shadow the real
+// StationAPI and break every mod that depends on it.
+sourceSets {
+	stapiStub
+}
+
+// Order matters: the stubs need Minecraft's own types, so they take main's compile classpath as it
+// stands BEFORE the stub output is added to it. The other order is a cycle.
+sourceSets.stapiStub.compileClasspath += sourceSets.main.compileClasspath
+sourceSets.main.compileClasspath += sourceSets.stapiStub.output
+tasks.named('compileJava') { dependsOn tasks.named('stapiStubClasses') }
+
+def verifyNoStubsInJar = tasks.register('verifyNoStubsInJar') {
+	dependsOn tasks.named('jar')
+	def jarFile = tasks.named('jar').flatMap { it.archiveFile }
+	doLast {
+		def leaked = zipTree(jarFile.get().asFile).matching {
+			include 'net/modificationstation/**'
+			include 'net/mine_diver/**'
+		}.files
+		if (!leaked.isEmpty()) {
+			throw new GradleException("StationAPI compile stubs leaked into the jar: ${leaked}")
+		}
+	}
+}
+tasks.named('check') { dependsOn verifyNoStubsInJar }
 
 // Don't fail test task when no tests are discovered (these are mod test classes, not unit tests)
 tasks.withType(Test) {

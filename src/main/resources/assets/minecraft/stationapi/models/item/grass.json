@@ -1,0 +1,29 @@
+{
+  "_comment": [
+    "Item model for block 31 (minecraft:grass), whose three metas are the dead shrub, short grass and",
+    "the fern. StationAPI keys item models by ITEM, not by damage - ItemModels.getModel(stack) looks up",
+    "stack.getItem() - so the per-meta split has to happen through overrides, which its arsenic renderer",
+    "does apply (ModelOverrideList.apply, from BakedModelRendererImpl.getModel).",
+    "",
+    "The 'meta' predicate is StationAPI's own, and it only answers for an item whose hasSubtypes() is",
+    "true - which mixin.item.TallPlantSubtypesMixin is what makes true for this one. With the option off",
+    "the predicate returns -Infinity, no override matches, and every variant draws as the base model,",
+    "which is the vanilla look.",
+    "",
+    "Order matters and is ascending on purpose: ModelOverrideList tests value >= threshold and builds its",
+    "array in reverse, so the LAST matching entry wins. meta 2 matches both and lands on the fern.",
+    "",
+    "Base model is the dead shrub because it is meta 0, and meta 0 is what a stack that never had a",
+    "variant carries. Tinting is not decided here - every layer0 quad carries tintindex 0 (that is what",
+    "item/generated does with its first layer), and compat.stationapi.StationApiItemColors answers white",
+    "for the shrub and the grass colour for the other two."
+  ],
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "minecraft:block/dead_bush"
+  },
+  "overrides": [
+    { "predicate": { "meta": 1 }, "model": "retroapi:item/short_grass" },
+    { "predicate": { "meta": 2 }, "model": "retroapi:item/fern" }
+  ]
+}

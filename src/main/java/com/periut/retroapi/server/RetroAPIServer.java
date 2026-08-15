@@ -39,6 +39,13 @@ public class RetroAPIServer implements ServerModInitializer {
 		ServerConnectionEvents.PLAY_READY.register((server, player) ->
 			com.periut.retroapi.gamemode.GameModeSync.sendAll(player));
 
+		// Every mod's world-scoped config options, plus whether this player may change them. A client
+		// that is told nothing assumes the server runs none and puts them all back to their defaults,
+		// so this has to reach even a player whose mods register no world options at all.
+		ServerConnectionEvents.PLAY_READY.register((server, player) ->
+			com.periut.retroapi.config.ConfigSyncServer.sendAll(player));
+		com.periut.retroapi.config.ConfigSyncServer.registerServer();
+
 		// Synced block entities within sight, and the command tree, resent HERE rather than trusted to
 		// the join itself. Both are first sent while the player is still logging in, and OSL drops -
 		// not queues - a send to a player whose channel handshake has not finished, so both were being

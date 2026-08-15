@@ -47,20 +47,23 @@ public final class StationBridgeImpl implements StationBridge {
 		BlockItem blockItem = itemFactory.apply(block.id - 256);
 		Registry.register(ItemRegistry.INSTANCE, id, blockItem);
 
-		LOGGER.info("Registered block {} with StationAPI", id);
+		// Per-registration lines are debug: a modpack forwards hundreds of these at boot, and a
+		// hundred identical INFO lines are not information. RetroAPI already logs one summary line
+		// with the counts once registration is done.
+		LOGGER.debug("Registered block {} with StationAPI", id);
 	}
 
 	@Override
 	public void registerItem(String namespace, String path, Item item) {
 		Identifier id = Identifier.of(namespace + ":" + path);
 		Registry.register(ItemRegistry.INSTANCE, id, item);
-		LOGGER.info("Registered item {} with StationAPI", id);
+		LOGGER.debug("Registered item {} with StationAPI", id);
 	}
 
 	@Override
 	public void registerLangPath() {
 		LanguageManager.addPath("lang");
-		LOGGER.info("Registered lang path with StationAPI LanguageManager");
+		LOGGER.debug("Registered lang path with StationAPI LanguageManager");
 	}
 
 	/**
@@ -72,7 +75,7 @@ public final class StationBridgeImpl implements StationBridge {
 	public void bindAchievement(Achievement achievement, String namespace, String path) {
 		Identifier id = Identifier.of(namespace + ":" + path);
 		AchievementTemplate.onConstructor(achievement, id);
-		LOGGER.info("Bound achievement {} into StationAPI StatRegistry", id);
+		LOGGER.debug("Bound achievement {} into StationAPI StatRegistry", id);
 	}
 
 	@Override
@@ -146,6 +149,12 @@ public final class StationBridgeImpl implements StationBridge {
 	public int itemId(String identifier) {
 		Identifier id = Identifier.tryParse(identifier);
 		return id == null ? -1 : ItemRegistry.INSTANCE.getOrEmpty(id).map(item -> item.id).orElse(-1);
+	}
+
+	@Override
+	public int blockId(String identifier) {
+		Identifier id = Identifier.tryParse(identifier);
+		return id == null ? -1 : BlockRegistry.INSTANCE.getOrEmpty(id).map(block -> block.id).orElse(-1);
 	}
 
 	@Override

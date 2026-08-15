@@ -643,6 +643,18 @@ public class RetroCreativeScreen extends HandledScreen {
             return;
         }
 
+        // Vanilla calls this with the item lighting already off. The "items no longer draw under
+        // container text" fix - ours, or UniTweaks' identical one, whichever is installed - moves the
+        // call earlier, to a point where that lighting is still ON, and lit text comes out shaded: the
+        // two lights were aimed under a 120-degree rotation for drawing item cubes, so a flat glyph
+        // facing +Y catches almost none of them and white typing lands on screen grey.
+        //
+        // Handled here rather than at either call site because only one of those is ours to patch.
+        final boolean lit = retroapi$drawnLit();
+        if (lit) {
+            Lighting.turnOff();
+        }
+
         // Modern draws the tab's title unless the tab asked for it to be hidden, and the inventory tab
         // is the only builder in CreativeModeTabs that calls hideTitle() - the search tab keeps its
         // "Search Items" beside the box.
@@ -655,6 +667,32 @@ public class RetroCreativeScreen extends HandledScreen {
             // way in, so it always draws its cursor.
             searchField.render(SEARCH_X, SEARCH_Y);
         }
+
+        if (lit) {
+            // The four enables turnOn sets, and NOT turnOn itself: that also re-issues glLight, whose
+            // directions are taken from the modelview at the time of the call, and the rotation they
+            // were aimed under has long been popped. Only the enable bits were touched; the light
+            // parameters are still exactly as they were set.
+            GL11.glEnable(GL11.GL_LIGHTING);
+            GL11.glEnable(GL11.GL_LIGHT0);
+            GL11.glEnable(GL11.GL_LIGHT1);
+            GL11.glEnable(GL11.GL_COLOR_MATERIAL);
+        }
+    }
+
+    /**
+     * Whether this is being drawn inside the lit part of the render, i.e. whether the early-foreground
+     * fix is in force.
+     *
+     * <p>Asked of the setting rather than of GL. {@code glIsEnabled} is the obvious question, and it is
+     * the wrong one to ask here: a replacement renderer that does not implement an entry point gives it
+     * an empty body, so the answer comes back false whether or not the light is on, and this would
+     * "restore" the state to something it never was. The setting is the same one both implementations
+     * of the fix read - the tweaks half's own mixin, and UniTweaks' copy, which RetroTweaks hands this
+     * very value to - so it says which ordering is in effect without asking the driver anything.
+     */
+    private static boolean retroapi$drawnLit() {
+        return com.periut.retrotweaks.config.ConfigManager.chosenBoolean("bugfixes.itemstackRenderingFix", false);
     }
 
     @Override

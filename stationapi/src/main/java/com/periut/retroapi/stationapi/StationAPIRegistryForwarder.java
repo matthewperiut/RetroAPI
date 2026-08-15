@@ -17,6 +17,7 @@ import net.modificationstation.stationapi.api.registry.DimensionContainer;
 import net.modificationstation.stationapi.api.util.Identifier;
 import net.modificationstation.stationapi.api.event.entity.player.IsPlayerUsingEffectiveToolEvent;
 import net.modificationstation.stationapi.api.event.entity.player.PlayerStrengthOnBlockEvent;
+import net.modificationstation.stationapi.api.event.achievement.AchievementRegisterEvent;
 import net.modificationstation.stationapi.api.event.recipe.RecipeRegisterEvent;
 import net.modificationstation.stationapi.api.mod.entrypoint.Entrypoint;
 import net.modificationstation.stationapi.api.mod.entrypoint.EventBusPolicy;
@@ -37,6 +38,29 @@ public class StationAPIRegistryForwarder {
 
 	@Entrypoint.Logger
 	public Logger logger = LOGGER;
+
+	/** Set once RetroAPI's achievement event has been passed on; the StationAPI one can fire again. */
+	private static boolean achievementsForwarded;
+
+	/**
+	 * Fires RetroAPI's own {@code AchievementRegistrationCallback} from StationAPI's achievement event.
+	 *
+	 * <p>Without StationAPI, {@code RetroAPI.init} runs that callback itself. With it, RetroAPI hands
+	 * registration over wholesale and deliberately does not fire its block, item or achievement events -
+	 * so every mod registering achievements through RetroAPI's API simply registered none, and anything
+	 * built on them (the WAYS pages and the button that opens them) was missing on exactly the installs
+	 * that had StationAPI. This is the missing half of that handover: StationAPI decides WHEN, RetroAPI's
+	 * own API still decides what.
+	 *
+	 * <p>Latched, because StationAPI's event is dispatched from a resource-reload path that can run more
+	 * than once, and registering the same achievement twice would allocate it a second id.
+	 */
+	@EventListener
+	public void registerAchievements(AchievementRegisterEvent event) {
+		if (achievementsForwarded) return;
+		achievementsForwarded = true;
+		com.periut.retroapi.achievement.event.AchievementRegistrationCallback.fire();
+	}
 
 	@EventListener
 	public void registerTextures(TextureRegisterEvent event) {
@@ -59,7 +83,7 @@ public class StationAPIRegistryForwarder {
 			Identifier id = Identifier.of(reg.getId().toString());
 			if (event.registry.containsId(id)) continue;
 			event.registry.register(id, reg.getSerialId(), new DimensionContainer<>(reg.getFactory()));
-			LOGGER.info("Forwarded RetroAPI dimension {} (serial {}) into StationAPI DimensionRegistry", id, reg.getSerialId());
+			LOGGER.debug("Forwarded RetroAPI dimension {} (serial {}) into StationAPI DimensionRegistry", id, reg.getSerialId());
 		}
 	}
 

@@ -114,3 +114,9 @@ accessible method net/minecraft/entity/Entity getRegistryEntry ()Ljava/lang/Stri
 accessible field net/minecraft/entity/EntityRegistry idToClass Ljava/util/Map;
 accessible field net/minecraft/entity/EntityRegistry classToId Ljava/util/Map;
 accessible field net/minecraft/client/font/TextRenderer characterWidths [I
+
+# Achievement description. The score achievements rewrite this live rather than shipping a
+# translation per possible value - getTranslatedDescription returns it verbatim when the achievement
+# has no stat formatter, which is true of every one they build. It is final, so writing it from a
+# generated @Accessor is an IllegalAccessError on a modern JVM; this is what makes the write legal.
+transitive-mutable field net/minecraft/achievement/Achievement translationKey Ljava/lang/String;

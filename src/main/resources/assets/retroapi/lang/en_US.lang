@@ -11,3 +11,174 @@ item.minecraft.creeper_spawn_egg.name=Creeper Spawn Egg
 item.minecraft.slime_spawn_egg.name=Slime Spawn Egg
 item.minecraft.ghast_spawn_egg.name=Ghast Spawn Egg
 item.minecraft.pigman_spawn_egg.name=Pigman Spawn Egg
+
+# The implicit page 0 of the achievements screen, holding the vanilla achievements. Named for what
+# is on it, matching what StationAPI calls the same page.
+gui.retroapi.achievementPage.minecraft.minecraft=Minecraft
+
+# ---------------------------------------------------------------------------------------------
+# The tweaks half's own strings. They live in RetroAPI's lang file rather than in an
+# assets/retrotweaks/ one because a lang loader - RetroAPI's own, and StationAPI's - scans
+# assets/<mod id>/, and since the merge there is exactly one mod id. A second asset namespace is
+# not a mod, so nothing ever looked in it and every one of these keys drew as itself on screen.
+# ---------------------------------------------------------------------------------------------
+# Display names for the four non-vanilla fish types RetroAPI registers for FishinFoodTweaks'
+# Config.FISHING.nonVanillaFish (see feature/fishing/Fishing.java). Loaded by RetroAPI's own
+# LangLoader, which scans assets/<modid>/lang/en_US.lang for every installed mod - nothing extra
+# to wire up on RetroTweaks' side. Names match FishinFoodTweaks' own en_US.lang exactly.
+item.retrotweaks.raw_common_fish.name=Common Fish
+item.retrotweaks.cooked_common_fish.name=Cooked Common Fish
+item.retrotweaks.raw_river_fish.name=River Fish
+item.retrotweaks.cooked_river_fish.name=Cooked River Fish
+item.retrotweaks.raw_sea_fish.name=Sea Fish
+item.retrotweaks.cooked_sea_fish.name=Cooked Sea Fish
+item.retrotweaks.raw_ocean_fish.name=Ocean Fish
+item.retrotweaks.cooked_ocean_fish.name=Cooked Ocean Fish
+# English strings for the WAYS achievement pages (feature/scoring/achievement/ScoreAchievements.java).
+# Loaded only by RetroAPI's LangLoader, which scans every installed mod's
+# assets/<modid>/lang/en_US.lang before any achievement is constructed - see
+# com.periut.retroapi.lang.LangLoader#loadModLangFiles. Inert on a bare Fabric install: nothing else
+# in RetroTweaks reads a lang file, and this one is simply never opened without RetroAPI.
+#
+# The .desc lines are only what an achievement shows before its first live refresh (and, for
+# real_10_days/real_100_days, for its whole life - see WaysDaysAchievements); every other
+# description is overwritten with a live count/score the moment the achievements screen opens.
+
+gui.retroapi.achievementPage.retrotweaks.waysbasic=WAYS: Basic
+gui.retroapi.achievementPage.retrotweaks.waysdays=WAYS: Days
+gui.retroapi.achievementPage.retrotweaks.ways404=WAYS: 404
+
+achievement.retrotweaks.start_basic=Begin Basic Scoring
+achievement.retrotweaks.start_basic.desc=Scores each block placed/removed and each mob killed.
+achievement.retrotweaks.block_placed=Block Placed
+achievement.retrotweaks.block_placed.desc=Count: 0
+achievement.retrotweaks.block_removed=Block Removed
+achievement.retrotweaks.block_removed.desc=Count: 0
+achievement.retrotweaks.monster_mob_killed=Monster Kill
+achievement.retrotweaks.monster_mob_killed.desc=Count: 0
+achievement.retrotweaks.passive_mob_killed=Passive Kill
+achievement.retrotweaks.passive_mob_killed.desc=Count: 0
+
+achievement.retrotweaks.start_days=Begin Days Scoring
+achievement.retrotweaks.start_days.desc=Scores each in-game day survived (and tracks real world days).
+achievement.retrotweaks.minecraft_day=In-game Day Survived!
+achievement.retrotweaks.minecraft_day.desc=Current: 0
+achievement.retrotweaks.minecraft_100_days=100 Days Survived!
+achievement.retrotweaks.minecraft_100_days.desc=Current: 0
+achievement.retrotweaks.minecraft_year=In-game Year Survived!
+achievement.retrotweaks.minecraft_year.desc=Current: 0
+achievement.retrotweaks.real_day=Real Day Completed!
+achievement.retrotweaks.real_day.desc=Count: 0
+achievement.retrotweaks.real_10_days=Ready for YouTube!
+achievement.retrotweaks.real_10_days.desc=Play for 10 real days.
+achievement.retrotweaks.real_100_days=It's a work of art!
+achievement.retrotweaks.real_100_days.desc=Play for 100 real days.
+
+achievement.retrotweaks.start_404=Begin 404 Challenge
+achievement.retrotweaks.start_404.desc=Scores certain aspects of the game for the 404 challenge.
+
+achievement.retrotweaks.leather_armor=100% Real Leather!
+achievement.retrotweaks.leather_armor.desc=Craft a full set of leather armor. [Incomplete]
+achievement.retrotweaks.iron_armor=A Knight At Last!
+achievement.retrotweaks.iron_armor.desc=Craft a full set of iron armor. [Incomplete]
+achievement.retrotweaks.gold_armor=Armor of Royalty!
+achievement.retrotweaks.gold_armor.desc=Craft a full set of gold armor. [Incomplete]
+achievement.retrotweaks.diamond_armor=Impervious To Blows!
+achievement.retrotweaks.diamond_armor.desc=Craft a full set of diamond armor. [Incomplete]
+
+achievement.retrotweaks.craft_iron_block=Age of Iron!
+achievement.retrotweaks.craft_iron_block.desc=Craft an iron block. [Incomplete]
+achievement.retrotweaks.craft_gold_block=We're rich, we're Rich!
+achievement.retrotweaks.craft_gold_block.desc=Craft a gold block. [Incomplete]
+achievement.retrotweaks.craft_lapis_lazuli_block=Ultramarine blue!
+achievement.retrotweaks.craft_lapis_lazuli_block.desc=Craft a lapiz lazuli block. [Incomplete]
+achievement.retrotweaks.craft_diamond_block=Kingly Status!
+achievement.retrotweaks.craft_diamond_block.desc=Craft a diamond block. [Incomplete]
+achievement.retrotweaks.creeper_iron_block=No cage strong enough!
+achievement.retrotweaks.creeper_iron_block.desc=Have a creeper destroy an iron block. [Incomplete]
+achievement.retrotweaks.creeper_gold_block=Noo! Not the gold!
+achievement.retrotweaks.creeper_gold_block.desc=Have a creeper destroy a gold block. [Incomplete]
+achievement.retrotweaks.creeper_lapis_lazuli_block=What's with the smoke?
+achievement.retrotweaks.creeper_lapis_lazuli_block.desc=Have a creeper destroy a lapis lazuli block. [Incomplete]
+achievement.retrotweaks.creeper_diamond_block=How Could You!
+achievement.retrotweaks.creeper_diamond_block.desc=Have a creeper destroy a diamond block. [Incomplete]
+
+achievement.retrotweaks.craft_jack_o_lantern=Time for Halloween!
+achievement.retrotweaks.craft_jack_o_lantern.desc=Craft a jack o' lantern. [Incomplete]
+achievement.retrotweaks.craft_bread=Good for journeys!
+achievement.retrotweaks.craft_bread.desc=Craft bread. [Incomplete]
+achievement.retrotweaks.craft_bow_and_arrows=The beta machine gun!
+achievement.retrotweaks.craft_bow_and_arrows.desc=Craft a bow and 64 arrows. [Incomplete]
+
+achievement.retrotweaks.never_sleep=I need sleep!
+achievement.retrotweaks.never_sleep.desc=Never sleep. [Success!]
+achievement.retrotweaks.never_wear_armor=I need protection!
+achievement.retrotweaks.never_wear_armor.desc=Never wear armor. [Success!]
+
+achievement.retrotweaks.zombie_killed=Zombie Killed!
+achievement.retrotweaks.zombie_killed.desc=Count: 0
+achievement.retrotweaks.skeleton_killed=Skeleton Killed!
+achievement.retrotweaks.skeleton_killed.desc=Count: 0
+achievement.retrotweaks.spider_killed=Spider Killed!
+achievement.retrotweaks.spider_killed.desc=Count: 0
+achievement.retrotweaks.creeper_killed=Creeper Killed!
+achievement.retrotweaks.creeper_killed.desc=Count: 0
+achievement.retrotweaks.ghast_killed=Ghast Killed!
+achievement.retrotweaks.ghast_killed.desc=Count: 0
+achievement.retrotweaks.zombie_pigman_killed=Zombie Pigman Killed!
+achievement.retrotweaks.zombie_pigman_killed.desc=Count: 0
+
+achievement.retrotweaks.place_32_glass=Careful with those rocks!
+achievement.retrotweaks.place_32_glass.desc=Place 32 glass. [Incomplete]
+achievement.retrotweaks.place_20_bricks=Couldn't blow it down!
+achievement.retrotweaks.place_20_bricks.desc=Place 20 bricks. [Incomplete]
+achievement.retrotweaks.place_8_types_of_wool=Makes a nice rug!
+achievement.retrotweaks.place_8_types_of_wool.desc=Place 8 different wool types. [Incomplete]
+achievement.retrotweaks.place_all_types_of_wool=Taste the rainbow!
+achievement.retrotweaks.place_all_types_of_wool.desc=Place all different wool types. [Incomplete]
+achievement.retrotweaks.place_a_crash_slab=A perfect cube!
+achievement.retrotweaks.place_a_crash_slab.desc=Place a crash slab. [Incomplete]
+
+achievement.retrotweaks.break_15_wheat=Farming Prodigy!
+achievement.retrotweaks.break_15_wheat.desc=Break 15 wheat. [Incomplete]
+achievement.retrotweaks.break_20_sugar_canes=Something smells sweet!
+achievement.retrotweaks.break_20_sugar_canes.desc=Break 20 sugar canes. [Incomplete]
+achievement.retrotweaks.break_32_cacti=Ow! Ow! Ow!
+achievement.retrotweaks.break_32_cacti.desc=Break 32 cacti. [Incomplete]
+achievement.retrotweaks.break_3_pumpkins=Pumpkin Spice Latte!
+achievement.retrotweaks.break_3_pumpkins.desc=Break 3 pumpkins. [Incomplete]
+achievement.retrotweaks.break_an_obsidian_block=It takes forever!
+achievement.retrotweaks.break_an_obsidian_block.desc=Break an obsidian block. [Incomplete]
+achievement.retrotweaks.exit_the_nether=To hell and back!
+achievement.retrotweaks.exit_the_nether.desc=Exit the nether. [Incomplete]
+achievement.retrotweaks.place_glowstone_in_the_overworld=You are my sunshine!
+achievement.retrotweaks.place_glowstone_in_the_overworld.desc=Place a glowstone block in the overworld. [Incomplete]
+
+# The three variants of block 31, which vanilla labels with one shared name because
+# BlockItem.getTranslationKey ignores the stack's damage - see mixin/item/TallPlantItemNameMixin.
+# Only reachable once TallPlantBlockMixin.getDroppedItemMeta keeps the variant on the sheared item.
+# Loaded by RetroAPI's LangLoader like everything else here. Nothing depends on it being loaded:
+# mixin/client/TallPlantNameShimMixin answers these three keys itself when no loader has, so a bare
+# install (and StationAPI, which clears the whole translation table on every resource reload) still
+# gets a name. These entries win wherever they ARE loaded, which is what makes them translatable.
+#
+# "Dead Shrub", not "Dead Bush": block 32 is a different block with the same sprite and already owns
+# that name.
+tile.retrotweaks.dead_shrub.name=Dead Shrub
+tile.retrotweaks.short_grass.name=Short Grass
+tile.retrotweaks.fern.name=Fern
+
+# Two of VANILLA's own keys, filled in rather than invented: blocks 32 and 31 set them in their
+# constructors and lang/en_US.lang translates neither, because neither block was obtainable in
+# b1.7.3 so nothing ever looked them up. RetroTweaks makes both obtainable, which turns that into a
+# blank tooltip. Same shim covers them when nothing loads this file - see TallPlantNameShimMixin.
+tile.deadbush.name=Dead Bush
+tile.tallgrass.name=Tall Grass
+
+# The same page names again under StationAPI's key. StationAPI's achievements screen titles a page
+# with "gui.stationapi.achievementPage." + the page's own name, and RetroAPI's with its own prefix -
+# so a page mirrored onto that screen (StationAchievementPages) needs both, or it draws a raw key on
+# exactly one of the two installs.
+gui.stationapi.achievementPage.retrotweaks.waysbasic=WAYS: Basic
+gui.stationapi.achievementPage.retrotweaks.waysdays=WAYS: Days
+gui.stationapi.achievementPage.retrotweaks.ways404=WAYS: 404

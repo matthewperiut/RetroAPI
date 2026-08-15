@@ -54,20 +54,113 @@ public class AchievementPage {
 		PAGES.add(page);
 	}
 
+	/**
+	 * Whether this page is kept off the achievements screen's normal navigation.
+	 *
+	 * <p>For a set of pages that should exist - their achievements registered, their ids agreed
+	 * between client and server, their progress tracked - without being in everyone's face on the main
+	 * screen. A hidden page is reachable through {@link #setViewingHidden}, which is what a mod's own
+	 * "viewer" button opens.
+	 */
+	private boolean hidden;
+
+	/** True while navigation is showing the hidden pages INSTEAD of the ordinary ones. */
+	private static boolean viewingHidden;
+
+	public AchievementPage setHidden(final boolean hidden) {
+		this.hidden = hidden;
+		return this;
+	}
+
+	public boolean isHidden() {
+		return hidden;
+	}
+
+	/** Run before an achievements screen is built - see {@link #onBeforeScreen}. */
+	private static final List<Runnable> BEFORE_SCREEN = new ArrayList<>();
+
+	/**
+	 * Registers work to do just before an achievements screen is built.
+	 *
+	 * <p>For anything deciding what belongs on the screen from state this class cannot see - a mod's
+	 * own setting, most obviously, which is what {@link #setHidden} is usually driven from. Without
+	 * it the pages carry whatever visibility they were last given, which on the first screen of a
+	 * session is none at all: every page shows, however the setting reads.
+	 */
+	public static void onBeforeScreen(final Runnable action) {
+		if (action != null) BEFORE_SCREEN.add(action);
+	}
+
+	/** Runs everything {@link #onBeforeScreen} registered. Called from the screen's constructor. */
+	public static void prepare() {
+		for (final Runnable action : BEFORE_SCREEN) {
+			action.run();
+		}
+	}
+
+	/** Every registered page, in registration order. For a bridge that mirrors them elsewhere. */
+	public static List<AchievementPage> all() {
+		return Collections.unmodifiableList(PAGES);
+	}
+
+	/** True for the implicit page 0 holding the vanilla achievements. */
+	public boolean isDefaultPage() {
+		return isDefault;
+	}
+
+	/** True when at least one page is hidden, i.e. when there is anything for a viewer to show. */
+	public static boolean hasHiddenPages() {
+		for (final AchievementPage page : PAGES) {
+			if (page.hidden) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Switches navigation between the ordinary pages and the hidden ones. Resets the current page, so
+	 * entering or leaving the viewer always starts at that set's first page rather than at whatever
+	 * index the other set happened to be on.
+	 */
+	public static void setViewingHidden(final boolean viewing) {
+		if (viewingHidden == viewing) return;
+		viewingHidden = viewing;
+		currentPage = 0;
+	}
+
+	public static boolean isViewingHidden() {
+		return viewingHidden;
+	}
+
+	/** The pages navigation may currently reach: the hidden set in the viewer, the rest otherwise. */
+	private static List<AchievementPage> visible() {
+		final List<AchievementPage> out = new ArrayList<>();
+		for (final AchievementPage page : PAGES) {
+			if (page.hidden == viewingHidden) out.add(page);
+		}
+		return out;
+	}
+
 	public static AchievementPage nextPage() {
+		final List<AchievementPage> pages = visible();
+		if (pages.isEmpty()) return null;
 		currentPage += 1;
-		if (currentPage > PAGES.size() - 1) currentPage = 0;
-		return PAGES.get(currentPage);
+		if (currentPage > pages.size() - 1) currentPage = 0;
+		return pages.get(currentPage);
 	}
 
 	public static AchievementPage prevPage() {
+		final List<AchievementPage> pages = visible();
+		if (pages.isEmpty()) return null;
 		currentPage -= 1;
-		if (currentPage < 0) currentPage = PAGES.size() - 1;
-		return PAGES.get(currentPage);
+		if (currentPage < 0) currentPage = pages.size() - 1;
+		return pages.get(currentPage);
 	}
 
 	public static AchievementPage getCurrentPage() {
-		return PAGES.isEmpty() ? null : PAGES.get(currentPage);
+		final List<AchievementPage> pages = visible();
+		if (pages.isEmpty()) return null;
+		if (currentPage >= pages.size()) currentPage = 0;
+		return pages.get(currentPage);
 	}
 
 	public static String getCurrentPageName() {
@@ -86,8 +179,9 @@ public class AchievementPage {
 		return currentPage;
 	}
 
+	/** How many pages navigation can currently reach - see {@link #visible()}. */
 	public static int getPageCount() {
-		return PAGES.size();
+		return visible().size();
 	}
 
 	/**

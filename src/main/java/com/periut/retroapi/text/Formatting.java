@@ -9,7 +9,7 @@ import java.util.Map;
  *
  * <p>b1.7.3's font renderer only understands the sixteen colours - {@code §k} through {@code §o}
  * were added years later - so the formats here carry no meaning for the vanilla renderer and are
- * applied by {@link com.periut.retroapi.commands.client.gui.TextDrawer} instead. They still round-trip
+ * applied by {@link com.periut.retroapi.client.gui.RetroTextDrawer} instead. They still round-trip
  * through {@link Texts#toLegacy} so that a message sent to a vanilla client degrades to plain text
  * rather than to visible junk.
  */

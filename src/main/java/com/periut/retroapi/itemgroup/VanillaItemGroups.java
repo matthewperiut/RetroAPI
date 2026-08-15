@@ -1,6 +1,7 @@
 package com.periut.retroapi.itemgroup;
 
 import com.periut.retroapi.text.Text;
+import com.periut.retroapi.register.item.ObtainableItems;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -57,17 +58,7 @@ public final class VanillaItemGroups {
      * any of them either, and a creative tab full of them is how a backport looks unfinished.
      */
     private static boolean isTechnical(final int blockId) {
-        return blockId == Block.FLOWING_WATER.id || blockId == Block.WATER.id
-            || blockId == Block.FLOWING_LAVA.id || blockId == Block.LAVA.id
-            || blockId == Block.FIRE.id || blockId == Block.NETHER_PORTAL.id
-            || blockId == Block.PISTON_HEAD.id || blockId == Block.MOVING_PISTON.id
-            || blockId == Block.DOUBLE_SLAB.id
-            || blockId == Block.LIT_FURNACE.id || blockId == Block.LIT_REDSTONE_ORE.id
-            || blockId == Block.REDSTONE_TORCH.id
-            || blockId == Block.WALL_SIGN.id || blockId == Block.LOCKED_CHEST.id
-            || blockId == Block.FARMLAND.id || blockId == Block.WHEAT.id
-            || blockId == Block.SNOW.id
-            || blockId == Block.POWERED_REPEATER.id;
+        return ObtainableItems.isTechnicalBlock(blockId);
     }
 
     /**
@@ -76,10 +67,7 @@ public final class VanillaItemGroups {
      * that belongs in a creative tab.
      */
     private static boolean hasSeparateItem(final int blockId) {
-        return blockId == Block.BED.id || blockId == Block.DOOR.id || blockId == Block.IRON_DOOR.id
-            || blockId == Block.SIGN.id || blockId == Block.CAKE.id
-            || blockId == Block.REPEATER.id || blockId == Block.SUGAR_CANE.id
-            || blockId == Block.REDSTONE_WIRE.id;
+        return ObtainableItems.hasSeparateItem(blockId);
     }
 
     public static synchronized void ensureRegistered() {

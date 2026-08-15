@@ -1,4 +1,4 @@
-package com.periut.retroapi.commands.client.gui;
+package com.periut.retroapi.client.gui;
 
 import com.periut.retroapi.text.Style;
 import com.periut.retroapi.text.Text;
@@ -22,13 +22,13 @@ import java.util.Random;
  *
  * <p>Extends {@link DrawContext} only to reach its protected {@code fill}.
  */
-public class TextDrawer extends DrawContext {
-    public static final TextDrawer INSTANCE = new TextDrawer();
+public class RetroTextDrawer extends DrawContext {
+    public static final RetroTextDrawer INSTANCE = new RetroTextDrawer();
 
     private static final Random OBFUSCATION_RANDOM = new Random();
     private static final int DEFAULT_COLOR = 0xE0E0E0;
 
-    private TextDrawer() {
+    private RetroTextDrawer() {
     }
 
     /** A run of same-styled text, already measured. */

@@ -1,5 +1,6 @@
 package com.periut.retroapi.commands.client.gui;
 
+import com.periut.retroapi.client.gui.RetroTextDrawer;
 import com.periut.retroapi.text.Style;
 import com.periut.retroapi.text.Text;
 import com.periut.retroapi.text.Texts;
@@ -48,7 +49,7 @@ public class RetroChatHud {
     }
 
     /** One wrapped line, with the tick its message arrived so it can fade on its own schedule. */
-    private record VisibleLine(TextDrawer.Line line, int creationTick, boolean endOfMessage) {
+    private record VisibleLine(RetroTextDrawer.Line line, int creationTick, boolean endOfMessage) {
     }
 
     public void addMessage(final Text message) {
@@ -57,7 +58,7 @@ public class RetroChatHud {
             messages.remove(messages.size() - 1);
         }
 
-        final List<TextDrawer.Line> wrapped = TextDrawer.INSTANCE.wrap(textRenderer(), message, wrapWidth);
+        final List<RetroTextDrawer.Line> wrapped = RetroTextDrawer.INSTANCE.wrap(textRenderer(), message, wrapWidth);
         for (int i = wrapped.size() - 1; i >= 0; i--) {
             visible.add(0, new VisibleLine(wrapped.get(i), ticks, i == wrapped.size() - 1));
         }
@@ -141,8 +142,8 @@ public class RetroChatHud {
             }
 
             final int y = bottom - drawn * LINE_HEIGHT;
-            TextDrawer.INSTANCE.box(2, y - 1, 2 + wrapWidth + 4, y + LINE_HEIGHT - 1, (alpha / 2) << 24);
-            TextDrawer.INSTANCE.draw(textRenderer, line.line(), 4, y, alpha);
+            RetroTextDrawer.INSTANCE.box(2, y - 1, 2 + wrapWidth + 4, y + LINE_HEIGHT - 1, (alpha / 2) << 24);
+            RetroTextDrawer.INSTANCE.draw(textRenderer, line.line(), 4, y, alpha);
         }
 
         if (focused && scrolledLines > 0) {
@@ -160,8 +161,8 @@ public class RetroChatHud {
         final int top = bottom - trackHeight + LINE_HEIGHT;
 
         final int x = 2 + wrapWidth + 2;
-        TextDrawer.INSTANCE.box(x, top, x + 2, top + trackHeight, 0x30FFFFFF);
-        TextDrawer.INSTANCE.box(x, top + trackHeight - barHeight - offset, x + 2,
+        RetroTextDrawer.INSTANCE.box(x, top, x + 2, top + trackHeight, 0x30FFFFFF);
+        RetroTextDrawer.INSTANCE.box(x, top + trackHeight - barHeight - offset, x + 2,
             top + trackHeight - offset, hasUnreadMessages ? 0xFFFFFF55 : 0xAAFFFFFF);
     }
 
@@ -201,7 +202,7 @@ public class RetroChatHud {
             return null;
         }
 
-        return TextDrawer.INSTANCE.styleAt(textRenderer(), visible.get(index).line(), mouseX - 4);
+        return RetroTextDrawer.INSTANCE.styleAt(textRenderer(), visible.get(index).line(), mouseX - 4);
     }
 
     private int bottomY() {

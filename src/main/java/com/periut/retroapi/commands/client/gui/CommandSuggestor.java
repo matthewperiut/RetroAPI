@@ -1,5 +1,7 @@
 package com.periut.retroapi.commands.client.gui;
 
+import com.periut.retroapi.client.gui.RetroTextDrawer;
+import com.periut.retroapi.client.gui.RetroKeys;
 import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.StringReader;
 import com.mojang.brigadier.context.CommandContextBuilder;
@@ -14,6 +16,7 @@ import com.periut.retroapi.commands.RetroCommandSource;
 import com.periut.retroapi.commands.SuggestionHelper;
 import com.periut.retroapi.text.Formatting;
 import com.periut.retroapi.text.Style;
+import com.periut.retroapi.client.gui.RetroTextField;
 import com.periut.retroapi.text.Text;
 import com.periut.retroapi.text.Texts;
 import net.minecraft.client.font.TextRenderer;
@@ -60,7 +63,7 @@ public class CommandSuggestor extends DrawContext {
     private static final int UNSELECTED_COLOR = 0xAAAAAA;
 
     private final net.minecraft.client.gui.screen.Screen owner;
-    private final ChatInputField input;
+    private final RetroTextField input;
     private final TextRenderer textRenderer;
 
     /**
@@ -91,11 +94,11 @@ public class CommandSuggestor extends DrawContext {
     /** Messages under the input box: a parse error, or the usage list Tab produces. */
     private final List<Text> messages = new ArrayList<>();
 
-    public CommandSuggestor(final RetroChatScreen owner, final ChatInputField input, final TextRenderer textRenderer) {
+    public CommandSuggestor(final RetroChatScreen owner, final RetroTextField input, final TextRenderer textRenderer) {
         this(owner, input, textRenderer, false);
     }
 
-    public CommandSuggestor(final net.minecraft.client.gui.screen.Screen owner, final ChatInputField input,
+    public CommandSuggestor(final net.minecraft.client.gui.screen.Screen owner, final RetroTextField input,
                             final TextRenderer textRenderer, final boolean commandsOnly) {
         this.owner = owner;
         this.input = input;
@@ -225,19 +228,19 @@ public class CommandSuggestor extends DrawContext {
     public boolean keyPressed(final char typed, final int keyCode) {
         if (window != null) {
             switch (keyCode) {
-                case Keys.UP -> {
+                case RetroKeys.UP -> {
                     window.select(window.selection - 1);
                     return true;
                 }
-                case Keys.DOWN -> {
+                case RetroKeys.DOWN -> {
                     window.select(window.selection + 1);
                     return true;
                 }
-                case Keys.TAB -> {
+                case RetroKeys.TAB -> {
                     window.complete();
                     return true;
                 }
-                case Keys.ESCAPE -> {
+                case RetroKeys.ESCAPE -> {
                     window = null;
                     return true;
                 }
@@ -248,7 +251,7 @@ public class CommandSuggestor extends DrawContext {
         }
 
         // Tab with nothing to complete lists what the command actually accepts, as modern does.
-        if (keyCode == Keys.TAB) {
+        if (keyCode == RetroKeys.TAB) {
             showUsages();
             return true;
         }
@@ -302,18 +305,18 @@ public class CommandSuggestor extends DrawContext {
         // that caused them.
         int y = listY >= 0 ? listY : owner.height - 14 - messages.size() * ENTRY_HEIGHT;
         for (final Text message : messages) {
-            final TextDrawer.Line line = TextDrawer.flatten(message);
-            final int width = TextDrawer.INSTANCE.width(textRenderer, line);
+            final RetroTextDrawer.Line line = RetroTextDrawer.flatten(message);
+            final int width = RetroTextDrawer.INSTANCE.width(textRenderer, line);
             fill(inputX - 2, y - 1, inputX + width, y + ENTRY_HEIGHT - 3, BACKGROUND);
-            TextDrawer.INSTANCE.draw(textRenderer, line, inputX, y, 255);
+            RetroTextDrawer.INSTANCE.draw(textRenderer, line, inputX, y, 255);
             y += ENTRY_HEIGHT;
         }
     }
 
     /** Colours the visible slice of the input the way modern colours a command as you type it. */
-    public TextDrawer.Line highlight(final String visible, final int firstCharacterIndex) {
+    public RetroTextDrawer.Line highlight(final String visible, final int firstCharacterIndex) {
         if (parse == null) {
-            return new TextDrawer.Line(List.of(new Texts.Segment(visible, PLAIN_STYLE)));
+            return new RetroTextDrawer.Line(List.of(new Texts.Segment(visible, PLAIN_STYLE)));
         }
 
         final List<Texts.Segment> segments = new ArrayList<>();
@@ -351,7 +354,7 @@ public class CommandSuggestor extends DrawContext {
         }
 
         segments.add(new Texts.Segment(visible.substring(consumed), PLAIN_STYLE));
-        return new TextDrawer.Line(segments);
+        return new RetroTextDrawer.Line(segments);
     }
 
     /** The scrollable list of completions. */
@@ -489,8 +492,8 @@ public class CommandSuggestor extends DrawContext {
             }
 
             final Text tooltip = Texts.of(suggestion.getTooltip());
-            final TextDrawer.Line line = TextDrawer.flatten(tooltip);
-            final int tooltipWidth = TextDrawer.INSTANCE.width(textRenderer, line);
+            final RetroTextDrawer.Line line = RetroTextDrawer.flatten(tooltip);
+            final int tooltipWidth = RetroTextDrawer.INSTANCE.width(textRenderer, line);
 
             // Beside the entry it describes, not above the list: above is where the command line is,
             // and a description that covers what you are typing is worse than no description. The
@@ -504,7 +507,7 @@ public class CommandSuggestor extends DrawContext {
             final int tooltipY = top + (selection - scrollOffset) * ENTRY_HEIGHT + 2;
 
             fill(tooltipX - 1, tooltipY - 2, tooltipX + tooltipWidth + 1, tooltipY + ENTRY_HEIGHT - 3, BACKGROUND);
-            TextDrawer.INSTANCE.draw(textRenderer, line, tooltipX, tooltipY, 255);
+            RetroTextDrawer.INSTANCE.draw(textRenderer, line, tooltipX, tooltipY, 255);
         }
     }
 }

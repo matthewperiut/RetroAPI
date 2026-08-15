@@ -1,4 +1,8 @@
-package com.periut.retroapi.commands.client.gui;
+package com.periut.retroapi.client.gui;
+
+import com.periut.retroapi.client.gui.RetroClipboard;
+import com.periut.retroapi.client.gui.RetroKeys;
+import com.periut.retroapi.client.gui.RetroTextDrawer;
 
 import com.periut.retroapi.text.Style;
 import com.periut.retroapi.text.Texts;
@@ -11,15 +15,30 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 
 /**
- * The chat input box: a backport of modern Minecraft's {@code TextFieldWidget}.
+ * A text field: RetroAPI's backport of modern Minecraft's {@code EditBox}.
  *
  * <p>Beta's own text field is a single string with a cursor pinned to the end - no selection, no
  * scrolling, no keyboard shortcuts. This one has all of it: a cursor and a selection anchor,
  * {@code Ctrl+A/C/X/V}, word-wise movement and deletion with {@code Ctrl}, {@code Home} and
- * {@code End}, shift-selection, a window that scrolls horizontally when the text outruns the box,
- * and the grey ghost text the command suggestor writes into it.
+ * {@code End}, shift-selection, arrows that collapse a selection to its edge, a window that scrolls
+ * horizontally when the text outruns the box, and grey ghost text for a suggested completion.
+ *
+ * <p>Nothing about it is chat-specific, which is why it is here rather than in the chat package: it
+ * is the field behind the chat bar, the command block editor and the creative search box alike, and
+ * a mod wanting a usable text box in beta should reach for this rather than write a fourth one.
+ *
+ * <pre>{@code
+ * field = new RetroTextField(textRenderer, 200);   // width in pixels
+ * field.setMaxLength(64);
+ * field.setChangedListener(text -> ...);
+ *
+ * // in the screen: keyPressed -> field.keyPressed(typed, keyCode)
+ * //                mouseClicked -> field.click(mouseX - textX, RetroKeys.isShiftDown())
+ * //                tick -> field.tick()      (drives the cursor blink)
+ * //                render -> field.render(textX, textY)
+ * }</pre>
  */
-public class ChatInputField extends DrawContext {
+public class RetroTextField extends DrawContext {
     private static final int CURSOR_BLINK_TICKS = 6;
     private static final int TEXT_COLOR = 0xE0E0E0;
     private static final int SELECTION_COLOR = 0xFF3030C0;
@@ -41,10 +60,10 @@ public class ChatInputField extends DrawContext {
     private Consumer<String> changedListener = ignored -> {
     };
     /** Given the visible slice and where it starts, returns how to colour it. */
-    private BiFunction<String, Integer, TextDrawer.Line> renderTextProvider =
-        (visible, firstIndex) -> new TextDrawer.Line(List.of(new Texts.Segment(visible, Style.EMPTY)));
+    private BiFunction<String, Integer, RetroTextDrawer.Line> renderTextProvider =
+        (visible, firstIndex) -> new RetroTextDrawer.Line(List.of(new Texts.Segment(visible, Style.EMPTY)));
 
-    public ChatInputField(final TextRenderer textRenderer, final int width) {
+    public RetroTextField(final TextRenderer textRenderer, final int width) {
         this.textRenderer = textRenderer;
         this.width = width;
     }
@@ -53,7 +72,7 @@ public class ChatInputField extends DrawContext {
         this.changedListener = listener;
     }
 
-    public void setRenderTextProvider(final BiFunction<String, Integer, TextDrawer.Line> provider) {
+    public void setRenderTextProvider(final BiFunction<String, Integer, RetroTextDrawer.Line> provider) {
         this.renderTextProvider = provider;
     }
 
@@ -133,26 +152,26 @@ public class ChatInputField extends DrawContext {
      * @return whether the field handled it
      */
     public boolean keyPressed(final char typed, final int keyCode) {
-        final boolean control = Keys.isControlDown();
-        final boolean shift = Keys.isShiftDown();
+        final boolean control = RetroKeys.isControlDown();
+        final boolean shift = RetroKeys.isShiftDown();
 
         if (control) {
             switch (keyCode) {
-                case Keys.A -> {
+                case RetroKeys.A -> {
                     setCursor(text.length());
                     setSelectionAnchor(0);
                     return true;
                 }
-                case Keys.C -> {
-                    Clipboard.write(getSelectedText());
+                case RetroKeys.C -> {
+                    RetroClipboard.write(getSelectedText());
                     return true;
                 }
-                case Keys.V -> {
-                    write(Clipboard.read());
+                case RetroKeys.V -> {
+                    write(RetroClipboard.read());
                     return true;
                 }
-                case Keys.X -> {
-                    Clipboard.write(getSelectedText());
+                case RetroKeys.X -> {
+                    RetroClipboard.write(getSelectedText());
                     write("");
                     return true;
                 }
@@ -163,7 +182,7 @@ public class ChatInputField extends DrawContext {
         }
 
         switch (keyCode) {
-            case Keys.BACKSPACE -> {
+            case RetroKeys.BACKSPACE -> {
                 if (control) {
                     eraseWords(-1);
                 } else {
@@ -171,7 +190,7 @@ public class ChatInputField extends DrawContext {
                 }
                 return true;
             }
-            case Keys.DELETE -> {
+            case RetroKeys.DELETE -> {
                 if (control) {
                     eraseWords(1);
                 } else {
@@ -179,7 +198,7 @@ public class ChatInputField extends DrawContext {
                 }
                 return true;
             }
-            case Keys.LEFT -> {
+            case RetroKeys.LEFT -> {
                 // With text selected and no shift held, the arrow collapses the selection to its edge
                 // rather than stepping one character from wherever the cursor happens to be - which is
                 // what every text field does, and what makes "select, then left" put you before the
@@ -192,7 +211,7 @@ public class ChatInputField extends DrawContext {
                 moveCursor(control ? wordSkipPosition(-1) - cursor : -1, shift);
                 return true;
             }
-            case Keys.RIGHT -> {
+            case RetroKeys.RIGHT -> {
                 if (!shift && !control && cursor != selectionAnchor) {
                     setCursor(Math.max(cursor, selectionAnchor));
                     setSelectionAnchor(cursor);
@@ -201,11 +220,11 @@ public class ChatInputField extends DrawContext {
                 moveCursor(control ? wordSkipPosition(1) - cursor : 1, shift);
                 return true;
             }
-            case Keys.HOME -> {
+            case RetroKeys.HOME -> {
                 moveCursor(-cursor, shift);
                 return true;
             }
-            case Keys.END -> {
+            case RetroKeys.END -> {
                 moveCursor(text.length() - cursor, shift);
                 return true;
             }
@@ -309,7 +328,7 @@ public class ChatInputField extends DrawContext {
             renderSelection(x, y, visible);
         }
 
-        TextDrawer.INSTANCE.draw(textRenderer, renderTextProvider.apply(visible, firstCharacterIndex), x, y, textColor, 255);
+        RetroTextDrawer.INSTANCE.draw(textRenderer, renderTextProvider.apply(visible, firstCharacterIndex), x, y, textColor, 255);
 
         if (!suggestion.isEmpty()) {
             drawTextWithShadow(textRenderer, suggestion, x + textRenderer.getWidth(visible), y, 0x808080);

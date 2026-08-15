@@ -2,6 +2,7 @@ package com.periut.retroapi.commands.argument;
 
 import com.periut.retroapi.commands.argument.VanillaIds.VanillaItem;
 import com.periut.retroapi.compat.StationBridges;
+import com.periut.retroapi.register.item.ObtainableItems;
 import com.periut.retroapi.registry.RetroRegistry;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -141,6 +142,26 @@ public final class ItemIds {
 
 
     /** Every identifier worth suggesting, namespaced as modern Minecraft writes them. */
+    /**
+     * The identifiers worth offering where an ITEM is wanted - {@code /give} and the like.
+     *
+     * <p>{@link #allIdentifiers()} lists every id there is, technical block states included, because a
+     * BLOCK argument legitimately wants them: {@code /setblock minecraft:fire} is a reasonable thing to
+     * type. Handing the same list to {@code /give} offered the lit copy of a furnace, the powered copy
+     * of a repeater, the unlit redstone torch and farmland - none of which anyone can hold.
+     */
+    public static List<String> obtainableIdentifiers() {
+        final List<String> obtainable = new ArrayList<>();
+        for (final String identifier : allIdentifiers()) {
+            final VanillaIds.VanillaItem resolved = resolve(identifier);
+            // Unresolvable means modded, and a mod's own id is only ever registered for something real.
+            if (resolved == null || ObtainableItems.isObtainable(resolved.id())) {
+                obtainable.add(identifier);
+            }
+        }
+        return obtainable;
+    }
+
     public static List<String> allIdentifiers() {
         final TreeSet<String> identifiers = new TreeSet<>();
 

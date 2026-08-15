@@ -1,4 +1,4 @@
-package com.periut.retroapi.commands.client.gui;
+package com.periut.retroapi.client.gui;
 
 /**
  * LWJGL 2 key codes, as compile-time constants.
@@ -7,7 +7,7 @@ package com.periut.retroapi.commands.client.gui;
  * build beta runs against, so they cannot appear in a {@code switch}. These are the same values -
  * PS/2 scan codes, which is what beta's screens receive.
  */
-public final class Keys {
+public final class RetroKeys {
     public static final int ESCAPE = 1;
     public static final int BACKSPACE = 14;
     public static final int TAB = 15;
@@ -33,7 +33,7 @@ public final class Keys {
     public static final int LMETA = 219;
     public static final int RMETA = 220;
 
-    private Keys() {
+    private RetroKeys() {
     }
 
     public static boolean isShiftDown() {

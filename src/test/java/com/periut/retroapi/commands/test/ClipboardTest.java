@@ -15,7 +15,7 @@ import java.lang.reflect.Field;
  */
 public final class ClipboardTest {
     private static final String DISPLAY = "org.lwjgl.opengl.Display";
-    private static final String HOLDER = "com.periut.retroapi.commands.client.gui.Clipboard$Display";
+    private static final String HOLDER = "com.periut.retroapi.client.gui.RetroClipboard$Display";
 
     private ClipboardTest() {
     }

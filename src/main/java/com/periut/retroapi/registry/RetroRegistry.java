@@ -14,12 +14,28 @@ public class RetroRegistry {
 	private static final List<ItemRegistration> ITEMS = new ArrayList<>();
 	private static final List<EntityRegistration> ENTITIES = new ArrayList<>();
 
+	/**
+	 * Blocks and items together, in the order they were registered.
+	 *
+	 * <p>The two lists above answer "what blocks are there"; this answers "what did this mod add, and
+	 * in what order" - which is what an automatic creative tab lists, and neither list alone can say,
+	 * because a mod that registers a block, an item and another block interleaves them.
+	 */
+	private static final List<Object> REGISTRATION_ORDER = new ArrayList<>();
+
 	public static void registerBlock(BlockRegistration registration) {
 		BLOCKS.add(registration);
+		REGISTRATION_ORDER.add(registration);
 	}
 
 	public static void registerItem(ItemRegistration registration) {
 		ITEMS.add(registration);
+		REGISTRATION_ORDER.add(registration);
+	}
+
+	/** Every block and item registration, interleaved in registration order. */
+	public static List<Object> getRegistrationOrder() {
+		return Collections.unmodifiableList(REGISTRATION_ORDER);
 	}
 
 	public static List<BlockRegistration> getBlocks() {

@@ -1,4 +1,4 @@
-package com.periut.retroapi.commands.client.gui;
+package com.periut.retroapi.client.gui;
 
 import net.minecraft.client.gui.screen.Screen;
 
@@ -7,7 +7,7 @@ import java.awt.datatransfer.StringSelection;
 import java.lang.reflect.Method;
 
 /**
- * Clipboard access.
+ * RetroClipboard access.
  *
  * <p>Beta can only read: {@link Screen#getClipboard()} is the one clipboard call it has, so copying
  * has to find its own way out. Which way that should be depends on what is driving the window.
@@ -25,8 +25,8 @@ import java.lang.reflect.Method;
  * <p>Every call is guarded: a headless JVM, or a desktop that refuses clipboard access, must cost
  * the player a copy rather than the chat screen.
  */
-public final class Clipboard {
-    private Clipboard() {
+public final class RetroClipboard {
+    private RetroClipboard() {
     }
 
     public static String read() {

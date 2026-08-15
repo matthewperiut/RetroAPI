@@ -36,9 +36,11 @@
 			"net/minecraft/class_124": ["com/periut/retroapi/register/item/RetroItemAccess"]
 		}
 	},
-	"//breaks": "retromovement is embedded in RetroAPI 0.4.0 (com.periut.retroapi.movement). Running both means two mixins writing the same entity sprint/swim flag bits, which is not a degraded experience but a broken one - so this is a hard incompatibility rather than a silent fight. retrocommands is deliberately NOT listed: it stands itself down when RetroAPI 0.4.0+ is present.",
 	"breaks": {
-		"retromovement": "*"
+		"retromovement": "*",
+    "retrosprint": "*",
+    "retrocommands": "*",
+    "bhcreative": "*"
 	},
 	"depends": {
 		"fabricloader": ">=0.17.3",

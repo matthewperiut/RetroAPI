@@ -1,9 +1,13 @@
 package com.periut.retroapi.commands.client.gui;
 
+import com.periut.retroapi.client.gui.RetroTextDrawer;
+import com.periut.retroapi.client.gui.RetroClipboard;
+import com.periut.retroapi.client.gui.RetroKeys;
 import com.periut.retroapi.commands.client.ClientCommands;
 import com.periut.retroapi.text.ClickEvent;
 import com.periut.retroapi.text.HoverEvent;
 import com.periut.retroapi.text.Style;
+import com.periut.retroapi.client.gui.RetroTextField;
 import com.periut.retroapi.text.Text;
 import net.minecraft.client.gui.screen.Screen;
 import org.lwjgl.input.Keyboard;
@@ -28,7 +32,7 @@ public class RetroChatScreen extends Screen {
 
     private final String initialText;
 
-    private ChatInputField input;
+    private RetroTextField input;
     private CommandSuggestor suggestor;
     private int historyIndex = -1;
     private String draft = "";
@@ -51,7 +55,7 @@ public class RetroChatScreen extends Screen {
         historyIndex = -1;
         draft = "";
 
-        input = new ChatInputField(textRenderer, width - 8);
+        input = new RetroTextField(textRenderer, width - 8);
         input.setMaxLength(256);
         suggestor = new CommandSuggestor(this, input, textRenderer);
         input.setRenderTextProvider(suggestor::highlight);
@@ -84,12 +88,12 @@ public class RetroChatScreen extends Screen {
         }
 
         switch (keyCode) {
-            case Keys.ESCAPE -> minecraft.setScreen(null);
-            case Keys.RETURN, Keys.NUMPAD_ENTER -> send();
-            case Keys.UP -> browseHistory(1);
-            case Keys.DOWN -> browseHistory(-1);
-            case Keys.PAGE_UP -> RetroChatHud.getInstance().scroll(RetroChatHud.PAGE_LINES);
-            case Keys.PAGE_DOWN -> RetroChatHud.getInstance().scroll(-RetroChatHud.PAGE_LINES);
+            case RetroKeys.ESCAPE -> minecraft.setScreen(null);
+            case RetroKeys.RETURN, RetroKeys.NUMPAD_ENTER -> send();
+            case RetroKeys.UP -> browseHistory(1);
+            case RetroKeys.DOWN -> browseHistory(-1);
+            case RetroKeys.PAGE_UP -> RetroChatHud.getInstance().scroll(RetroChatHud.PAGE_LINES);
+            case RetroKeys.PAGE_DOWN -> RetroChatHud.getInstance().scroll(-RetroChatHud.PAGE_LINES);
             default -> {
                 if (input.keyPressed(typed, keyCode)) {
                     // Typing invalidates where the player was in their history.
@@ -165,7 +169,7 @@ public class RetroChatScreen extends Screen {
             }
 
             if (mouseY >= height - 14) {
-                input.click(mouseX - 4, Keys.isShiftDown());
+                input.click(mouseX - 4, RetroKeys.isShiftDown());
                 selecting = true;
                 return;
             }
@@ -189,7 +193,7 @@ public class RetroChatScreen extends Screen {
                 minecraft.setScreen(null);
             }
             case SUGGEST_COMMAND -> input.setText(event.getValue());
-            case COPY_TO_CLIPBOARD -> Clipboard.write(event.getValue());
+            case COPY_TO_CLIPBOARD -> RetroClipboard.write(event.getValue());
             case OPEN_URL -> openUrl(event.getValue());
             default -> {
                 return false;
@@ -222,7 +226,7 @@ public class RetroChatScreen extends Screen {
 
         final int lines = wheel > 0 ? 1 : -1;
         if (!suggestor.mouseScrolled(lines)) {
-            RetroChatHud.getInstance().scroll(lines * (Keys.isControlDown() ? RetroChatHud.PAGE_LINES : 1));
+            RetroChatHud.getInstance().scroll(lines * (RetroKeys.isControlDown() ? RetroChatHud.PAGE_LINES : 1));
         }
     }
 
@@ -259,13 +263,13 @@ public class RetroChatScreen extends Screen {
             return;
         }
 
-        final TextDrawer.Line line = TextDrawer.flatten(hover.getValue());
-        final int textWidth = TextDrawer.INSTANCE.width(textRenderer, line);
+        final RetroTextDrawer.Line line = RetroTextDrawer.flatten(hover.getValue());
+        final int textWidth = RetroTextDrawer.INSTANCE.width(textRenderer, line);
         final int x = Math.min(mouseX + 6, width - textWidth - 6);
         final int y = Math.max(mouseY - 12, 2);
 
         fill(x - 3, y - 3, x + textWidth + 3, y + 9, 0xF0100010);
-        TextDrawer.INSTANCE.draw(textRenderer, line, x, y, 255);
+        RetroTextDrawer.INSTANCE.draw(textRenderer, line, x, y, 255);
     }
 
     /** So other code can open chat with something already typed, e.g. a command suggestion. */

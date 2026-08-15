@@ -1,7 +1,7 @@
 package com.periut.retroapi.client.screen;
 
-import com.periut.retroapi.commands.client.gui.ChatInputField;
-import com.periut.retroapi.commands.client.gui.Keys;
+import com.periut.retroapi.client.gui.RetroTextField;
+import com.periut.retroapi.client.gui.RetroKeys;
 import com.periut.retroapi.gamemode.screen.CreativeScreenHandler;
 import com.periut.retroapi.gamerule.RetroGameRules;
 import com.periut.retroapi.itemgroup.RetroItemGroup;
@@ -114,12 +114,12 @@ public class RetroCreativeScreen extends HandledScreen {
     private List<RetroItemGroup> groups = List.of();
     private List<ItemStack> visible = new ArrayList<>();
     /**
-     * Modern's search box is an {@code EditBox}, and RetroAPI already has that widget backported for
-     * the chat screen - selection, click-to-place and drag-to-select, {@code Ctrl+A/C/X/V}, word-wise
-     * movement, {@code Home}/{@code End}, and a window that scrolls with the cursor so a long query is
-     * clipped to the box instead of running out of it.
+     * Modern's search box is an {@code EditBox}, and RetroAPI has that widget backported as
+     * {@link RetroTextField} - selection, click-to-place and drag-to-select, {@code Ctrl+A/C/X/V},
+     * word-wise movement, {@code Home}/{@code End}, and a window that scrolls with the cursor so a
+     * long query is clipped to the box instead of running out of it.
      */
-    private ChatInputField searchField;
+    private RetroTextField searchField;
     private boolean selecting;
     /** Ticked so a key that arrives twice in one tick swaps once. See {@code keyPressed}. */
     private int ticks;
@@ -140,7 +140,7 @@ public class RetroCreativeScreen extends HandledScreen {
         super.init();
         // Modern's own EditBox: 80 wide at (82,6), fifty characters, white rather than the widget's
         // usual grey.
-        searchField = new ChatInputField(textRenderer, SEARCH_WIDTH);
+        searchField = new RetroTextField(textRenderer, SEARCH_WIDTH);
         searchField.setMaxLength(50);
         searchField.setTextColor(0xFFFFFF);
         groups = visibleGroups();
@@ -765,7 +765,7 @@ public class RetroCreativeScreen extends HandledScreen {
             }
 
             if (isSearchTab() && insideSearchBox(mouseX, mouseY)) {
-                searchField.click(mouseX - left() - SEARCH_X, Keys.isShiftDown());
+                searchField.click(mouseX - left() - SEARCH_X, RetroKeys.isShiftDown());
                 selecting = true;
                 return;
             }
@@ -839,11 +839,11 @@ public class RetroCreativeScreen extends HandledScreen {
 
     @Override
     protected void keyPressed(final char typed, final int keyCode) {
-        if (keyCode == Keys.PAGE_UP) {
+        if (keyCode == RetroKeys.PAGE_UP) {
             switchToPage(currentPage - 1);
             return;
         }
-        if (keyCode == Keys.PAGE_DOWN) {
+        if (keyCode == RetroKeys.PAGE_DOWN) {
             switchToPage(currentPage + 1);
             return;
         }

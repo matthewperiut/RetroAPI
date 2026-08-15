@@ -114,6 +114,10 @@ public class RetroAPI implements ModInitializer {
 		// And one for every mob a mod registered, unless it opted out - after the entity event above,
 		// so every mob is known, and after the vanilla eggs so a mod cannot be beaten to a name.
 		com.periut.retroapi.entity.spawnegg.RetroSpawnEggs.registerAll();
+		// A creative tab for any mod that added content and never said where to find it. Last of the
+		// automatic passes, so a mod's own tab - registered from its init or its entrypoint - has
+		// already been seen and this leaves it alone.
+		com.periut.retroapi.itemgroup.AutoItemGroups.registerAll();
 
 		// Commands come last: the tree a dedicated server builds here describes the entities, items and
 		// dimensions registered above, so every registration event has to have fired first.

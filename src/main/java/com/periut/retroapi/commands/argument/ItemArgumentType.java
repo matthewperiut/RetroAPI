@@ -73,7 +73,9 @@ public class ItemArgumentType implements ArgumentType<ItemStackArgument> {
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
-        return SuggestionHelper.suggestIdentifiers(ItemIds.allIdentifiers(), builder);
+        // Only what can actually be given: a block that exists solely as a world state has no item
+        // form, and offering it here offers something the command cannot hand over.
+        return SuggestionHelper.suggestIdentifiers(ItemIds.obtainableIdentifiers(), builder);
     }
 
     @Override

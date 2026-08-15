@@ -3,9 +3,9 @@ package com.periut.retroapi.client.screen;
 import com.periut.retroapi.commandblock.CommandBlockEntity;
 import com.periut.retroapi.commandblock.CommandBlockMode;
 import com.periut.retroapi.commandblock.CommandBlocks;
-import com.periut.retroapi.commands.client.gui.ChatInputField;
+import com.periut.retroapi.client.gui.RetroTextField;
 import com.periut.retroapi.commands.client.gui.CommandSuggestor;
-import com.periut.retroapi.commands.client.gui.Keys;
+import com.periut.retroapi.client.gui.RetroKeys;
 import com.periut.retroapi.commandblock.CommandBlockNetworking;
 import com.periut.retroapi.network.RetroAPINetworking;
 import net.ornithemc.osl.networking.api.client.ClientPlayNetworking;
@@ -22,7 +22,7 @@ import net.minecraft.client.gui.widget.ButtonWidget;
  * field at {@code y=135} with its 20-wide track-output toggle at the right end, and Done / Cancel
  * 150 wide at {@code height/4 + 132}.
  *
- * <p>The command field is the chat bar's own {@code ChatInputField} under the chat bar's own
+ * <p>The command field is RetroAPI's own {@code RetroTextField} under the chat bar's own
  * {@code CommandSuggestor}, so this box is the chat box in every way that matters: click to place the
  * cursor, drag or shift-click to select, clipboard and word jumps, arguments coloured as they parse,
  * errors underlined, and Brigadier's completions in a window under the box - arrows to pick, Tab to
@@ -52,7 +52,7 @@ public class CommandBlockScreen extends Screen {
     private final int blockY;
     private final int blockZ;
 
-    private ChatInputField commandField;
+    private RetroTextField commandField;
     private CommandSuggestor suggestor;
     /** Beta gives a press and a release and nothing between, so a drag-select is followed by hand. */
     private boolean selecting;
@@ -81,7 +81,7 @@ public class CommandBlockScreen extends Screen {
         // it, in modern's commandsOnly mode: the whole line is the command, no leading slash needed
         // (the executor takes one if it is there). The window hangs under the box rather than off
         // the bottom of the screen, as modern's does here.
-        commandField = new ChatInputField(textRenderer, FIELD_WIDTH - 8);
+        commandField = new RetroTextField(textRenderer, FIELD_WIDTH - 8);
         commandField.setMaxLength(32500);
         suggestor = new CommandSuggestor(this, commandField, textRenderer, true);
         suggestor.setAnchor(fieldTextX(), SUGGESTION_Y);
@@ -222,11 +222,11 @@ public class CommandBlockScreen extends Screen {
         }
 
         switch (keyCode) {
-            case Keys.ESCAPE -> {
+            case RetroKeys.ESCAPE -> {
                 minecraft.setScreen(null);
                 return;
             }
-            case Keys.RETURN, Keys.NUMPAD_ENTER -> {
+            case RetroKeys.RETURN, RetroKeys.NUMPAD_ENTER -> {
                 buttonClicked(buttonById(DONE_ID));
                 return;
             }
@@ -254,7 +254,7 @@ public class CommandBlockScreen extends Screen {
         if (button == 0 && mouseY >= FIELD_Y && mouseY < FIELD_Y + 20) {
             // Shift extends the selection, and holding the button drags it out - the same two things
             // the chat bar does, which is what "highlightable" means for this field.
-            commandField.click(mouseX - fieldTextX(), Keys.isShiftDown());
+            commandField.click(mouseX - fieldTextX(), RetroKeys.isShiftDown());
             selecting = true;
             return;
         }

@@ -16,6 +16,13 @@ item.minecraft.pigman_spawn_egg.name=Pigman Spawn Egg
 # is on it, matching what StationAPI calls the same page.
 gui.retroapi.achievementPage.minecraft.minecraft=Minecraft
 
+# Entity names, keyed entity.<namespace>.<path> the way modern Minecraft keys them. Only this one is
+# listed: every other entity, vanilla or modded, is named by spelling out its identifier, which is
+# already right ("zombie_pigman" -> "Zombie Pigman", "mymod:big_dog" -> "Big Dog"). An acronym is the
+# case that cannot be derived, so it is written down. Add a line of your own here - or in your mod's
+# assets/<modid>/lang/en_US.lang - to name or rename any entity. See EntityNames.
+entity.minecraft.tnt=TNT
+
 # ---------------------------------------------------------------------------------------------
 # The tweaks half's own strings. They live in RetroAPI's lang file rather than in an
 # assets/retrotweaks/ one because a lang loader - RetroAPI's own, and StationAPI's - scans

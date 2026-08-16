@@ -13,6 +13,9 @@ import com.periut.retroapi.commands.argument.GameModeArgumentType;
 import com.periut.retroapi.gamemode.RetroGameMode;
 import com.periut.retroapi.commands.argument.ItemIds;
 import com.periut.retroapi.commands.argument.TimeArgumentType;
+import com.periut.retroapi.commands.argument.EntityNames;
+import com.periut.retroapi.commands.argument.Snbt;
+import com.periut.retroapi.commands.argument.VanillaEntityIds;
 import com.periut.retroapi.commands.argument.VanillaIds;
 import com.periut.retroapi.commands.network.CommandTreeSerializer;
 import net.ornithemc.osl.networking.api.PacketBuffer;
@@ -33,6 +36,9 @@ public final class CommandTest {
 
     public static void run() {
         vanillaIds();
+        vanillaEntityIds();
+        entityNames();
+        snbt();
         coordinates();
         units();
         treeRoundTrip();
@@ -377,6 +383,159 @@ public final class CommandTest {
         Tests.check("suggestions are namespaced", identifiers.contains("minecraft:stone"));
         Tests.check("aliases are not suggested", !identifiers.contains("minecraft:planks"));
         Tests.check("every canonical name is suggested", identifiers.size() >= VanillaIds.names().size());
+    }
+
+    /**
+     * The entity table, which is only worth having if the modern names in it are the ones 26.2
+     * actually registers - these four are the ones that have moved since beta.
+     */
+    private static void vanillaEntityIds() {
+        Tests.group("entity identifiers");
+
+        Tests.eq("a name that never changed", "Creeper", VanillaEntityIds.byName("creeper"));
+        Tests.eq("primed tnt is minecraft:tnt", "PrimedTnt", VanillaEntityIds.byName("tnt"));
+        Tests.eq("falling sand is minecraft:falling_block", "FallingSand", VanillaEntityIds.byName("falling_block"));
+        // Pre-1.16, so it is still a pigman here; the 1.16 name resolves but is not what gets offered.
+        Tests.eq("the pigman keeps its pre-1.16 id", "PigZombie", VanillaEntityIds.byName("zombie_pigman"));
+        Tests.eq("the pigman is named as one", "zombie_pigman", VanillaEntityIds.nameOf("PigZombie"));
+        Tests.eq("the 1.16 name still resolves", "PigZombie", VanillaEntityIds.byName("zombified_piglin"));
+        Tests.check("the 1.16 name is not suggested", !VanillaEntityIds.names().contains("zombified_piglin"));
+        // Pre-1.21.2, because beta has one boat and no wood variants to pick between.
+        Tests.eq("the boat keeps its pre-1.21.2 id", "Boat", VanillaEntityIds.byName("boat"));
+        Tests.eq("the boat is named as one", "boat", VanillaEntityIds.nameOf("Boat"));
+        Tests.eq("the per-wood name still resolves", "Boat", VanillaEntityIds.byName("oak_boat"));
+        Tests.check("the per-wood name is not suggested", !VanillaEntityIds.names().contains("oak_boat"));
+
+        Tests.eq("resolution ignores case", "Creeper", VanillaEntityIds.byName("CREEPER"));
+        Tests.eq("beta's own name for the pigman still resolves", "PigZombie", VanillaEntityIds.byName("pigman"));
+        Tests.check("an entity beta does not have resolves to nothing", VanillaEntityIds.byName("enderman") == null);
+
+        Tests.eq("names are reported namespaced", "tnt", VanillaEntityIds.nameOf("PrimedTnt"));
+        Tests.check("an unknown beta id has no modern name", VanillaEntityIds.nameOf("Moa") == null);
+
+        // Every one of beta's registrations must be named, or /summon would offer an id it cannot
+        // complete - which is exactly the failure this table was added to fix.
+        for (final String path : VanillaEntityIds.names()) {
+            final String betaId = VanillaEntityIds.byName(path);
+            Tests.check(path + " round-trips", betaId != null && path.equals(VanillaEntityIds.nameOf(betaId)));
+        }
+        Tests.eq("beta has twenty-four entity types", 24, VanillaEntityIds.names().size());
+        Tests.check("aliases are not suggested", !VanillaEntityIds.names().contains("pigman"));
+    }
+
+    /**
+     * Entity display names: what a lang entry keys on, and what is produced when there is none - which
+     * is every entity that has not been written down, modded ones included.
+     */
+    private static void entityNames() {
+        Tests.group("entity names");
+
+        // The key is built from the identifier, not from beta's word, so it stays modern-shaped even
+        // where the two disagree. This is the string an end user writes to rename something.
+        Tests.eq("a vanilla key", "entity.minecraft.creeper", EntityNames.translationKey("Creeper"));
+        Tests.eq("a renamed mob keys on its identifier", "entity.minecraft.zombie_pigman",
+            EntityNames.translationKey("PigZombie"));
+        Tests.eq("a modded key uses the mod's namespace", "entity.mymod.big_dog",
+            EntityNames.translationKey("mymod:big_dog"));
+
+        // With no entry, the identifier is spelled out - capitalised, spaced, no namespace.
+        Tests.eq("a one-word name", "Creeper", EntityNames.displayName("Creeper"));
+        Tests.eq("a two-word name", "Falling Block", EntityNames.displayName("FallingSand"));
+        Tests.eq("a renamed mob reads as its identifier", "Zombie Pigman", EntityNames.displayName("PigZombie"));
+        Tests.eq("a modded entity needs no lang file", "Big Dog", EntityNames.displayName("mymod:big_dog"));
+        Tests.eq("nothing still names something", "Entity", EntityNames.displayName((String) null));
+
+        // The one name spelling-out cannot reach, which is the whole reason the lang file has a line
+        // in it at all. If this ever stops being true the line can go.
+        Tests.eq("an acronym cannot be derived", "Tnt", EntityNames.displayName("PrimedTnt"));
+        Tests.check("so it is written down instead",
+            langFileContains(EntityNames.translationKey("PrimedTnt") + "=TNT"));
+    }
+
+    /** Reads RetroAPI's own lang file off the classpath, to check code and file still agree. */
+    private static boolean langFileContains(final String line) {
+        try (var stream = CommandTest.class.getResourceAsStream("/assets/retroapi/lang/en_US.lang")) {
+            if (stream == null) {
+                return false;
+            }
+            return new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8).contains(line);
+        } catch (final java.io.IOException ignored) {
+            return false;
+        }
+    }
+
+    /**
+     * The SNBT parser. What matters is that a value lands as the TAG TYPE its suffix claims: beta
+     * reads {@code Color} with getByte and {@code Health} with getShort, so an int where a byte was
+     * meant is silently zero rather than an error.
+     */
+    private static void snbt() {
+        Tests.group("snbt");
+
+        // Type ids: 1 byte, 2 short, 3 int, 4 long, 5 float, 6 double, 8 string, 9 list, 10 compound.
+        Tests.eq("a bare number is an int", (byte) 3, typeOf("{Color:14}", "Color"));
+        Tests.eq("...with its value", 14, parse("{Color:14}").getInt("Color"));
+        Tests.eq("a b suffix is a byte", (byte) 1, typeOf("{Sheared:1b}", "Sheared"));
+        Tests.eq("an s suffix is a short", (byte) 2, typeOf("{Health:20s}", "Health"));
+        Tests.eq("an L suffix is a long", (byte) 4, typeOf("{Seed:123L}", "Seed"));
+        Tests.eq("an f suffix is a float", (byte) 5, typeOf("{Fall:1.5f}", "Fall"));
+        Tests.eq("a d suffix is a double", (byte) 6, typeOf("{Speed:1.5d}", "Speed"));
+        Tests.eq("a bare decimal is a double", (byte) 6, typeOf("{Speed:1.5}", "Speed"));
+        Tests.eq("a negative number still parses", -5, parse("{Depth:-5}").getInt("Depth"));
+
+        // true/false are bytes, which is what every beta boolean field actually is.
+        Tests.eq("true is a byte", (byte) 1, typeOf("{powered:true}", "powered"));
+        Tests.eq("...set to one", true, parse("{powered:true}").getBoolean("powered"));
+        Tests.eq("false is zero", false, parse("{powered:false}").getBoolean("powered"));
+
+        // An unquoted word is a string, so a name-valued field needs no quotes.
+        Tests.eq("an unquoted word is a string", (byte) 8, typeOf("{Motive:Kebab}", "Motive"));
+        Tests.eq("...keeping its text", "Kebab", parse("{Motive:Kebab}").getString("Motive"));
+        Tests.eq("a quoted string keeps its spaces", "Some Player",
+            parse("{Owner:\"Some Player\"}").getString("Owner"));
+        Tests.eq("a namespaced value needs no quotes", "mymod:moa",
+            parse("{Type:mymod:moa}").getString("Type"));
+
+        // Motion and Rotation are lists, and a compound can nest.
+        Tests.eq("a list parses", (byte) 9, typeOf("{Motion:[0.0d,1.0d,0.0d]}", "Motion"));
+        Tests.eq("...with every element", 3, parse("{Motion:[0.0d,1.0d,0.0d]}").getList("Motion").size());
+        Tests.eq("a compound nests", (byte) 10, typeOf("{Item:{id:1}}", "Item"));
+        Tests.eq("...and is readable", 1, parse("{Item:{id:1}}").getCompound("Item").getInt("id"));
+
+        // Shape: several keys, free whitespace, and the empty compound.
+        Tests.eq("several keys", 14, parse("{Color:14,Sheared:1b}").getInt("Color"));
+        Tests.eq("...both of them", true, parse("{Color:14,Sheared:1b}").getBoolean("Sheared"));
+        Tests.eq("whitespace is free", 14, parse("{ Color : 14 , Sheared : 1b }").getInt("Color"));
+        Tests.check("an empty compound is legal", parse("{}").values().isEmpty());
+
+        // Straight to the parser, not through the helper below, so the real exception propagates.
+        Tests.throwsError("a missing colon is an error", CommandSyntaxException.class,
+            () -> Snbt.parseCompound(new StringReader("{Color}")));
+        Tests.throwsError("an unterminated compound is an error", CommandSyntaxException.class,
+            () -> Snbt.parseCompound(new StringReader("{Color:14")));
+        Tests.throwsError("a missing value is an error", CommandSyntaxException.class,
+            () -> Snbt.parseCompound(new StringReader("{Color:}")));
+        Tests.throwsError("a missing name is an error", CommandSyntaxException.class,
+            () -> Snbt.parseCompound(new StringReader("{:14}")));
+    }
+
+    /** For the cases that are expected to parse; a failure here is a test failure, not an outcome. */
+    private static net.minecraft.nbt.NbtCompound parse(final String text) {
+        try {
+            return Snbt.parseCompound(new StringReader(text));
+        } catch (final CommandSyntaxException thrown) {
+            throw new RuntimeException(thrown);
+        }
+    }
+
+    /** The tag type id stored under a key, which is the thing a suffix is there to decide. */
+    private static byte typeOf(final String text, final String key) {
+        for (final net.minecraft.nbt.NbtElement value : parse(text).values()) {
+            if (key.equals(value.getKey())) {
+                return value.getType();
+            }
+        }
+        return -1;
     }
 
     private static void coordinates() {

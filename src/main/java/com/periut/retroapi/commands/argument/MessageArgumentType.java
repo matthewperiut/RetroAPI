@@ -95,7 +95,7 @@ public class MessageArgumentType implements ArgumentType<MessageArgumentType.Mes
                 if (names.length() > 0) {
                     names.append(", ");
                 }
-                names.append(EntitySelectorReader.nameOf(entity));
+                names.append(EntityNames.displayName(entity));
             }
             return names.toString();
         }

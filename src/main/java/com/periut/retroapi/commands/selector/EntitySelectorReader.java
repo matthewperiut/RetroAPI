@@ -6,6 +6,8 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
+import com.periut.retroapi.commands.SuggestionHelper;
+import com.periut.retroapi.commands.argument.EntityIds;
 import com.periut.retroapi.text.Text;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityRegistry;
@@ -13,7 +15,6 @@ import net.minecraft.entity.player.PlayerEntity;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -194,9 +195,9 @@ public class EntitySelectorReader {
     private void readType() throws CommandSyntaxException {
         final boolean negated = readNegation();
         final int start = reader.getCursor();
-        final String type = reader.readString();
+        final String type = readTypeToken();
 
-        if ("player".equals(type)) {
+        if ("player".equals(type) || "minecraft:player".equals(type)) {
             addPredicate(negated, entity -> entity instanceof PlayerEntity);
             if (!negated) {
                 playersOnly = true;
@@ -204,12 +205,27 @@ public class EntitySelectorReader {
             return;
         }
 
-        final Class<? extends Entity> entityClass = EntityRegistry.idToClass.get(type);
+        final Class<? extends Entity> entityClass = EntityIds.classOf(EntityIds.resolve(type));
         if (entityClass == null) {
             reader.setCursor(start);
             throw INVALID_ENTITY_TYPE.createWithContext(reader, type);
         }
         addPredicate(negated, entityClass::isInstance);
+    }
+
+    /**
+     * A quoted value as before, otherwise a token that may carry a namespace - Brigadier's unquoted
+     * reader stops dead at the colon, so {@code type=mymod:moa} used to need quoting to work at all.
+     */
+    private String readTypeToken() throws CommandSyntaxException {
+        if (reader.canRead() && StringReader.isQuotedStringStart(reader.peek())) {
+            return reader.readQuotedString();
+        }
+        final int start = reader.getCursor();
+        while (reader.canRead() && (StringReader.isAllowedInUnquotedString(reader.peek()) || reader.peek() == ':')) {
+            reader.skip();
+        }
+        return reader.getString().substring(start, reader.getCursor());
     }
 
     private void readName() throws CommandSyntaxException {
@@ -370,11 +386,7 @@ public class EntitySelectorReader {
                 }
             }
             case "type" -> {
-                for (final String type : entityTypeIds()) {
-                    if (type.toLowerCase(Locale.ROOT).startsWith(builder.getRemainingLowerCase())) {
-                        builder.suggest(type);
-                    }
-                }
+                return SuggestionHelper.suggestIdentifiers(entityTypeIds(), builder);
             }
             default -> {
             }
@@ -382,14 +394,25 @@ public class EntitySelectorReader {
         return builder.buildFuture();
     }
 
-    /** Every summonable id plus {@code player}, which beta does not keep in the registry. */
+    /**
+     * Every entity identifier plus {@code minecraft:player}, which beta does not keep in the registry
+     * but modern does - and {@code type=player} is the one selector option that has always worked here,
+     * so both spellings resolve.
+     */
     public static List<String> entityTypeIds() {
-        final List<String> ids = new ArrayList<>(EntityRegistry.idToClass.keySet());
-        ids.add("player");
+        final List<String> ids = new ArrayList<>(EntityIds.allIdentifiers());
+        ids.add("minecraft:player");
         ids.sort(String::compareTo);
         return ids;
     }
 
+    /**
+     * What {@code name=} matches against, and only that: a player's own name, otherwise the raw beta
+     * registry word. It is deliberately NOT the name shown to a player - that is
+     * {@link com.periut.retroapi.commands.argument.EntityNames#displayName(Entity)}, which spells the
+     * identifier out and can be overridden by a lang entry. Both of those would change what
+     * {@code @e[name=Creeper]} selects, so the two roles are kept apart.
+     */
     public static String nameOf(final Entity entity) {
         if (entity instanceof PlayerEntity player) {
             return player.name;

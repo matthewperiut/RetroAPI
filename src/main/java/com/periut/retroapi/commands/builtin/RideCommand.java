@@ -5,7 +5,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.periut.retroapi.commands.RegistrationEnvironment;
 import com.periut.retroapi.commands.RetroCommandSource;
-import com.periut.retroapi.commands.selector.EntitySelectorReader;
+import com.periut.retroapi.commands.argument.EntityNames;
 import com.periut.retroapi.text.Text;
 import net.minecraft.entity.Entity;
 
@@ -42,20 +42,20 @@ public final class RideCommand {
                         }
 
                         rider.setVehicle(vehicle);
-                        source.sendFeedback(Text.literal(EntitySelectorReader.nameOf(rider)
-                            + " is now riding " + EntitySelectorReader.nameOf(vehicle)));
+                        source.sendFeedback(Text.literal(EntityNames.displayName(rider)
+                            + " is now riding " + EntityNames.displayName(vehicle)));
                         return Command.SINGLE_SUCCESS;
                     }))));
     }
 
     private static int dismount(final RetroCommandSource source, final Entity rider) {
         if (rider.vehicle == null) {
-            source.sendError(Text.literal(EntitySelectorReader.nameOf(rider) + " is not riding anything"));
+            source.sendError(Text.literal(EntityNames.displayName(rider) + " is not riding anything"));
             return 0;
         }
 
         rider.setVehicle(null);
-        source.sendFeedback(Text.literal(EntitySelectorReader.nameOf(rider) + " dismounted"));
+        source.sendFeedback(Text.literal(EntityNames.displayName(rider) + " dismounted"));
         return Command.SINGLE_SUCCESS;
     }
 }

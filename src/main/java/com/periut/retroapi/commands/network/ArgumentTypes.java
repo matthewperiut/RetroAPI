@@ -12,6 +12,7 @@ import com.periut.retroapi.commands.argument.DimensionArgumentType;
 import com.periut.retroapi.commands.argument.BlockArgumentType;
 import com.periut.retroapi.commands.argument.EntityArgumentType;
 import com.periut.retroapi.commands.argument.EntitySummonArgumentType;
+import com.periut.retroapi.commands.argument.NbtCompoundArgumentType;
 import com.periut.retroapi.commands.argument.GameModeArgumentType;
 import com.periut.retroapi.commands.argument.ItemArgumentType;
 import com.periut.retroapi.commands.argument.MessageArgumentType;
@@ -104,6 +105,7 @@ public final class ArgumentTypes {
         register("retroapi:message", MessageArgumentType.class, buffer -> MessageArgumentType.message());
         register("retroapi:dimension", DimensionArgumentType.class, buffer -> DimensionArgumentType.dimension());
         register("retroapi:entity_summon", EntitySummonArgumentType.class, buffer -> EntitySummonArgumentType.entitySummon());
+        register("retroapi:nbt_compound", NbtCompoundArgumentType.class, buffer -> NbtCompoundArgumentType.nbtCompound());
     }
 
     private static <T extends ArgumentType<?>> void register(final String id, final Class<T> type, final Serializer<T> serializer) {

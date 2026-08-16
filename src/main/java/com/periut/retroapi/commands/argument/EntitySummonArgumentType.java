@@ -10,17 +10,21 @@ import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.periut.retroapi.commands.SuggestionHelper;
 import com.periut.retroapi.text.Text;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityRegistry;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-/** {@code <entity>} for {@code /summon}: a registered entity id such as {@code Creeper}. */
+/**
+ * {@code <entity>} for {@code /summon}: an entity identifier such as {@code minecraft:creeper} or
+ * {@code mymod:moa}.
+ *
+ * <p>The value the argument yields is beta's own registry word ({@code Creeper}), because that is what
+ * spawns something; the identifier is the spelling, not the storage. See {@link EntityIds}.
+ */
 public class EntitySummonArgumentType implements ArgumentType<String> {
-    private static final Collection<String> EXAMPLES = Arrays.asList("Pig", "Creeper");
+    private static final Collection<String> EXAMPLES = Arrays.asList("minecraft:pig", "minecraft:creeper");
 
     public static final DynamicCommandExceptionType UNKNOWN_ENTITY = new DynamicCommandExceptionType(
         id -> Text.literal("Unknown entity type '" + id + "'"));
@@ -39,44 +43,40 @@ public class EntitySummonArgumentType implements ArgumentType<String> {
     @Override
     public String parse(final StringReader reader) throws CommandSyntaxException {
         final int start = reader.getCursor();
-        final String id = reader.readUnquotedString();
-        final String resolved = resolve(id);
+        final String token = readToken(reader);
+        final String resolved = EntityIds.resolve(token);
         if (resolved == null) {
             reader.setCursor(start);
-            throw UNKNOWN_ENTITY.createWithContext(reader, id);
+            throw UNKNOWN_ENTITY.createWithContext(reader, token);
         }
         return resolved;
     }
 
     /**
-     * Beta's entity ids are capitalised ({@code Creeper}, {@code PrimedTnt}); matching them
-     * case-insensitively lets a player type them the way every other id in the game is typed.
+     * Brigadier's own unquoted-string reader stops at a colon, which is what made a suggested
+     * {@code mymod:moa} unusable the moment it was accepted: the parse saw {@code mymod}, found no
+     * such entity, and failed on an id the completion had just offered. Every other namespaced
+     * argument here reads its token the same way (see {@link ItemArgumentType}).
      */
-    public static String resolve(final String id) {
-        if (EntityRegistry.idToClass.containsKey(id)) {
-            return id;
+    private static String readToken(final StringReader reader) {
+        final int start = reader.getCursor();
+        while (reader.canRead() && (StringReader.isAllowedInUnquotedString(reader.peek()) || reader.peek() == ':')) {
+            reader.skip();
         }
-        for (final String candidate : EntityRegistry.idToClass.keySet()) {
-            if (candidate.equalsIgnoreCase(id)) {
-                return candidate;
-            }
-        }
-        return null;
+        return reader.getString().substring(start, reader.getCursor());
     }
 
-    public static Class<? extends Entity> classOf(final String id) {
-        return EntityRegistry.idToClass.get(id);
+    public static Class<? extends Entity> classOf(final String betaId) {
+        return EntityIds.classOf(betaId);
     }
 
     public static List<String> summonableIds() {
-        final List<String> ids = new ArrayList<>(EntityRegistry.idToClass.keySet());
-        ids.sort(String.CASE_INSENSITIVE_ORDER);
-        return ids;
+        return EntityIds.allIdentifiers();
     }
 
     @Override
     public <S> CompletableFuture<Suggestions> listSuggestions(final CommandContext<S> context, final SuggestionsBuilder builder) {
-        return SuggestionHelper.suggestMatching(summonableIds(), builder);
+        return SuggestionHelper.suggestIdentifiers(EntityIds.allIdentifiers(), builder);
     }
 
     @Override

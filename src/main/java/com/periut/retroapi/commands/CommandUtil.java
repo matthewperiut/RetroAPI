@@ -109,7 +109,7 @@ public final class CommandUtil {
             if (i > 0) {
                 builder.append(i == entities.size() - 1 ? " and " : ", ");
             }
-            builder.append(com.periut.retroapi.commands.selector.EntitySelectorReader.nameOf(entities.get(i)));
+            builder.append(com.periut.retroapi.commands.argument.EntityNames.displayName(entities.get(i)));
         }
         return builder.toString();
     }

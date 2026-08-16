@@ -2,7 +2,6 @@ package com.periut.retroapi.commands;
 
 import com.periut.retroapi.RetroAPI;
 import com.periut.retroapi.commands.optionaldep.cryonicconfig.CryonicConfigCompat;
-import com.periut.retroapi.commands.util.VanillaMobs;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.loader.api.FabricLoader;
 
@@ -37,7 +36,6 @@ public final class RetroCommands {
         // an incompatible version must not register /reloadcryonicconfig.
         cryConfig = FabricLoader.getInstance().isModLoaded("cryonicconfig")
                 && CryonicConfigCompat.isAvailable();
-        VanillaMobs.setupSummons();
 
         // A dedicated server builds its tree now; a client waits until it has a world, because
         // singleplayer commands run against that world and the tree describes it.

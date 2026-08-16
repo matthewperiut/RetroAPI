@@ -94,7 +94,7 @@ public final class TeleportCommand {
         }
 
         source.sendFeedback(Text.literal("Teleported " + CommandUtil.joinNames(targets) + " to "
-            + com.periut.retroapi.commands.selector.EntitySelectorReader.nameOf(destination)));
+            + com.periut.retroapi.commands.argument.EntityNames.displayName(destination)));
         return Command.SINGLE_SUCCESS;
     }
 

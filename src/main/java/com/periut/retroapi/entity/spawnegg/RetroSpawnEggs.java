@@ -1,9 +1,9 @@
 package com.periut.retroapi.entity.spawnegg;
 
 import com.periut.retroapi.RetroAPI;
-import com.periut.retroapi.entity.EntityRegistration;
-import com.periut.retroapi.registry.RetroRegistry;
-import net.fabricmc.loader.api.FabricLoader;
+import com.periut.retroapi.mixin.entity.EntityRegistryAccessor;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifier;
 import net.ornithemc.osl.core.api.util.NamespacedIdentifiers;
 
@@ -25,7 +25,9 @@ import java.util.Set;
  *
  * <p><b>The texture.</b> Looked for at {@code assets/<mod>/textures/item/<name>_spawn_egg.png}. A mod
  * that has not drawn one gets RetroAPI's plain egg and a line in the log saying exactly which file to
- * create - a working egg either way, and a warning rather than a missing texture.
+ * create - a working egg either way, and a warning rather than a missing texture. That fallback egg is
+ * tinted to the average of the mob's own render texture ({@link EggTint}), so a mod's eggs are still
+ * told apart at a glance before anyone draws them.
  *
  * <p><b>Opting out.</b> Either one mob or the whole mod:
  *
@@ -35,10 +37,13 @@ import java.util.Set;
  * }</pre>
  *
  * Call it before RetroAPI's own init finishes - a mod's {@code retroapi} entrypoint or its
- * {@code EntityRegistrationCallback} both run in time.
+ * {@code EntityRegistrationCallback} both run in time. A mod that does not depend on RetroAPI can ask
+ * for the same thing reflectively through {@link com.periut.retroapi.compat.RetroOptional}.
  *
- * <p><b>Not under StationAPI.</b> There StationAPI owns registration and its mods bring their own
- * items, so nothing is added automatically and a mod that wants an egg registers one itself.
+ * <p><b>Under StationAPI too.</b> This drives off vanilla's own {@code EntityRegistry}, which is the
+ * map StationAPI populates as well, so a StationAPI mob gets an egg on the same terms as a RetroAPI
+ * one without either mod knowing about the other. Anything already carrying an egg from elsewhere
+ * simply ends up with two, which is harmless - the other mod may not always be installed.
  */
 public final class RetroSpawnEggs {
     private RetroSpawnEggs() {
@@ -66,35 +71,52 @@ public final class RetroSpawnEggs {
      * known, and so are the exclusions any of them asked for.
      */
     public static void registerAll() {
-        if (FabricLoader.getInstance().isModLoaded("stationapi")) {
-            return;
-        }
-
         // Mod -> the mobs it got an egg for without having a texture, so the log says it once per mod
         // rather than once per mob.
         final Map<String, List<String>> missingTextures = new LinkedHashMap<>();
 
-        for (final EntityRegistration registration : RetroRegistry.getEntities()) {
-            final NamespacedIdentifier id = registration.getId();
-            if (id == null || !registration.isLiving()) {
+        // Copied because registering an egg registers an item, and we would rather not reason about
+        // whether anything downstream can reach back into the entity registry mid-iteration.
+        final Map<String, Class<? extends Entity>> registered =
+            new LinkedHashMap<>(EntityRegistryAccessor.retroapi$getIdToClass());
+
+        for (final Map.Entry<String, Class<? extends Entity>> entry : registered.entrySet()) {
+            final String stringId = entry.getKey();
+            final int colon = stringId.indexOf(':');
+            if (colon < 0) {
+                continue;   // vanilla's own CamelCase names already have hand-drawn eggs
+            }
+
+            final Class<? extends Entity> entityClass = entry.getValue();
+            if (entityClass == null || !LivingEntity.class.isAssignableFrom(entityClass)) {
                 continue;   // a projectile or a boat has nothing to hatch
             }
-            if (EXCLUDED_MODS.contains(id.namespace()) || EXCLUDED_ENTITIES.contains(id.toString())) {
+
+            final String namespace = stringId.substring(0, colon);
+            final String path = stringId.substring(colon + 1);
+            if (EXCLUDED_MODS.contains(namespace) || EXCLUDED_ENTITIES.contains(stringId)) {
                 continue;
             }
 
-            final String eggName = snakeCase(id.identifier()) + "_spawn_egg";
-            final NamespacedIdentifier texture = NamespacedIdentifiers.from(id.namespace(), eggName);
-            final boolean hasTexture = textureExists(id.namespace(), eggName);
+            final String eggName = snakeCase(path) + "_spawn_egg";
+            final NamespacedIdentifier texture = NamespacedIdentifiers.from(namespace, eggName);
+            final boolean hasTexture = textureExists(namespace, eggName);
+
+            // Only the fallback egg is tinted; a mod that drew its own gets it untouched.
+            final int tint = hasTexture ? SpawnEggs.NO_TINT : EggTint.forEntityClass(entityClass);
+            if (tint != SpawnEggs.NO_TINT) {
+                RetroAPI.LOGGER.debug("Tinted {}'s fallback spawn egg #{} from its own texture",
+                    stringId, String.format("%06X", tint));
+            }
 
             SpawnEggs.registerFor(
-                NamespacedIdentifiers.from(id.namespace(), eggName),
-                id.toString(),
-                hasTexture ? texture : SpawnEggs.DEFAULT_TEXTURE);
+                NamespacedIdentifiers.from(namespace, eggName),
+                stringId,
+                hasTexture ? texture : SpawnEggs.DEFAULT_TEXTURE,
+                tint);
 
             if (!hasTexture) {
-                missingTextures.computeIfAbsent(id.namespace(), key -> new ArrayList<>())
-                    .add(id.identifier());
+                missingTextures.computeIfAbsent(namespace, key -> new ArrayList<>()).add(path);
             }
         }
 

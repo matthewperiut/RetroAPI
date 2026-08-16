@@ -1,0 +1,80 @@
+// Copy this file into your own mod's source tree and change the package line.
+//
+// It talks to RetroAPI entirely by reflection, so your mod does NOT depend on RetroAPI: with RetroAPI
+// absent every call here quietly does nothing, and your mod loads and runs exactly as before. Nothing
+// in this file imports anything from RetroAPI, which is what makes that true.
+//
+// You only need this to say NO. RetroAPI already gives your mod a creative tab holding everything you
+// registered, and a spawn egg for each of your living entities, without you writing anything at all.
+// The egg is tinted from your mob's own texture, so it is recognisable before you draw one; to replace
+// it, drop a sprite at assets/<yourmod>/textures/item/<your_mob>_spawn_egg.png and it is used instead.
+//
+// Call these before RetroAPI finishes starting up. A StationAPI event_bus listener is early enough,
+// and so is a "retroapi" entrypoint if you have one.
+
+package com.example.mymod.compat;
+
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.lang.reflect.Method;
+
+/** Optional RetroAPI integration. Every method is a no-op when RetroAPI is not installed. */
+public final class RetroCompat {
+    private RetroCompat() {
+    }
+
+    private static final String FACADE = "com.periut.retroapi.compat.RetroOptional";
+
+    /** Resolved once. Null means RetroAPI is absent, or present but too old to have the facade. */
+    private static final Class<?> RETRO_OPTIONAL = resolve();
+
+    private static Class<?> resolve() {
+        if (!FabricLoader.getInstance().isModLoaded("retroapi")) {
+            return null;
+        }
+        try {
+            return Class.forName(FACADE);
+        } catch (ClassNotFoundException | LinkageError missing) {
+            return null;   // an older RetroAPI without this facade; nothing to opt out of
+        }
+    }
+
+    /** Whether the calls below will actually reach RetroAPI. */
+    public static boolean isAvailable() {
+        return RETRO_OPTIONAL != null;
+    }
+
+    /** Suppress the creative tab RetroAPI would generate for your mod. */
+    public static void excludeItemGroup(String namespace) {
+        call("excludeItemGroup", namespace);
+    }
+
+    /** Suppress every spawn egg RetroAPI would generate for your mod. */
+    public static void excludeSpawnEggs(String namespace) {
+        call("excludeSpawnEggs", namespace);
+    }
+
+    /**
+     * Suppress the spawn egg for one mob.
+     *
+     * @param entityPath the name you registered the entity under, e.g. "ShadowWolf"
+     */
+    public static void excludeSpawnEgg(String namespace, String entityPath) {
+        call("excludeSpawnEgg", namespace, entityPath);
+    }
+
+    private static void call(String method, String... args) {
+        if (RETRO_OPTIONAL == null) {
+            return;
+        }
+        try {
+            Class<?>[] types = new Class<?>[args.length];
+            java.util.Arrays.fill(types, String.class);
+            Method target = RETRO_OPTIONAL.getMethod(method, types);
+            target.invoke(null, (Object[]) args);
+        } catch (ReflectiveOperationException | LinkageError failed) {
+            // RetroAPI is installed but would not take the call. Not worth crashing a mod over an
+            // optional creative tab, so carry on without it.
+        }
+    }
+}

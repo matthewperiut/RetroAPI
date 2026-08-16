@@ -87,14 +87,36 @@ public final class SpawnEggs {
      */
     public static Item registerFor(final NamespacedIdentifier itemId, final String entityId,
                                    final NamespacedIdentifier texture) {
+        return registerFor(itemId, entityId, texture, NO_TINT);
+    }
+
+    /** Passed as {@code tint} to leave an egg its own colours. */
+    public static final int NO_TINT = -1;
+
+    /**
+     * The same, with a {@code 0xRRGGBB} multiply over the sprite.
+     *
+     * <p>{@link #DEFAULT_TEXTURE} is drawn greyscale precisely so this works: a mob with no egg art of
+     * its own still gets one shaded in its own colours rather than thirteen identical grey eggs. The
+     * tint is a render-time pass ({@link RetroItemAccess#overlay(NamespacedIdentifier, int)}) rather
+     * than a stitched layer, because a flattened layer cannot be coloured afterwards.
+     *
+     * @param tint {@code 0xRRGGBB}, or {@link #NO_TINT} to leave the sprite alone
+     */
+    public static Item registerFor(final NamespacedIdentifier itemId, final String entityId,
+                                   final NamespacedIdentifier texture, final int tint) {
         final Item existing = REGISTERED.get(itemId.identifier());
         if (existing != null) {
             return existing;
         }
 
-        final Item egg = RetroItemAccess.of(new SpawnEggItem(RetroItemAccess.AUTO_ID, entityId))
-            .texture(texture)
-            .register(itemId);
+        RetroItemAccess access = RetroItemAccess.of(new SpawnEggItem(RetroItemAccess.AUTO_ID, entityId))
+            .texture(texture);
+        if (tint != NO_TINT) {
+            access = access.overlay(texture, tint);
+        }
+
+        final Item egg = access.register(itemId);
         REGISTERED.put(itemId.identifier(), egg);
         return egg;
     }
